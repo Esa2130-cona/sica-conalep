@@ -22,26 +22,24 @@ st.markdown("""
 # --- 2. FUNCIÓN DE CARGA INTELIGENTE ---
 SHEET_ID = "11RZyoBo_MyQkGWfc21WCY_xPFZdKkwTG12YagiZf3yM"
 
-@st.cache_data(ttl=5)
-def cargar_base_segura(gid):
-    url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={gid}"
+@st.cache_data(ttl=10)
+def cargar_base_por_nombre(nombre_hoja):
+    url = (
+        f"https://docs.google.com/spreadsheets/d/{SHEET_ID}"
+        f"/gviz/tq?tqx=out:csv&sheet={nombre_hoja}"
+    )
     try:
-        # Leemos el CSV
         df = pd.read_csv(url)
-        
-        # ELIMINAR columnas que se llamen "Unnamed" o estén vacías al inicio
         df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
-        
-        # Limpiar nombres de columnas (Quitar espacios y pasar a MAYÚSCULAS)
         df.columns = [str(c).strip().upper() for c in df.columns]
-        
-        # Si la columna MATRICULA existe, limpiamos sus valores
+
         if 'MATRICULA' in df.columns:
             df['MATRICULA'] = df['MATRICULA'].astype(str).str.strip().replace("'", "-")
-            
+
         return df
     except Exception as e:
-        st.error(f"Error técnico en pestaña {gid}: {e}")
+        st.error(f"❌ Error al cargar la hoja: {nombre_hoja}")
+        st.exception(e)
         return pd.DataFrame()
 
 # Cargar las pestañas con sus GIDs
@@ -138,3 +136,4 @@ elif menu == "Historial Alumnos":
                 in_h = df_incidencias[df_incidencias['MATRICULA'] == m_busc]
                 st.table(in_h)
         else: st.error("Matrícula no encontrada.")
+
