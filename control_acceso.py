@@ -33,10 +33,10 @@ st.markdown("""
 SHEET_ID = "11RZyoBo_MyQkGWfc21WCY_xPFZdKkwTG12YagiZf3yM"
 
 # URLs con GIDs (Asegúrate de que correspondan a tus pestañas)
-URL_ALUMNOS = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=0"
-URL_ACADEMICO = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=1114227031"
-URL_INCIDENCIAS = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=569107936"
-URL_USUARIOS = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=1418859187"
+URL_ALUMNOS = f"https://docs.google.com/spreadsheets/d/11RZyoBo_MyQkGWfc21WCY_xPFZdKkwTG12YagiZf3yM/edit?gid=1882885827#gid=1882885827{SHEET_ID}/export?format=csv&gid=0"
+URL_ACADEMICO = f"https://docs.google.com/spreadsheets/d/11RZyoBo_MyQkGWfc21WCY_xPFZdKkwTG12YagiZf3yM/edit?gid=1794524153#gid=1794524153{SHEET_ID}/export?format=csv&gid=1114227031"
+URL_INCIDENCIAS = f"https://docs.google.com/spreadsheets/d/11RZyoBo_MyQkGWfc21WCY_xPFZdKkwTG12YagiZf3yM/edit?gid=2080119575#gid=2080119575{SHEET_ID}/export?format=csv&gid=569107936"
+URL_USUARIOS = f"https://docs.google.com/spreadsheets/d/11RZyoBo_MyQkGWfc21WCY_xPFZdKkwTG12YagiZf3yM/edit?gid=921806663#gid=921806663{SHEET_ID}/export?format=csv&gid=1418859187"
 
 @st.cache_data(ttl=10)
 def cargar_datos(url):
@@ -165,3 +165,4 @@ elif menu == "Gestión Administrativa":
     st.title("⚙️ Panel de Administración")
     st.write("Desde aquí puedes ir directamente a la base de datos para modificar avisos o usuarios.")
     st.link_button("Abrir Google Sheets Principal", f"https://docs.google.com/spreadsheets/d/{SHEET_ID}")
+
