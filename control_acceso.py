@@ -111,8 +111,21 @@ if st.session_state.user_data is None:
 user = st.session_state.user_data
 
 st.sidebar.title(f"👤 {user.get('NOMBRE', 'Usuario')}")
-menu = st.sidebar.radio("MENÚ", ["Puerta de Entrada", "Historial Alumnos"])
+opciones = ["Puerta de Entrada", "Historial Alumnos"]
 
+if user.get("ROL") == "ADMIN":
+    opciones.append("Administrar Usuarios")
+
+if user.get("ROL") in ["PREFECTO", "ADMIN"]:
+    opciones.append("Reportes")
+
+if user.get("ROL") in ["SERV_ESCOLARES", "ADMIN"]:
+    opciones.append("Incidencias")
+
+if user.get("ROL") in ["FORMACION", "ADMIN"]:
+    opciones.append("Académico")
+
+menu = st.sidebar.radio("MENÚ", opciones)
 if st.sidebar.button("Cerrar Sesión"):
     st.session_state.user_data = None
     st.rerun()
@@ -203,3 +216,4 @@ elif menu == "Historial Alumnos":
 
         else:
             st.error("Matrícula no encontrada.")
+
