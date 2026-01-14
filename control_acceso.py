@@ -261,7 +261,8 @@ elif menu == "Administrar Usuarios":
 
     st.divider()
     st.subheader("📋 Usuarios existentes")
-    st.dataframe(df_usuarios, hide_index=True) elif menu == "Reportes":
+    st.dataframe(df_usuarios, hide_index=True) 
+elif menu == "Reportes":
     st.title("📝 Registro de Reportes")
 
     matricula = st.text_input("Matrícula del alumno").replace("'", "-").strip()
@@ -314,4 +315,5 @@ elif menu == "Administrar Usuarios":
             except Exception as e:
                 st.error("❌ Error de conexión con Apps Script")
                 st.exception(e)
+
 
