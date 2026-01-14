@@ -114,7 +114,28 @@ if st.session_state.user_data is None:
 user = st.session_state.user_data
 
 st.sidebar.title(f"👤 {user.get('NOMBRE', 'Usuario')}")
-opciones = ["Puerta de Entrada", "Historial Alumnos"]
+opciones = set()
+opciones.add("Puerta de Entrada")
+opciones.add("Historial Alumnos")
+
+rol = user.get("ROL", "")
+
+if rol == "ADMIN":
+    opciones.add("Administrar Usuarios")
+    opciones.add("Academico")
+    opciones.add("Reportes")
+    opciones.add("Incidencias")
+
+elif rol == "PREFECTO":
+    opciones.add("Reportes")
+
+elif rol == "SERVICIOS_ESCOLARES":
+    opciones.add("Incidencias")
+
+elif rol == "FORMACION":
+    opciones.add("Academico")
+
+menu = st.sidebar.radio("MENÚ", sorted(opciones))
 
 if user.get("ROL") == "ADMIN":
     opciones.append("Administrar Usuarios")
@@ -372,6 +393,7 @@ elif menu == "Academico":
             except Exception as e:
                 st.error("❌ Error de conexión con Apps Script")
                 st.exception(e)
+
 
 
 
