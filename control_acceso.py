@@ -10,7 +10,7 @@ st.set_page_config(page_title="SICA Conalep Cuautla", layout="wide", page_icon="
 # Estilos visuales
 st.markdown("""
     <style>
-    .stApp { background-color: #0d1117; color: white; }
+    .stApp { background-color: #f0f2f6; color: white; }
     .big-font { font-size:35px !important; font-weight: bold; color: #2ecc71; }
     .status-box { padding: 20px; border-radius: 15px; text-align: center; font-size: 25px; background-color: #1e272e; border: 2px solid #2ecc71; }
     .aviso-box { padding: 15px; background-color: #f1c40f; color: black; border-radius: 10px; font-weight: bold; margin-bottom: 10px; }
@@ -121,4 +121,5 @@ if user['rol'] in ["Servicios Escolares", "Administrador"]:
     busc = st.text_input("Matrícula a consultar").replace("'", "-").strip()
     if busc in db.index:
         st.table(db.loc[[busc]])
+
 
