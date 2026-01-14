@@ -3,28 +3,39 @@ import pandas as pd
 import requests
 from datetime import datetime
 
-# --- CONFIGURACIÓN ---
-# ID del nuevo archivo que me pasaste
+# --- 1. CONFIGURACIÓN Y ESTILO ---
+st.set_page_config(page_title="SICA Conalep Cuautla", layout="wide", page_icon="🛡️")
+
+st.markdown("""
+    <style>
+    .stApp { background-color: #0d1117; color: white; }
+    .big-font { font-size:35px !important; font-weight: bold; color: #2ecc71; }
+    .status-box { padding: 20px; border-radius: 15px; text-align: center; font-size: 25px; background-color: #1e272e; border: 2px solid #2ecc71; }
+    .aviso-box { padding: 15px; background-color: #f1c40f; color: black; border-radius: 10px; font-weight: bold; margin-bottom: 10px; }
+    .reporte-box { padding: 15px; background-color: #e74c3c; color: white; border-radius: 10px; font-weight: bold; }
+    </style>
+    """, unsafe_allow_html=True)
+
+# --- 2. CONEXIÓN A GOOGLE SHEETS ---
 SHEET_ID = "1A9fA0TEjHiLFYpimAobC9xSZFHrCNZl3"
 URL_CSV = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=0"
-WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbz_JkainmoGoEv3PpMUtPMlq2yLHpVQqo4ND_NyBVODN5wd6EBe9yn81RnwfY6TNVu1uA/exec" # Pon aquí la URL de Apps Script
+# Reemplaza la siguiente línea con tu URL de Apps Script cuando la tengas
+WEBHOOK_URL = "TU_URL_DE_APPS_SCRIPT_AQUI" 
 
-st.set_page_config(page_title="SICA Conalep Cuautla", layout="wide")
-
-# --- CARGA DE DATOS ---
 @st.cache_data(ttl=30)
 def cargar_alumnos():
     try:
         df = pd.read_csv(URL_CSV)
+        # Limpieza básica de la base de datos al cargar
         df['MATRICULA'] = df['MATRICULA'].astype(str).str.strip()
         return df.set_index('MATRICULA')
-    except:
+    except Exception as e:
+        st.error(f"Error cargando base de datos: {e}")
         return pd.DataFrame()
 
 db = cargar_alumnos()
 
-# --- GESTIÓN DE USUARIOS (SIMULADA POR AHORA) ---
-# Puedes mover esto a otra pestaña del Google Sheet después
+# --- 3. GESTIÓN DE USUARIOS ---
 usuarios = {
     "admin": {"pin": "2026", "rol": "Administrador", "nombre": "Admin General"},
     "prefectura": {"pin": "1234", "rol": "Prefectura", "nombre": "Prefecto de Turno"},
@@ -32,7 +43,6 @@ usuarios = {
     "tecnica": {"pin": "9999", "rol": "Formación Técnica", "nombre": "Jefe de Formación"}
 }
 
-# --- LOGIN ---
 if 'user' not in st.session_state:
     st.session_state.user = None
 
@@ -45,10 +55,11 @@ if st.session_state.user is None:
             if u in usuarios and usuarios[u]["pin"] == p:
                 st.session_state.user = usuarios[u]
                 st.rerun()
-            else: st.error("Acceso denegado")
+            else:
+                st.error("Acceso denegado. Verifique usuario y PIN.")
     st.stop()
 
-# --- INTERFAZ SEGÚN ROL ---
+# --- 4. PANEL SEGÚN ROL ---
 user = st.session_state.user
 st.sidebar.title(f"👤 {user['nombre']}")
 st.sidebar.info(f"Rol: {user['rol']}")
@@ -57,70 +68,84 @@ if st.sidebar.button("Cerrar Sesión"):
     st.session_state.user = None
     st.rerun()
 
-# --- MÓDULOS ---
-
-# 1. CONTROL DE ACCESO (Para todos, especialmente Prefectura)
+# --- 5. MÓDULO DE CONTROL DE ACCESO (PREFECTURA) ---
 if user['rol'] in ["Prefectura", "Administrador"]:
-    with st.expander("🚪 PANEL DE ENTRADA", expanded=True):
-        if 'scanned' not in st.session_state: st.session_state.scanned = ""
-        
-       def on_scan():
-            # 1. Capturamos lo que mandó el lector
-            lectura_sucia = st.session_state.barcode
-            # 2. Corregimos de inmediato antes de guardar en la sesión
-            lectura_limpia = lectura_sucia.replace("'", "-").strip()
-            # 3. Guardamos ya corregido
-            st.session_state.scanned = lectura_limpia
-            # 4. Limpiamos el campo de entrada
-            st.session_state.barcode = ""
+    st.header("🚀 Registro de Entrada")
+    
+    # Inicializar el estado si no existe
+    if 'scanned' not in st.session_state:
+        st.session_state.scanned = ""
 
-        st.text_input("👇 ESCANEAR AQUÍ", key="barcode", on_change=on_scan)
-        
-        # Doble seguridad: Volvemos a limpiar al asignar a la variable de búsqueda
-        mat = st.session_state.scanned.replace("'", "-").strip()
-        
-        if mat:
-            # Ahora 'mat' ya no tiene comillas, por lo que entrará aquí:
-            if mat in db.index:
-                al = db.loc[mat]
-                c1, c2 = st.columns([1, 2])
-                with c1:
-                    st.image(f"Fotos-Alumnos/{mat}.jpg", width=250)
-                with c2:
-                    st.header(f"{al['NOMBRE']} {al['PRIMER APELLIDO']}")
-                    st.write(f"**Grupo:** {al['GRUPO']}")
-                    
-                    # Avisos de Escolares
-                    aviso = al.get('AVISO_ENTRADA', "")
-                    if pd.notna(aviso) and aviso != "":
-                        st.warning(f"📢 AVISO: {aviso}")
-                    
-                    # Botones de reporte
-                    col_a, col_b = st.columns(2)
-                    if col_a.button("⏰ RETARDO"):
-                        # Aquí llamarías a la función para guardar en el sheet
-                        st.toast("Retardo registrado")
-            else:
-                st.error("No registrado")
+    # Función que se ejecuta al escanear
+    def on_scan():
+        raw_data = st.session_state.barcode
+        # CORRECCIÓN NIVEL 1: Antes de guardar en la sesión
+        limpio = raw_data.replace("'", "-").strip()
+        st.session_state.scanned = limpio
+        st.session_state.barcode = ""
 
-# 2. PANEL ADMINISTRATIVO (Servicios Escolares / Técnica / Admin)
+    st.text_input("👇 ESCANEE MATRÍCULA AQUÍ", key="barcode", on_change=on_scan)
+
+    # CORRECCIÓN NIVEL 2: Al leer de la sesión para buscar en la DB
+    mat = st.session_state.scanned.replace("'", "-").strip()
+
+    if mat:
+        if mat in db.index:
+            alumno = db.loc[mat]
+            col_foto, col_info = st.columns([1, 2])
+            
+            with col_foto:
+                # Intenta mostrar foto, si no existe muestra icono por defecto
+                foto_path = f"Fotos-Alumnos/{mat}.jpg"
+                if os.path.exists(foto_path):
+                    st.image(foto_path, width=280)
+                else:
+                    st.warning("📷 Foto no disponible")
+            
+            with col_info:
+                st.markdown(f"<p class='big-font'>{alumno['NOMBRE']} {alumno['PRIMER APELLIDO']}</p>", unsafe_allow_html=True)
+                st.write(f"### Grupo: {alumno['GRUPO']}")
+                
+                # --- AVISOS DE SERVICIOS ESCOLARES ---
+                aviso = alumno.get('AVISO_ENTRADA', "")
+                if pd.notna(aviso) and aviso != "":
+                    st.markdown(f"<div class='aviso-box'>📢 AVISO: {aviso}</div>", unsafe_allow_html=True)
+                
+                # --- ESTADO ACADÉMICO ---
+                estado = str(alumno.get('ESTADO_ACADEMICO', "")).upper()
+                if "RIESGO" in estado or "REPORTE" in estado:
+                    st.markdown(f"<div class='reporte-box'>⚠️ {estado}</div>", unsafe_allow_html=True)
+
+                st.markdown(f"<div class='status-box'>✅ ACCESO REGISTRADO<br>{datetime.now().strftime('%H:%M:%S')}</div>", unsafe_allow_html=True)
+                
+                # Botones de incidencias
+                c1, c2 = st.columns(2)
+                if c1.button("⏰ REGISTRAR RETARDO"):
+                    st.toast("Retardo enviado a la nube...")
+                if c2.button("🚫 REPORTE DISCIPLINA"):
+                    st.toast("Reporte generado.")
+        else:
+            st.error(f"❌ La matrícula [{mat}] no existe en la base de datos.")
+
+# --- 6. MÓDULO ADMINISTRATIVO (ESCOLARES / TÉCNICA) ---
 if user['rol'] in ["Servicios Escolares", "Formación Técnica", "Administrador"]:
     st.divider()
-    st.header("📋 Gestión Administrativa")
-    tab1, tab2 = st.tabs(["🔍 Buscador Académico", "📢 Publicar Avisos"])
+    st.header("📋 Gestión y Consulta Administrativa")
+    tab1, tab2 = st.tabs(["🔍 Buscador de Expedientes", "📢 Control de Avisos"])
     
     with tab1:
-        st.subheader("Información Integral del Alumno")
-        busc = st.text_input("Buscar por matrícula para ver historial académico")
-        if busc in db.index:
-            alumno_data = db.loc[busc]
-            st.write(alumno_data) # Muestra todo: Promedios, materias, etc.
-            
+        id_busc = st.text_input("Ingrese Matrícula para ver historial académico")
+        # CORRECCIÓN NIVEL 3: También en el buscador manual por si el admin se equivoca
+        id_busc = id_busc.replace("'", "-").strip()
+        
+        if id_busc in db.index:
+            al_data = db.loc[id_busc]
+            st.write(f"### Datos de: {al_data['NOMBRE']}")
+            st.table(al_data) 
+        elif id_busc:
+            st.error("No se encontró al alumno.")
+
     with tab2:
-        st.subheader("Crear Aviso en Pantalla")
-        target = st.text_input("Matrícula del alumno a notificar")
-        msg = st.text_area("Mensaje del aviso")
-        if st.button("Publicar Aviso"):
-
-            st.success("El aviso aparecerá la próxima vez que el alumno escanee su credencial.")
-
+        st.subheader("Gestión de Avisos en Puerta")
+        st.info("Para actualizar avisos masivamente, use el enlace de Google Sheets.")
+        st.link_button("📂 Abrir Google Sheets", f"https://docs.google.com/spreadsheets/d/{SHEET_ID}")
