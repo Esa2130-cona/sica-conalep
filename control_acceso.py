@@ -5,11 +5,11 @@ from datetime import datetime
 import os
 import pytz
 
-# --- CONFIGURACIÓN ---
+# --- 1. CONFIGURACIÓN ---
 st.set_page_config(page_title="SICA Conalep Cuautla", layout="wide")
 zona_horaria = pytz.timezone('America/Mexico_City')
 
-# Estilos Institucionales
+# Estilos visuales
 st.markdown("""
     <style>
     .stApp { background-color: #F8F9FA; color: #212529; }
@@ -20,140 +20,120 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- CONEXIÓN A GOOGLE SHEETS ---
+# --- 2. CONEXIÓN A GOOGLE SHEETS ---
 SHEET_ID = "11RZyoBo_MyQkGWfc21WCY_xPFZdKkwTG12YagiZf3yM"
 
 @st.cache_data(ttl=5)
-def cargar_datos(gid):
+def cargar_tabla(gid):
     url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={gid}"
     try:
-        # Leemos el CSV
         df = pd.read_csv(url)
-        
-        # 1. Limpiar espacios en los nombres de las columnas y pasarlos a MAYÚSCULAS
+        # Limpieza extrema de columnas
         df.columns = [str(c).strip().upper() for c in df.columns]
-        
-        # 2. Eliminar columnas que se llamen "UNNAMED" (las vacías del Excel)
-        df = df.loc[:, ~df.columns.str.contains('^UNNAMED')]
-        
-        # 3. Asegurar que MATRICULA sea texto limpio
+        # Si la matrícula viene como número, la pasamos a texto limpio
         if 'MATRICULA' in df.columns:
             df['MATRICULA'] = df['MATRICULA'].astype(str).str.strip()
-            
         return df
     except Exception as e:
-        st.error(f"Error al leer pestaña {gid}: {e}")
+        st.error(f"Error cargando pestaña {gid}: {e}")
         return pd.DataFrame()
 
-# Cargar bases de datos
-df_alumnos = cargar_datos(0)          # Alumnos
-df_academico = cargar_datos(1114227031) # Academico
-df_incidencias = cargar_datos(569107936) # Incidencias
-df_usuarios = cargar_datos(1418859187) # Usuarios
+# Cargar las 4 pestañas clave
+df_alumnos = cargar_tabla(0)
+df_academico = cargar_tabla(1114227031)
+df_incidencias = cargar_tabla(569107936)
+df_usuarios = cargar_tabla(1418859187)
 
-# --- SISTEMA DE LOGIN ---
+# --- 3. LOGIN ---
 if 'user_data' not in st.session_state:
     st.session_state.user_data = None
 
 if st.session_state.user_data is None:
-    st.title("🛡️ SICA - Inicio de Sesión")
-    u_log = st.text_input("Usuario")
-    p_log = st.text_input("PIN", type="password")
-    if st.button("INGRESAR"):
-        if not df_usuarios.empty:
-            # Buscamos el usuario ignorando mayúsculas/minúsculas
-            u_col = 'USUARIO' if 'USUARIO' in df_usuarios.columns else df_usuarios.columns[0]
-            p_col = 'PIN' if 'PIN' in df_usuarios.columns else df_usuarios.columns[1]
-            
-            match = df_usuarios[(df_usuarios[u_col].astype(str).str.lower() == u_log.lower()) & 
-                                (df_usuarios[p_col].astype(str) == p_log)]
-            if not match.empty:
-                st.session_state.user_data = match.iloc[0].to_dict()
-                st.rerun()
-            else: st.error("Usuario o PIN incorrectos")
-        else: st.error("No se pudo cargar la base de usuarios.")
+    st.title("🛡️ SICA - CONALEP CUAUTLA")
+    col1, col2 = st.columns([1,1])
+    with col1:
+        u = st.text_input("Usuario")
+        p = st.text_input("PIN", type="password")
+        if st.button("INGRESAR", use_container_width=True):
+            # Buscar usuario
+            if not df_usuarios.empty and 'USUARIO' in df_usuarios.columns:
+                match = df_usuarios[(df_usuarios['USUARIO'].astype(str).str.lower() == u.lower()) & 
+                                    (df_usuarios['PIN'].astype(str) == p)]
+                if not match.empty:
+                    st.session_state.user_data = match.iloc[0].to_dict()
+                    st.rerun()
+                else: st.error("Usuario o PIN incorrecto")
+            else: st.error("Error: Pestaña de Usuarios no encontrada o vacía.")
     st.stop()
 
-# --- INTERFAZ ---
+# --- 4. INTERFAZ PRINCIPAL ---
 user = st.session_state.user_data
 st.sidebar.title(f"👤 {user.get('NOMBRE', 'Usuario')}")
-menu = st.sidebar.radio("Menú", ["Puerta de Entrada", "Historial Alumnos", "Gestión"])
-
+st.sidebar.write(f"Rol: {user.get('ROL', 'Sin Rol')}")
 if st.sidebar.button("Cerrar Sesión"):
     st.session_state.user_data = None
     st.rerun()
 
-# --- MODULO 1: ENTRADA ---
+menu = st.sidebar.radio("MENÚ", ["Puerta de Entrada", "Historial Alumnos", "Asistencia General"])
+
+# --- MODULO: PUERTA DE ENTRADA ---
 if menu == "Puerta de Entrada":
-    st.title("🚀 Registro de Acceso")
+    st.title("🚀 Control de Acceso")
     
-    if 'scanned_id' not in st.session_state: st.session_state.scanned_id = ""
+    if 'id_leido' not in st.session_state: st.session_state.id_leido = ""
 
-    def on_scan():
-        raw = st.session_state.lector
-        st.session_state.scanned_id = raw.replace("'", "-").strip()
-        st.session_state.lector = ""
+    def al_escanear():
+        raw = st.session_state.input_lector
+        # CORRECCIÓN DE COMILLA POR GUION
+        st.session_state.id_leido = raw.replace("'", "-").strip()
+        st.session_state.input_lector = ""
 
-    st.text_input("👇 ESCANEE AQUÍ", key="lector", on_change=on_scan)
-    mat = st.session_state.scanned_id
-
+    st.text_input("👇 ESCANEE AQUÍ", key="input_lector", on_change=al_escanear)
+    
+    mat = st.session_state.id_leido
+    
     if mat:
-        # Buscar en la columna MATRICULA
-        alumno_row = df_alumnos[df_alumnos['MATRICULA'] == mat]
-        if not alumno_row.empty:
-            al = alumno_row.iloc[0]
+        # Buscar alumno por matrícula
+        res = df_alumnos[df_alumnos['MATRICULA'] == mat]
+        if not res.empty:
+            al = res.iloc[0]
             c1, c2 = st.columns([1, 2])
             with c1:
-                # Mostrar foto si existe
                 foto = f"Fotos-Alumnos/{mat}.jpg"
                 if os.path.exists(foto): st.image(foto, width=300)
-                else: st.info("📷 Sin foto en servidor")
+                else: st.info("📷 Sin foto")
             with c2:
                 st.markdown(f"<p class='big-font'>{al.get('NOMBRE','')} {al.get('PRIMER APELLIDO','')}</p>", unsafe_allow_html=True)
                 st.write(f"### Grupo: {al.get('GRUPO', 'S/G')}")
                 
+                # Avisos
                 aviso = al.get('AVISO_ENTRADA', "")
-                if pd.notna(aviso) and aviso != "":
+                if pd.notna(aviso) and str(aviso).strip() != "":
                     st.markdown(f"<div class='aviso-box'>📢 AVISO: {aviso}</div>", unsafe_allow_html=True)
                 
-                hora = datetime.now(zona_horaria).strftime('%H:%M:%S')
-                st.markdown(f"<div class='status-box'>✅ ACCESO REGISTRADO<br>{hora}</div>", unsafe_allow_html=True)
+                # Reloj
+                h = datetime.now(zona_horaria).strftime('%H:%M:%S')
+                st.markdown(f"<div class='status-box'>✅ ACCESO REGISTRADO<br>{h}</div>", unsafe_allow_html=True)
         else:
-            st.error(f"Matrícula {mat} no encontrada en la base de datos.")
+            st.error(f"❌ La matrícula {mat} no existe en la pestaña ALUMNOS.")
 
-# --- MODULO 2: HISTORIAL 360 ---
+# --- MODULO: HISTORIAL ---
 elif menu == "Historial Alumnos":
-    st.title("🔍 Buscador 360°")
-    buscar = st.text_input("Matrícula del alumno").replace("'", "-").strip()
-    if buscar:
-        info_al = df_alumnos[df_alumnos['MATRICULA'] == buscar]
-        if not info_al.empty:
-            al = info_al.iloc[0]
-            st.header(f"Alumno: {al.get('NOMBRE','')} {al.get('PRIMER APELLIDO','')}")
+    st.title("🔍 Consulta de Expedientes")
+    m_busc = st.text_input("Matrícula").replace("'", "-").strip()
+    if m_busc:
+        busc_res = df_alumnos[df_alumnos['MATRICULA'] == m_busc]
+        if not busc_res.empty:
+            al_h = busc_res.iloc[0]
+            st.header(f"Expediente: {al_h.get('NOMBRE','')} {al_h.get('PRIMER APELLIDO','')}")
             
-            t1, t2, t3 = st.tabs(["📊 Académico", "📜 Conducta", "📞 Contacto"])
-            
+            t1, t2 = st.tabs(["📊 Académico", "📜 Incidencias"])
             with t1:
-                ac = df_academico[df_academico['MATRICULA'] == buscar]
-                if not ac.empty:
-                    st.write("### Situación Académica")
-                    st.table(ac)
-                else: st.info("Sin datos académicos.")
-
+                ac_h = df_academico[df_academico['MATRICULA'] == m_busc]
+                st.write("### Datos de la pestaña Académico")
+                st.dataframe(ac_h, hide_index=True)
             with t2:
-                inc = df_incidencias[df_incidencias['MATRICULA'] == buscar]
-                if not inc.empty:
-                    st.write("### Historial de Incidencias")
-                    st.dataframe(inc, hide_index=True)
-                else: st.success("Alumno sin reportes de conducta.")
-
-            with t3:
-                st.write(f"**Carrera:** {al.get('CARRERERA', 'N/A')}")
-                st.write(f"**Contacto 1:** {al.get('CONTACTO 1', 'N/A')}")
-                st.write(f"**Contacto 2:** {al.get('CONTACTO 2', 'N/A')}")
-        else:
-            st.error("No se encontró al alumno.")
-
-elif menu == "Gestión":
-    st.link_button("📂 Abrir Google Sheets", f"https://docs.google.com/spreadsheets/d/{SHEET_ID}")
-
+                in_h = df_incidencias[df_incidencias['MATRICULA'] == m_busc]
+                st.write("### Reportes Registrados")
+                st.table(in_h)
+        else: st.error("No encontrado.")
