@@ -216,4 +216,47 @@ elif menu == "Historial Alumnos":
 
         else:
             st.error("Matrícula no encontrada.")
+elif menu == "Administrar Usuarios":
+    st.title("👥 Alta de Usuarios")
+
+    st.subheader("➕ Nuevo usuario")
+
+    with st.form("form_usuario"):
+        nuevo_usuario = st.text_input("Usuario")
+        nuevo_pin = st.text_input("PIN")
+        nuevo_nombre = st.text_input("Nombre completo")
+        nuevo_rol = st.selectbox(
+            "Rol",
+            ["ADMIN", "PREFECTO", "SERV_ESCOLARES", "FORMACION"]
+        )
+
+        guardar = st.form_submit_button("Guardar usuario")
+
+    if guardar:
+        if not all([nuevo_usuario, nuevo_pin, nuevo_nombre]):
+            st.error("Todos los campos son obligatorios")
+        else:
+            # Evitar usuarios duplicados
+            if nuevo_usuario.lower() in df_usuarios["USUARIO"].astype(str).str.lower().values:
+                st.error("Ese usuario ya existe")
+            else:
+                nueva_fila = {
+                    "USUARIO": nuevo_usuario,
+                    "PIN": nuevo_pin,
+                    "NOMBRE": nuevo_nombre,
+                    "ROL": nuevo_rol
+                }
+
+                df_usuarios = pd.concat(
+                    [df_usuarios, pd.DataFrame([nueva_fila])],
+                    ignore_index=True
+                )
+
+                # Guardar en Google Sheets
+                url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit"
+                st.success("✅ Usuario creado (recarga la app)")
+
+    st.divider()
+    st.subheader("📋 Usuarios existentes")
+    st.dataframe(df_usuarios, hide_index=True)
 
