@@ -387,6 +387,46 @@ elif menu == "Academico":
             except Exception as e:
                 st.error("❌ Error de conexión con Apps Script")
                 st.exception(e)
+elif menu == "Incidencias":
+    st.title("🚨 Registro de Incidencias")
+
+    matricula = st.text_input("Matrícula del alumno").replace("'", "-").strip()
+
+    if matricula:
+        alumno = df_alumnos[df_alumnos["MATRICULA"] == matricula]
+
+        if alumno.empty:
+            st.error("Matrícula no encontrada")
+        else:
+            al = alumno.iloc[0]
+            st.success(f"{al['NOMBRE']} {al['PRIMER APELLIDO']}")
+
+            tipo = st.selectbox(
+                "Tipo de incidencia",
+                ["Disciplina", "Retardo", "Falta", "Conducta", "Otro"]
+            )
+
+            descripcion = st.text_area("Descripción de la incidencia")
+
+            if st.button("Registrar incidencia"):
+                payload = {
+                    "TIPO_REGISTRO": "INCIDENCIA",
+                    "FECHA": datetime.now(zona_horaria).strftime("%Y-%m-%d"),
+                    "HORA": datetime.now(zona_horaria).strftime("%H:%M:%S"),
+                    "MATRICULA": matricula,
+                    "NOMBRE": f"{al['NOMBRE']} {al['PRIMER APELLIDO']}",
+                    "GRUPO": al.get("GRUPO", ""),
+                    "TIPO": tipo,
+                    "DESCRIPCION": descripcion,
+                    "REGISTRO_POR": user.get("NOMBRE", "")
+                }
+
+                r = requests.post(APPS_SCRIPT_URL, json=payload)
+
+                if r.status_code == 200:
+                    st.success("✅ Incidencia registrada correctamente")
+                else:
+                    st.error("❌ Error al registrar incidencia")
 
 
 
