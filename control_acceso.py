@@ -151,12 +151,6 @@ if user.get("ROL") in ["SERV_ESCOLARES", "ADMIN"]:
 
 if user.get("ROL") in ["FORMACION", "ADMIN"]:
     opciones.add("Academico")
-
-menu = st.sidebar.radio("MENÚ", opciones)
-if st.sidebar.button("Cerrar Sesión"):
-    st.session_state.user_data = None
-    st.rerun()
-
 # --------------------------------------------------
 # 5. PUERTA DE ENTRADA
 # --------------------------------------------------
@@ -393,6 +387,7 @@ elif menu == "Academico":
             except Exception as e:
                 st.error("❌ Error de conexión con Apps Script")
                 st.exception(e)
+
 
 
 
