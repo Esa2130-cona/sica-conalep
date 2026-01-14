@@ -64,15 +64,19 @@ if user['rol'] in ["Prefectura", "Administrador"]:
     with st.expander("🚪 PANEL DE ENTRADA", expanded=True):
         if 'scanned' not in st.session_state: st.session_state.scanned = ""
         
-        def on_scan():
-            # Esta función limpia el input
-            st.session_state.scanned = st.session_state.barcode
+       def on_scan():
+            # 1. Capturamos lo que mandó el lector
+            lectura_sucia = st.session_state.barcode
+            # 2. Corregimos de inmediato antes de guardar en la sesión
+            lectura_limpia = lectura_sucia.replace("'", "-").strip()
+            # 3. Guardamos ya corregido
+            st.session_state.scanned = lectura_limpia
+            # 4. Limpiamos el campo de entrada
             st.session_state.barcode = ""
 
         st.text_input("👇 ESCANEAR AQUÍ", key="barcode", on_change=on_scan)
         
-        # --- LA CORRECCIÓN DEFINITIVA AQUÍ ---
-        # Forzamos que 'mat' siempre cambie la comilla por el guion antes de buscar
+        # Doble seguridad: Volvemos a limpiar al asignar a la variable de búsqueda
         mat = st.session_state.scanned.replace("'", "-").strip()
         
         if mat:
@@ -119,3 +123,4 @@ if user['rol'] in ["Servicios Escolares", "Formación Técnica", "Administrador"
         if st.button("Publicar Aviso"):
 
             st.success("El aviso aparecerá la próxima vez que el alumno escanee su credencial.")
+
