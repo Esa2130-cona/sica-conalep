@@ -3,36 +3,38 @@ import pandas as pd
 import requests
 from datetime import datetime
 import pytz
-import time
+import threading
 
 # ================= CONFIGURACIÓN =================
 st.set_page_config(page_title="SICA CONALEP CUAUTLA", layout="wide")
 zona = pytz.timezone("America/Mexico_City")
 
-# ESTILOS FORMALES
+# ESTILOS FORMALES E INSTITUCIONALES
 st.markdown("""
     <style>
     .card-acceso {
         background-color: white; padding: 40px; border-radius: 20px;
         border-left: 15px solid #1E8449; box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     }
-    .acceso-permitido { color: #1E8449; font-size: 65px !important; font-weight: 900; }
-    .nombre-alumno { color: #1B4F72; font-size: 80px !important; font-weight: bold; text-transform: uppercase; }
-    .datos-escolares { color: #566573; font-size: 35px !important; }
+    .acceso-permitido { color: #1E8449; font-size: 65px !important; font-weight: 900; line-height: 1; }
+    .nombre-alumno { color: #1B4F72; font-size: 75px !important; font-weight: bold; text-transform: uppercase; line-height: 1.1; }
+    .datos-escolares { color: #566573; font-size: 35px !important; margin-top: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
 SHEET_ID = "11RZyoBo_MyQkGWfc21WCY_xPFZdKkwTG12YagiZf3yM"
 APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwEzRUIDz4YtnT40VIbAwUs7WOgba0DWjSTYt2d7-QdZKFo3BCetNrB0kSy4Y4w4fTncg/exec"
 
-GID_ALUMNOS = 1882885827
-GID_USUARIOS = 921806663
-GID_ENTRADAS = 25814912
-GID_INCIDENCIAS = 2080119575
-GID_ACADEMICO = 1794524153
+GIDS = {
+    "ALUMNOS": 1882885827,
+    "USUARIOS": 921806663,
+    "ENTRADAS": 25814912,
+    "INCIDENCIAS": 2080119575,
+    "ACADEMICO": 1794524153
+}
 
-# ================= CARGA DE DATOS =================
-@st.cache_data(ttl=2)
+# ================= FUNCIONES =================
+@st.cache_data(ttl=5)
 def cargar(gid):
     try:
         url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={gid}"
@@ -41,19 +43,20 @@ def cargar(gid):
         return df
     except: return pd.DataFrame()
 
-df_alumnos = cargar(GID_ALUMNOS)
-df_usuarios = cargar(GID_USUARIOS)
-df_entradas = cargar(GID_ENTRADAS)
+def enviar_registro_background(payload):
+    try: requests.post(APPS_SCRIPT_URL, json=payload, timeout=10)
+    except: pass
 
 # ================= LOGIN =================
 if "user" not in st.session_state: st.session_state.user = None
+df_usuarios = cargar(GIDS["USUARIOS"])
 
 if not st.session_state.user:
     st.title("🔐 SICA - CONALEP CUAUTLA")
     u = st.text_input("Usuario")
     p = st.text_input("PIN", type="password")
     if st.button("Ingresar"):
-        if not df_usuarios.empty:
+        if not df_usuarios.empty and "USUARIO" in df_usuarios.columns:
             m = df_usuarios[(df_usuarios["USUARIO"].astype(str).str.lower() == u.lower()) & (df_usuarios["PIN"].astype(str) == p)]
             if not m.empty:
                 st.session_state.user = m.iloc[0].to_dict()
@@ -63,28 +66,30 @@ if not st.session_state.user:
 
 user = st.session_state.user
 
-# ================= MENÚ LATERAL =================
+# ================= MENÚ =================
 opciones = ["Puerta de Entrada", "Historial Alumnos"]
 rol = str(user.get("ROL", "")).upper()
 if rol == "ADMIN": opciones += ["Incidencias", "Academico"]
+elif rol == "PREFECTO": opciones += ["Incidencias"]
 
-menu = st.sidebar.radio("SISTEMA", opciones)
+menu = st.sidebar.radio("MENÚ PRINCIPAL", opciones)
 st.sidebar.button("Cerrar sesión", on_click=lambda: st.session_state.update(user=None))
 
-# ================= MODULOS =================
+# ================= MÓDULOS =================
 
 if menu == "Puerta de Entrada":
-    st.markdown("<h4 style='text-align: center;'>CONTROL DE ACCESO</h4>", unsafe_allow_html=True)
+    df_alumnos = cargar(GIDS["ALUMNOS"])
+    st.markdown("<h4 style='text-align: center; color: gray;'>ESCANEE CREDENCIAL</h4>", unsafe_allow_html=True)
     
-    # Lógica de auto-limpieza usando session_state
-    if "last_mat" not in st.session_state: st.session_state.last_mat = ""
+    if "input_val" not in st.session_state: st.session_state.input_val = ""
+    def procesar_escaneo():
+        st.session_state.input_val = st.session_state.temp_input
+        st.session_state.temp_input = ""
 
-    def registrar_y_limpiar():
-        st.session_state.last_mat = st.session_state.widget_scanner
-        st.session_state.widget_scanner = ""
-
-    mat_input = st.text_input("ESCANEE CREDENCIAL", key="widget_scanner", on_change=registrar_y_limpiar).strip()
-    mat = st.session_state.last_mat.replace("'", "-")
+    st.text_input("Esperando lectura...", key="temp_input", on_change=procesar_escaneo)
+    
+    # CORRECCIÓN DE ESCÁNER (Comilla por Guion)
+    mat = st.session_state.input_val.replace("'", "-").strip()
 
     if mat:
         a = df_alumnos[df_alumnos["MATRICULA"].astype(str) == mat]
@@ -99,41 +104,48 @@ if menu == "Puerta de Entrada":
             with c2:
                 st.markdown(f"<div class='card-acceso'><div class='acceso-permitido'>ACCESO PERMITIDO</div><div class='nombre-alumno'>{nombre}</div><div class='datos-escolares'><b>GRUPO:</b> {al['GRUPO']}<br><b>HORA:</b> {datetime.now(zona).strftime('%H:%M:%S')}</div></div>", unsafe_allow_html=True)
             
-            requests.post(APPS_SCRIPT_URL, json={
-                "TIPO_REGISTRO": "ENTRADA", "FECHA": datetime.now(zona).strftime("%Y-%m-%d"),
-                "HORA": datetime.now(zona).strftime("%H:%M:%S"), "MATRICULA": mat,
-                "NOMBRE": nombre, "GRUPO": al["GRUPO"], "REGISTRO_POR": user["NOMBRE"]
-            }, timeout=3)
+            payload = {"TIPO_REGISTRO": "ENTRADA", "FECHA": datetime.now(zona).strftime("%Y-%m-%d"), "HORA": datetime.now(zona).strftime("%H:%M:%S"), "MATRICULA": mat, "NOMBRE": nombre, "GRUPO": al["GRUPO"], "REGISTRO_POR": user["NOMBRE"]}
+            threading.Thread(target=enviar_registro_background, args=(payload,)).start()
 
 elif menu == "Incidencias":
-    st.title("🚨 Incidencias")
-    mat_i = st.text_input("Matrícula")
+    st.title("🚨 Registro de Incidencias")
+    df_alumnos = cargar(GIDS["ALUMNOS"])
+    # CORRECCIÓN AQUÍ TAMBIÉN
+    mat_i = st.text_input("Escanee o ingrese matrícula").replace("'", "-").strip()
     if mat_i:
-        al_i = df_alumnos[df_alumnos["MATRICULA"].astype(str) == mat_i]
-        if not al_i.empty:
-            al_i = al_i.iloc[0]
-            st.info(f"Alumno: {al_i['NOMBRE']}")
-            tipo = st.selectbox("Tipo", ["Retardo", "Falta", "Disciplina"])
-            desc = st.text_area("Descripción")
-            if st.button("Guardar"):
-                requests.post(APPS_SCRIPT_URL, json={"TIPO_REGISTRO": "INCIDENCIA", "FECHA": datetime.now(zona).strftime("%Y-%m-%d"), "HORA": datetime.now(zona).strftime("%H:%M:%S"), "MATRICULA": mat_i, "NOMBRE": al_i["NOMBRE"], "GRUPO": al_i["GRUPO"], "TIPO": tipo, "DESCRIPCION": desc, "REGISTRO_POR": user["NOMBRE"]})
-                st.success("Guardado")
+        res = df_alumnos[df_alumnos["MATRICULA"].astype(str) == mat_i]
+        if not res.empty:
+            al = res.iloc[0]
+            st.success(f"Alumno: {al['NOMBRE']} {al['PRIMER APELLIDO']}")
+            tipo = st.selectbox("Tipo de reporte", ["Retardo", "Falta", "Indisciplina", "Uniforme"])
+            obs = st.text_area("Observaciones")
+            if st.button("Guardar Incidencia"):
+                threading.Thread(target=enviar_registro_background, args=({
+                    "TIPO_REGISTRO": "INCIDENCIA", "FECHA": datetime.now(zona).strftime("%Y-%m-%d"),
+                    "HORA": datetime.now(zona).strftime("%H:%M:%S"), "MATRICULA": mat_i,
+                    "NOMBRE": al['NOMBRE'], "TIPO": tipo, "DESCRIPCION": obs, "REGISTRO_POR": user["NOMBRE"]
+                },)).start()
+                st.success("Incidencia enviada")
+        else: st.warning("Matrícula no encontrada")
 
 elif menu == "Academico":
-    st.title("📚 Académico")
-    mat_a = st.text_input("Matrícula")
+    st.title("📚 Módulo Académico")
+    # CORRECCIÓN AQUÍ TAMBIÉN
+    mat_a = st.text_input("Escanee matrícula del alumno").replace("'", "-").strip()
     materia = st.text_input("Materia")
     cal = st.number_input("Calificación", 0, 100)
-    if st.button("Registrar"):
-        requests.post(APPS_SCRIPT_URL, json={"TIPO_REGISTRO": "ACADEMICO", "MATRICULA": mat_a, "MATERIA": materia, "CALIFICACION": cal, "REGISTRO_POR": user["NOMBRE"]})
-        st.success("Calificación guardada")
+    if st.button("Registrar Calificación"):
+        payload = {"TIPO_REGISTRO": "ACADEMICO", "MATRICULA": mat_a, "MATERIA": materia, "CALIFICACION": cal, "REGISTRO_POR": user["NOMBRE"]}
+        threading.Thread(target=enviar_registro_background, args=(payload,)).start()
+        st.success("Registro académico enviado")
 
 elif menu == "Historial Alumnos":
-    st.title("📊 Historial")
-    busqueda = st.text_input("Matrícula")
-    if busqueda:
-        st.dataframe(df_entradas[df_entradas["MATRICULA"].astype(str) == busqueda], use_container_width=True)
-
+    st.title("📊 Consultas de Historial")
+    df_entradas = cargar(GIDS["ENTRADAS"])
+    # CORRECCIÓN AQUÍ TAMBIÉN
+    m_busq = st.text_input("Escanee matrícula para buscar").replace("'", "-").strip()
+    if m_busq:
+        st.dataframe(df_entradas[df_entradas["MATRICULA"].astype(str) == m_busq], use_container_width=True)
 
 
 
