@@ -88,26 +88,55 @@ st.sidebar.button("Cerrar sesión", on_click=lambda: st.session_state.update(use
 
 # ================= PUERTA =================
 if menu == "Puerta de Entrada":
-    st.title("🚪 Registro de Entrada")
-    mat = st.text_input("Escanee matrícula").replace("'", "-").strip()
+    st.markdown("<h1 style='text-align: center;'>🚪 CONTROL DE ACCESO AlUMNOS</h1>", unsafe_allow_html=True)
+    
+    # Input para el escáner
+    mat = st.text_input("ESPERANDO ESCANEO DE CREDENCIAL...", key="input_scanner").strip()
 
     if mat:
-        a = df_alumnos[df_alumnos["MATRICULA"] == mat]
+        # Buscar alumno
+        a = df_alumnos[df_alumnos["MATRICULA"].astype(str) == mat]
+        
         if a.empty:
-            st.error("Alumno no encontrado")
+            st.markdown(f"""<div style='background-color:#F2D7D5; padding:30px; border-radius:15px; text-align:center;'>
+                <h1 style='color:#943126;'>❌ MATRÍCULA NO ENCONTRADA</h1>
+                <p>Por favor, acuda a Servicios Escolares.</p>
+                </div>""", unsafe_allow_html=True)
         else:
             al = a.iloc[0]
+            nombre = f"{al['NOMBRE']} {al['PRIMER APELLIDO']}"
+            grupo = al['GRUPO']
+            # Obtener foto (columna FOTO) o usar una por defecto
+            url_foto = al.get('FOTO', "https://cdn-icons-png.flaticon.com/512/3135/3135715.png")
+            
+            # --- DISEÑO DE BIENVENIDA ---
+            st.divider()
+            col1, col2 = st.columns([1, 2])
+            
+            with col1:
+                st.image(url_foto, width=300)
+            
+            with col2:
+                st.markdown(f"<p class='status-acceso'>✅ ACCESO PERMITIDO</p>", unsafe_allow_html=True)
+                st.markdown(f"<p class='nombre-alumno'>{nombre}</p>", unsafe_allow_html=True)
+                st.markdown(f"### GRUPO: {grupo}")
+                st.markdown(f"#### HORA: {datetime.now(zona).strftime('%H:%M:%S')}")
+                st.balloons()
+
+            # Registro automático en la base de datos (Google Sheets)
             payload = {
                 "TIPO_REGISTRO": "ENTRADA",
                 "FECHA": datetime.now(zona).strftime("%Y-%m-%d"),
                 "HORA": datetime.now(zona).strftime("%H:%M:%S"),
                 "MATRICULA": mat,
-                "NOMBRE": f"{al['NOMBRE']} {al['PRIMER APELLIDO']}",
-                "GRUPO": al["GRUPO"],
+                "NOMBRE": nombre,
+                "GRUPO": grupo,
                 "REGISTRO_POR": user["NOMBRE"]
             }
-            requests.post(APPS_SCRIPT_URL, json=payload)
-            st.success("Acceso registrado")
+            try:
+                requests.post(APPS_SCRIPT_URL, json=payload)
+            except:
+                st.warning("Error de conexión al guardar, pero el alumno ha sido verificado.")
 
 # ================= INCIDENCIAS =================
 elif menu == "Incidencias":
@@ -171,6 +200,7 @@ elif menu == "Reportes":
     df_entradas["FECHA"] = pd.to_datetime(df_entradas["FECHA"])
     mensual = df_entradas.groupby(df_entradas["FECHA"].dt.to_period("M")).size()
     st.bar_chart(mensual)
+
 
 
 
