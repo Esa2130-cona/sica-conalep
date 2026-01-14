@@ -19,10 +19,24 @@ GID_ACADEMICO = 1794524153
 
 # ================= UTIL =================
 @st.cache_data(ttl=10)
+@st.cache_data(ttl=10)
 def cargar(gid):
     url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={gid}"
     df = pd.read_csv(url)
-    df.columns = [c.strip().upper() for c in df.columns]
+
+    # Limpiar columnas
+    df.columns = (
+        df.columns
+        .astype(str)
+        .str.strip()
+        .str.upper()
+        .str.replace("Á","A")
+        .str.replace("É","E")
+        .str.replace("Í","I")
+        .str.replace("Ó","O")
+        .str.replace("Ú","U")
+    )
+
     return df
 
 df_alumnos = cargar(GID_ALUMNOS)
@@ -157,6 +171,7 @@ elif menu == "Reportes":
     df_entradas["FECHA"] = pd.to_datetime(df_entradas["FECHA"])
     mensual = df_entradas.groupby(df_entradas["FECHA"].dt.to_period("M")).size()
     st.bar_chart(mensual)
+
 
 
 
