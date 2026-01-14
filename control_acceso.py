@@ -12,7 +12,7 @@ SHEET_ID = "11RZyoBo_MyQkGWfc21WCY_xPFZdKkwTG12YagiZf3yM"
 APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwEzRUIDz4YtnT40VIbAwUs7WOgba0DWjSTYt2d7-QdZKFo3BCetNrB0kSy4Y4w4fTncg/exec"
 
 GID_ALUMNOS = 1882885827
-GID_USUARIOS = 1794524153
+GID_USUARIOS = 921806663
 GID_ENTRADAS = 25814912
 GID_INCIDENCIAS = 2080119575
 GID_ACADEMICO = 1794524153
@@ -171,6 +171,7 @@ elif menu == "Reportes":
     df_entradas["FECHA"] = pd.to_datetime(df_entradas["FECHA"])
     mensual = df_entradas.groupby(df_entradas["FECHA"].dt.to_period("M")).size()
     st.bar_chart(mensual)
+
 
 
 
