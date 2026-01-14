@@ -88,51 +88,55 @@ st.sidebar.button("Cerrar sesión", on_click=lambda: st.session_state.update(use
 
 # ================= PUERTA =================
 if menu == "Puerta de Entrada":
-    st.markdown("<h1 style='text-align: center;'>🚪 CONTROL DE ACCESO AlUMNOS</h1>", unsafe_allow_html=True)
+    st.markdown("<h4 style='text-align: center; color: gray;'>SISTEMA DE CONTROL DE ASISTENCIA</h4>", unsafe_allow_html=True)
     
-    # Input para el escáner
-    mat = st.text_input("ESPERANDO ESCANEO DE CREDENCIAL...", key="input_scanner").strip()
+    # Input oculto para escáner
+    mat = st.text_input("ESCANEE CREDENCIAL", key="main_scanner", help="Coloque el cursor aquí antes de escanear").strip()
 
     if mat:
-        # Buscar alumno
         a = df_alumnos[df_alumnos["MATRICULA"].astype(str) == mat]
         
         if a.empty:
-            st.markdown(f"""<div style='background-color:#F2D7D5; padding:30px; border-radius:15px; text-align:center;'>
-                <h1 style='color:#943126;'>❌ MATRÍCULA NO ENCONTRADA</h1>
-                <p>Por favor, acuda a Servicios Escolares.</p>
+            st.markdown(f"""<div class='error-card'>
+                <h1 style='color:#943126; font-size: 60px;'>❌ MATRÍCULA NO REGISTRADA</h1>
+                <p style='font-size: 30px;'>Consulte al departamento de informática.</p>
                 </div>""", unsafe_allow_html=True)
         else:
             al = a.iloc[0]
-            nombre = f"{al['NOMBRE']} {al['PRIMER APELLIDO']}"
-            grupo = al['GRUPO']
-            # Obtener foto (columna FOTO) o usar una por defecto
-            url_foto = al.get('FOTO', "https://cdn-icons-png.flaticon.com/512/3135/3135715.png")
+            nombre = f"{al['NOMBRE']} {al['PRIMER APELLIDO']} {al.get('SEGUNDO APELLIDO', '')}"
             
-            # --- DISEÑO DE BIENVENIDA ---
+            # Formato Visual Formal
             st.divider()
-            col1, col2 = st.columns([1, 2])
+            col_foto, col_info = st.columns([1, 2.5])
             
-            with col1:
-                st.image(url_foto, width=300)
+            with col_foto:
+                foto_url = al.get('FOTO', "https://cdn-icons-png.flaticon.com/512/3135/3135715.png")
+                st.image(foto_url, use_container_width=True)
             
-            with col2:
-                st.markdown(f"<p class='status-acceso'>✅ ACCESO PERMITIDO</p>", unsafe_allow_html=True)
-                st.markdown(f"<p class='nombre-alumno'>{nombre}</p>", unsafe_allow_html=True)
-                st.markdown(f"### GRUPO: {grupo}")
-                st.markdown(f"#### HORA: {datetime.now(zona).strftime('%H:%M:%S')}")
-                st.balloons()
+            with col_info:
+                st.markdown(f"""
+                <div class='card-acceso'>
+                    <div class='acceso-permitido'>ACCESO PERMITIDO</div>
+                    <div class='nombre-alumno'>{nombre}</div>
+                    <div class='datos-escolares'>
+                        <b>MATRÍCULA:</b> {mat}<br>
+                        <b>GRUPO:</b> {al['GRUPO']}<br>
+                        <b>HORA:</b> {datetime.now(zona).strftime('%H:%M:%S')}
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
 
-            # Registro automático en la base de datos (Google Sheets)
-            payload = {
+            # Registro en Google Sheets
+            requests.post(APPS_SCRIPT_URL, json={
                 "TIPO_REGISTRO": "ENTRADA",
                 "FECHA": datetime.now(zona).strftime("%Y-%m-%d"),
                 "HORA": datetime.now(zona).strftime("%H:%M:%S"),
                 "MATRICULA": mat,
                 "NOMBRE": nombre,
-                "GRUPO": grupo,
+                "GRUPO": al["GRUPO"],
                 "REGISTRO_POR": user["NOMBRE"]
-            }
+            })
+
             try:
                 requests.post(APPS_SCRIPT_URL, json=payload)
             except:
@@ -200,6 +204,7 @@ elif menu == "Reportes":
     df_entradas["FECHA"] = pd.to_datetime(df_entradas["FECHA"])
     mensual = df_entradas.groupby(df_entradas["FECHA"].dt.to_period("M")).size()
     st.bar_chart(mensual)
+
 
 
 
