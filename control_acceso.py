@@ -65,14 +65,18 @@ if user['rol'] in ["Prefectura", "Administrador"]:
         if 'scanned' not in st.session_state: st.session_state.scanned = ""
         
         def on_scan():
-            raw = st.session_state.barcode
-            st.session_state.scanned = raw.replace("'", "-").strip() # CORRECCIÓN DEL LECTOR
+            # Esta función limpia el input
+            st.session_state.scanned = st.session_state.barcode
             st.session_state.barcode = ""
 
-        st.text_input("ESCANEAR CREDENCIAL", key="barcode", on_change=on_scan)
-        mat = st.session_state.scanned
+        st.text_input("👇 ESCANEAR AQUÍ", key="barcode", on_change=on_scan)
+        
+        # --- LA CORRECCIÓN DEFINITIVA AQUÍ ---
+        # Forzamos que 'mat' siempre cambie la comilla por el guion antes de buscar
+        mat = st.session_state.scanned.replace("'", "-").strip()
         
         if mat:
+            # Ahora 'mat' ya no tiene comillas, por lo que entrará aquí:
             if mat in db.index:
                 al = db.loc[mat]
                 c1, c2 = st.columns([1, 2])
@@ -113,4 +117,5 @@ if user['rol'] in ["Servicios Escolares", "Formación Técnica", "Administrador"
         target = st.text_input("Matrícula del alumno a notificar")
         msg = st.text_area("Mensaje del aviso")
         if st.button("Publicar Aviso"):
+
             st.success("El aviso aparecerá la próxima vez que el alumno escanee su credencial.")
