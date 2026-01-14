@@ -315,5 +315,59 @@ elif menu == "Reportes":
             except Exception as e:
                 st.error("❌ Error de conexión con Apps Script")
                 st.exception(e)
+elif menu == "Academico":
+    st.title("📚 Registro Académico")
+
+    matricula = st.text_input("Matrícula del alumno").replace("'", "-").strip()
+
+    alumno = None
+    if matricula:
+        res = df_alumnos[df_alumnos["MATRICULA"] == matricula]
+        if not res.empty:
+            alumno = res.iloc[0]
+            st.success(
+                f"{alumno.get('NOMBRE','')} {alumno.get('PRIMER APELLIDO','')} | "
+                f"Grupo: {alumno.get('GRUPO','')}"
+            )
+        else:
+            st.error("Matrícula no encontrada")
+
+    materia = st.text_input("Materia")
+    periodo = st.selectbox("Periodo", ["1er Parcial", "2do Parcial", "3er Parcial", "Final"])
+    calificacion = st.number_input("Calificación", min_value=0.0, max_value=10.0, step=0.1)
+    observaciones = st.text_area("Observaciones académicas")
+
+    if st.button("Registrar académico"):
+        if not alumno or not materia:
+            st.error("Completa todos los campos obligatorios")
+        else:
+            fecha = datetime.now(zona_horaria).strftime("%Y-%m-%d")
+            hora = datetime.now(zona_horaria).strftime("%H:%M:%S")
+
+            payload = {
+                "TIPO_REGISTRO": "ACADEMICO",
+                "FECHA": fecha,
+                "HORA": hora,
+                "MATRICULA": matricula,
+                "NOMBRE": f"{alumno.get('NOMBRE','')} {alumno.get('PRIMER APELLIDO','')}",
+                "GRUPO": alumno.get("GRUPO", ""),
+                "MATERIA": materia,
+                "PERIODO": periodo,
+                "CALIFICACION": calificacion,
+                "OBSERVACIONES": observaciones,
+                "REGISTRO_POR": user.get("NOMBRE", "")
+            }
+
+            try:
+                r = requests.post(APPS_SCRIPT_URL, json=payload, timeout=10)
+
+                if r.status_code == 200:
+                    st.success("✅ Registro académico guardado")
+                else:
+                    st.error("❌ Error al guardar el registro")
+
+            except Exception as e:
+                st.error("❌ Error de conexión con Apps Script")
+                st.exception(e)
 
 
