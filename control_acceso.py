@@ -3,6 +3,9 @@ import pandas as pd
 from datetime import datetime
 import os
 import pytz
+import requests
+
+APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwwTQehk_CODj_-8ZNeZRu2hYudq66I2FpJR8rqrZ9_6HeFy3I_zPgKIGMGvShua_71GQ/exec"
 
 # --------------------------------------------------
 # 1. CONFIGURACIÓN GENERAL
@@ -283,24 +286,33 @@ elif menu == "Reportes":
 
     descripcion = st.text_area("Descripción del reporte")
 
-    if st.button("Registrar reporte"):
-        if not matricula or alumno is None or not descripcion:
-            st.error("Completa todos los campos correctamente")
-        else:
-            fecha = datetime.now(zona_horaria).strftime("%Y-%m-%d")
-            hora = datetime.now(zona_horaria).strftime("%H:%M:%S")
+   if st.button("Registrar reporte"):
+    if not matricula or alumno is None or not descripcion:
+        st.error("Completa todos los campos correctamente")
+    else:
+        fecha = datetime.now(zona_horaria).strftime("%Y-%m-%d")
+        hora = datetime.now(zona_horaria).strftime("%H:%M:%S")
 
-            nuevo_reporte = {
-                "FECHA": fecha,
-                "HORA": hora,
-                "MATRICULA": matricula,
-                "NOMBRE": f"{alumno.get('NOMBRE','')} {alumno.get('PRIMER APELLIDO','')}",
-                "GRUPO": alumno.get("GRUPO", ""),
-                "TIPO": tipo,
-                "DESCRIPCION": descripcion,
-                "REGISTRO_POR": user.get("NOMBRE", "")
-            }
+        nuevo_reporte = {
+            "FECHA": fecha,
+            "HORA": hora,
+            "MATRICULA": matricula,
+            "NOMBRE": f"{alumno.get('NOMBRE','')} {alumno.get('PRIMER APELLIDO','')}",
+            "GRUPO": alumno.get("GRUPO", ""),
+            "TIPO": tipo,
+            "DESCRIPCION": descripcion,
+            "REGISTRO_POR": user.get("NOMBRE", "")
+        }
 
-            st.success("✅ Reporte listo para guardarse")
-            st.json(nuevo_reporte)
+        try:
+            r = requests.post(APPS_SCRIPT_URL, json=nuevo_reporte, timeout=10)
+
+            if r.status_code == 200:
+                st.success("✅ Reporte registrado correctamente")
+            else:
+                st.error("❌ Error al guardar el reporte")
+
+        except Exception as e:
+            st.error("Error de conexión con el servidor")
+            st.exception(e)
 
