@@ -119,6 +119,9 @@ opciones = ["Puerta de Entrada", "Historial Alumnos"]
 if user.get("ROL") == "ADMIN":
     opciones.append("Administrar Usuarios")
 
+if user["ROL"] in ["ADMIN", "FORMACION", "SERV_ESCOLARES"]:
+    opciones.append("Academico")
+
 if user.get("ROL") in ["PREFECTO", "ADMIN"]:
     opciones.append("Reportes")
 
@@ -369,5 +372,6 @@ elif menu == "Academico":
             except Exception as e:
                 st.error("❌ Error de conexión con Apps Script")
                 st.exception(e)
+
 
 
