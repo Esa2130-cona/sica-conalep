@@ -261,4 +261,57 @@ elif menu == "Administrar Usuarios":
 
     st.divider()
     st.subheader("📋 Usuarios existentes")
-    st.dataframe(df_usuarios, hide_index=True)
+    st.dataframe(df_usuarios, hide_index=True) elif menu == "Reportes":
+    st.title("📝 Registro de Reportes")
+
+    matricula = st.text_input("Matrícula del alumno").replace("'", "-").strip()
+
+    alumno = None
+    if matricula:
+        res = df_alumnos[df_alumnos["MATRICULA"] == matricula]
+        if not res.empty:
+            alumno = res.iloc[0]
+            st.success(
+                f"Alumno: {alumno.get('NOMBRE','')} {alumno.get('PRIMER APELLIDO','')} | "
+                f"Grupo: {alumno.get('GRUPO','')}"
+            )
+        else:
+            st.error("Matrícula no encontrada")
+
+    tipo = st.selectbox(
+        "Tipo de reporte",
+        ["Disciplina", "Conducta", "Uniforme", "Asistencia", "Otro"]
+    )
+
+    descripcion = st.text_area("Descripción del reporte")
+
+    if st.button("Registrar reporte"):
+        if not matricula or alumno is None or not descripcion:
+            st.error("Completa todos los campos correctamente")
+        else:
+            fecha = datetime.now(zona_horaria).strftime("%Y-%m-%d")
+            hora = datetime.now(zona_horaria).strftime("%H:%M:%S")
+
+            nuevo_reporte = {
+                "FECHA": fecha,
+                "HORA": hora,
+                "MATRICULA": matricula,
+                "NOMBRE": f"{alumno.get('NOMBRE','')} {alumno.get('PRIMER APELLIDO','')}",
+                "GRUPO": alumno.get("GRUPO", ""),
+                "TIPO": tipo,
+                "DESCRIPCION": descripcion,
+                "REGISTRO_POR": user.get("NOMBRE", "")
+            }
+
+            try:
+                r = requests.post(APPS_SCRIPT_URL, json=nuevo_reporte, timeout=10)
+
+                if r.status_code == 200:
+                    st.success("✅ Reporte registrado correctamente")
+                else:
+                    st.error("❌ Error al guardar el reporte")
+
+            except Exception as e:
+                st.error("❌ Error de conexión con Apps Script")
+                st.exception(e)
+
