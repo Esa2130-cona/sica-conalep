@@ -8,7 +8,7 @@ import pytz
 st.set_page_config(page_title="SICA CONALEP", layout="wide")
 zona = pytz.timezone("America/Mexico_City")
 
-SHEET_ID = "TU_SHEET_ID"
+SHEET_ID = "11RZyoBo_MyQkGWfc21WCY_xPFZdKkwTG12YagiZf3yM"
 APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwwTQehk_CODj_-8ZNeZRu2hYudq66I2FpJR8rqrZ9_6HeFy3I_zPgKIGMGvShua_71GQ/exec"
 
 GID_ALUMNOS = 0
@@ -157,4 +157,5 @@ elif menu == "Reportes":
     df_entradas["FECHA"] = pd.to_datetime(df_entradas["FECHA"])
     mensual = df_entradas.groupby(df_entradas["FECHA"].dt.to_period("M")).size()
     st.bar_chart(mensual)
+
 
