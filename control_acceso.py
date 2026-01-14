@@ -138,19 +138,19 @@ elif rol == "FORMACION":
 menu = st.sidebar.radio("MENÚ", sorted(opciones))
 
 if user.get("ROL") == "ADMIN":
-    opciones.append("Administrar Usuarios")
+    opciones.add("Administrar Usuarios")
 
 if user["ROL"] in ["ADMIN", "FORMACION", "SERV_ESCOLARES"]:
-    opciones.append("Academico")
+    opciones.add("Academico")
 
 if user.get("ROL") in ["PREFECTO", "ADMIN"]:
-    opciones.append("Reportes")
+    opciones.add("Reportes")
 
 if user.get("ROL") in ["SERV_ESCOLARES", "ADMIN"]:
-    opciones.append("Incidencias")
+    opciones.add("Incidencias")
 
 if user.get("ROL") in ["FORMACION", "ADMIN"]:
-    opciones.append("Academico")
+    opciones.add("Academico")
 
 menu = st.sidebar.radio("MENÚ", opciones)
 if st.sidebar.button("Cerrar Sesión"):
@@ -393,6 +393,7 @@ elif menu == "Academico":
             except Exception as e:
                 st.error("❌ Error de conexión con Apps Script")
                 st.exception(e)
+
 
 
 
