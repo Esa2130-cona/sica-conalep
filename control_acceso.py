@@ -154,24 +154,6 @@ if user.get("ROL") in ["FORMACION", "ADMIN"]:
 # --------------------------------------------------
 # 5. PUERTA DE ENTRADA
 # --------------------------------------------------
-if mat:
-    res = df_alumnos[df_alumnos['MATRICULA'] == mat]
-    if not res.empty:
-        al = res.iloc[0]
-
-        payload = {
-            "TIPO_REGISTRO": "ENTRADA",
-            "FECHA": datetime.now(zona_horaria).strftime("%Y-%m-%d"),
-            "HORA": datetime.now(zona_horaria).strftime("%H:%M:%S"),
-            "MATRICULA": mat,
-            "NOMBRE": f"{al.get('NOMBRE','')} {al.get('PRIMER APELLIDO','')}",
-            "GRUPO": al.get("GRUPO", ""),
-            "REGISTRO_POR": user.get("NOMBRE", "")
-        }
-
-        requests.post(APPS_SCRIPT_URL, json=payload)
-
-        st.success("✅ Acceso registrado")
 if menu == "Puerta de Entrada":
     st.title("🚀 Registro de Acceso")
 
@@ -445,6 +427,7 @@ elif menu == "Incidencias":
                     st.success("✅ Incidencia registrada correctamente")
                 else:
                     st.error("❌ Error al registrar incidencia")
+
 
 
 
