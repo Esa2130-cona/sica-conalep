@@ -4,23 +4,39 @@ import requests
 from datetime import datetime
 import pytz
 import threading
+import base64
 
 # ================= CONFIGURACIÓN =================
 st.set_page_config(page_title="SICA CONALEP CUAUTLA", layout="wide")
 zona = pytz.timezone("America/Mexico_City")
 
-# ESTILOS FORMALES E INSTITUCIONALES
+# ESTILOS FORMALES E INSTITUCIONALES (Incluye Alerta Roja)
 st.markdown("""
     <style>
     .card-acceso {
         background-color: white; padding: 40px; border-radius: 20px;
         border-left: 15px solid #1E8449; box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     }
+    .card-error {
+        background-color: #FDEDEC; padding: 40px; border-radius: 20px;
+        border: 5px solid #CB4335; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
     .acceso-permitido { color: #1E8449; font-size: 65px !important; font-weight: 900; line-height: 1; }
+    .acceso-denegado { color: #CB4335; font-size: 75px !important; font-weight: 900; }
     .nombre-alumno { color: #1B4F72; font-size: 75px !important; font-weight: bold; text-transform: uppercase; line-height: 1.1; }
+    .msg-error { color: #943126; font-size: 50px !important; font-weight: bold; }
     .datos-escolares { color: #566573; font-size: 35px !important; margin-top: 10px; }
     </style>
     """, unsafe_allow_html=True)
+
+# Función para reproducir sonido de alerta
+def play_audio(file_url):
+    audio_html = f"""
+        <audio autoplay>
+            <source src="{file_url}" type="audio/mp3">
+        </audio>
+    """
+    st.components.v1.html(audio_html, height=0)
 
 SHEET_ID = "11RZyoBo_MyQkGWfc21WCY_xPFZdKkwTG12YagiZf3yM"
 APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwEzRUIDz4YtnT40VIbAwUs7WOgba0DWjSTYt2d7-QdZKFo3BCetNrB0kSy4Y4w4fTncg/exec"
@@ -88,13 +104,21 @@ if menu == "Puerta de Entrada":
 
     st.text_input("Esperando lectura...", key="temp_input", on_change=procesar_escaneo)
     
-    # CORRECCIÓN DE ESCÁNER (Comilla por Guion)
     mat = st.session_state.input_val.replace("'", "-").strip()
 
     if mat:
         a = df_alumnos[df_alumnos["MATRICULA"].astype(str) == mat]
+        
         if a.empty:
-            st.error(f"❌ MATRÍCULA {mat} NO REGISTRADA")
+            # --- ALERTA VISUAL Y SONORA DE ERROR ---
+            play_audio("https://www.soundjay.com/buttons/beep-04.mp3") # Sonido de alerta
+            st.markdown(f"""
+                <div class='card-error'>
+                    <div class='acceso-denegado'>🚫 ACCESO NO PERMITIDO</div>
+                    <div class='msg-error'>MATRÍCULA NO REGISTRADA O BAJA</div>
+                    <p style='font-size:30px;'>La matrícula <b>{mat}</b> no existe en la base de datos.</p>
+                </div>
+            """, unsafe_allow_html=True)
         else:
             al = a.iloc[0]
             nombre = f"{al['NOMBRE']} {al['PRIMER APELLIDO']} {al.get('SEGUNDO APELLIDO', '')}"
@@ -102,7 +126,13 @@ if menu == "Puerta de Entrada":
             c1, c2 = st.columns([1, 2.5])
             with c1: st.image(al.get('FOTO', "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"), use_container_width=True)
             with c2:
-                st.markdown(f"<div class='card-acceso'><div class='acceso-permitido'>ACCESO PERMITIDO</div><div class='nombre-alumno'>{nombre}</div><div class='datos-escolares'><b>GRUPO:</b> {al['GRUPO']}<br><b>HORA:</b> {datetime.now(zona).strftime('%H:%M:%S')}</div></div>", unsafe_allow_html=True)
+                st.markdown(f"""
+                <div class='card-acceso'>
+                    <div class='acceso-permitido'>✅ ACCESO PERMITIDO</div>
+                    <div class='nombre-alumno'>{nombre}</div>
+                    <div class='datos-escolares'><b>GRUPO:</b> {al['GRUPO']}<br><b>HORA:</b> {datetime.now(zona).strftime('%H:%M:%S')}</div>
+                </div>
+                """, unsafe_allow_html=True)
             
             payload = {"TIPO_REGISTRO": "ENTRADA", "FECHA": datetime.now(zona).strftime("%Y-%m-%d"), "HORA": datetime.now(zona).strftime("%H:%M:%S"), "MATRICULA": mat, "NOMBRE": nombre, "GRUPO": al["GRUPO"], "REGISTRO_POR": user["NOMBRE"]}
             threading.Thread(target=enviar_registro_background, args=(payload,)).start()
@@ -110,8 +140,7 @@ if menu == "Puerta de Entrada":
 elif menu == "Incidencias":
     st.title("🚨 Registro de Incidencias")
     df_alumnos = cargar(GIDS["ALUMNOS"])
-    # CORRECCIÓN AQUÍ TAMBIÉN
-    mat_i = st.text_input("Escanee o ingrese matrícula").replace("'", "-").strip()
+    mat_i = st.text_input("Escanee o ingrese matrícula", key="inc_input").replace("'", "-").strip()
     if mat_i:
         res = df_alumnos[df_alumnos["MATRICULA"].astype(str) == mat_i]
         if not res.empty:
@@ -130,8 +159,7 @@ elif menu == "Incidencias":
 
 elif menu == "Academico":
     st.title("📚 Módulo Académico")
-    # CORRECCIÓN AQUÍ TAMBIÉN
-    mat_a = st.text_input("Escanee matrícula del alumno").replace("'", "-").strip()
+    mat_a = st.text_input("Escanee matrícula del alumno", key="acad_input").replace("'", "-").strip()
     materia = st.text_input("Materia")
     cal = st.number_input("Calificación", 0, 100)
     if st.button("Registrar Calificación"):
@@ -142,12 +170,6 @@ elif menu == "Academico":
 elif menu == "Historial Alumnos":
     st.title("📊 Consultas de Historial")
     df_entradas = cargar(GIDS["ENTRADAS"])
-    # CORRECCIÓN AQUÍ TAMBIÉN
-    m_busq = st.text_input("Escanee matrícula para buscar").replace("'", "-").strip()
+    m_busq = st.text_input("Escanee matrícula para buscar", key="hist_input").replace("'", "-").strip()
     if m_busq:
         st.dataframe(df_entradas[df_entradas["MATRICULA"].astype(str) == m_busq], use_container_width=True)
-
-
-
-
-
