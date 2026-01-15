@@ -213,7 +213,7 @@ if st.session_state.resultado:
 
 
 # ================= INCIDENCIAS =================
-    elif menu == "Reportes":
+elif menu == "Reportes":
     df = cargar(GIDS["ALUMNOS"])
 
     # ---- estados del formulario ----
@@ -345,6 +345,7 @@ elif menu == "Historial Alumnos":
                 reportes.sort_values("FECHA", ascending=False),
                 use_container_width=True
             )
+
 
 
 
