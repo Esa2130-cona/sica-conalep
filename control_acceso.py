@@ -263,7 +263,7 @@ elif menu == "Usuarios":
     with st.form("nuevo"):
         u = st.text_input("Usuario")
         p = st.text_input("PIN")
-        r = st.selectbox("Rol",["ADMIN","PREFECTO"])
+        r = st.selectbox("Rol",["ADMIN","PREFECTO","DIRECTOR"])
         if st.form_submit_button("Crear"):
             enviar ({"TIPO_REGISTRO":"USUARIO","USUARIO":u,"PIN":p,"ROL":r})
 
@@ -396,6 +396,7 @@ elif menu == "Dashboard Director":
     st.subheader("👤 Alumnos con más reportes")
 
     top_al_
+
 
 
 
