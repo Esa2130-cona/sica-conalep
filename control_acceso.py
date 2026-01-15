@@ -237,9 +237,8 @@ elif menu == "Reportes":
             )
 
             obs = st.text_area("Descripción", key="rep_desc")
-
-         if st.button("Guardar reporte"):
-    enviar({
+        if st.button("Guardar reporte"):
+             enviar({
         "TIPO_REGISTRO": "REPORTE",
         "FECHA": datetime.now(zona).strftime("%Y-%m-%d"),
         "HORA": datetime.now(zona).strftime("%H:%M:%S"),
@@ -331,6 +330,7 @@ elif menu == "Historial Alumnos":
                 reportes.sort_values("FECHA", ascending=False),
                 use_container_width=True
             )
+
 
 
 
