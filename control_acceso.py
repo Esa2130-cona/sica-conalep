@@ -316,17 +316,6 @@ elif menu == "Historial Alumnos":
             )
 
 
-        # ===== REPORTES =====
-        st.subheader("🚨 Historial de Reportes")
-
-        if reportes.empty:
-            st.success("Este alumno no tiene reportes registrados")
-        else:
-            st.dataframe(
-                reportes.sort_values("FECHA", ascending=False),
-                use_container_width=True
-            )
-
 
 
 
