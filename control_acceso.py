@@ -66,6 +66,11 @@ rol = user.get("ROL","").upper()
 # ================= DATA GLOBAL =================
 df_reportes = cargar(GIDS["REPORTES"])
 df_reportes.columns = [c.strip().upper() for c in df_reportes.columns]
+if "NIVEL" not in df_reportes.columns:
+    df_reportes["NIVEL"] = ""
+
+df_reportes["NIVEL"] = df_reportes["NIVEL"].astype(str)
+
 
 # ===== Inicialización segura de estados globales =====
 
@@ -454,6 +459,7 @@ elif menu == "Dashboard Director":
         )
 
         st.dataframe(top_al.head(10), use_container_width=True)
+
 
 
 
