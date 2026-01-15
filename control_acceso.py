@@ -212,40 +212,36 @@ if st.session_state.resultado:
         st.session_state.resultado = None
 
 
-# ================= INCIDENCIAS =================
+# ================= REPORTES =================
 elif menu == "Reportes":
+    st.title("🚨 Registro de Reportes")
+
     df = cargar(GIDS["ALUMNOS"])
 
-    # ---- estados del formulario ----
-    if "rep_mat" not in st.session_state:
-        st.session_state.rep_mat = ""
-    if "rep_tipo" not in st.session_state:
-        st.session_state.rep_tipo = "Retardo"
-    if "rep_desc" not in st.session_state:
-        st.session_state.rep_desc = ""
-    if "rep_guardado" not in st.session_state:
-        st.session_state.rep_guardado = False
+    with st.form("form_reportes", clear_on_submit=True):
 
-    mat = st.text_input("Matrícula", key="rep_mat").strip()
+        mat = st.text_input("Matrícula")
 
-    if mat:
-        a = df[df["MATRICULA"].astype(str) == mat]
+        tipo = st.selectbox(
+            "Tipo de reporte",
+            ["Retardo", "Falta", "Uniforme", "Conducta"]
+        )
 
-        if not a.empty:
-            tipo = st.selectbox(
-                "Tipo de reporte",
-                ["Retardo", "Falta", "Uniforme", "Conducta"],
-                key="rep_tipo"
-            )
+        obs = st.text_area("Descripción")
 
-            obs = st.text_area("Descripción", key="rep_desc")
+        guardar = st.form_submit_button("Guardar reporte")
 
-            if st.button("Guardar reporte"):
+        if guardar:
+            a = df[df["MATRICULA"].astype(str) == mat.strip()]
+
+            if a.empty:
+                st.error("Matrícula no encontrada")
+            else:
                 enviar({
                     "TIPO_REGISTRO": "REPORTE",
                     "FECHA": datetime.now(zona).strftime("%Y-%m-%d"),
                     "HORA": datetime.now(zona).strftime("%H:%M:%S"),
-                    "MATRICULA": mat,
+                    "MATRICULA": mat.strip(),
                     "NOMBRE": a.iloc[0]["NOMBRE"],
                     "GRUPO": a.iloc[0]["GRUPO"],
                     "TIPO": tipo,
@@ -253,25 +249,7 @@ elif menu == "Reportes":
                     "REGISTRADO_POR": user["USUARIO"]
                 })
 
-                # marcar como guardado
-                st.session_state.rep_guardado = True
-
-        else:
-            st.error("Matrícula no encontrada")
-
-    # ---- LIMPIEZA SEGURA (FUERA DEL BOTÓN) ----
-    if st.session_state.rep_guardado:
-        st.success("Reporte registrado correctamente")
-
-        # limpiar SOLO campos del formulario
-        st.session_state.rep_mat = ""
-        st.session_state.rep_tipo = "Retardo"
-        st.session_state.rep_desc = ""
-        st.session_state.rep_guardado = False
-
-        st.rerun()
-
-
+                st.success("Reporte registrado correctamente")
 
 
 # ================= USUARIOS =================
@@ -345,6 +323,7 @@ elif menu == "Historial Alumnos":
                 reportes.sort_values("FECHA", ascending=False),
                 use_container_width=True
             )
+
 
 
 
