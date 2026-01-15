@@ -176,7 +176,7 @@ if menu == "Puerta de Entrada":
     df.columns = [c.strip().upper() for c in df.columns]
 
 # 🔥 NORMALIZAR MATRÍCULAS DE LA BASE
-df["MATRICULA"] = (
+    df["MATRICULA"] = (
     df["MATRICULA"]
     .astype(str)
     .apply(normalizar_matricula)
@@ -489,6 +489,7 @@ elif menu == "Dashboard Director":
         )
 
         st.dataframe(top_al.head(10), use_container_width=True)
+
 
 
 
