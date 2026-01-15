@@ -81,7 +81,8 @@ if menu == "Puerta de Entrada":
         st.session_state.scan_input = ""
     if "resultado" not in st.session_state:
         st.session_state.resultado = None
-        def procesar_scan():
+        def 
+        procesar_scan():
     mat = st.session_state.scan_input.strip()
     st.session_state.scan_input = ""
 
@@ -234,6 +235,7 @@ elif menu == "Historial Alumnos":
     m = st.text_input("Matrícula").strip()
     if m:
         st.dataframe(df[df["MATRICULA"].astype(str)==m])
+
 
 
 
