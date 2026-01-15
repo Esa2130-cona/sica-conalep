@@ -22,7 +22,7 @@ st.markdown("""<style>
 
 # ================= CONFIG =================
 SHEET_ID = "11RZyoBo_MyQkGWfc21WCY_xPFZdKkwTG12YagiZf3yM"
-APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby-XlfNHDU-1BjAQ7MZJxFI8H8n1ueThOfP6qofdn7kvWcT6LXbpYB__Vv4QWkbK4hFQQ/exec"
+APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwHiXcSKzIjrUAt3acJmdvUFAHGBU0mHljLsbSYeetytYJUOdZoFHd-mQJD2k5VO85m1A/exec"
 
 GIDS = {
     "ALUMNOS": 1882885827,
@@ -232,43 +232,72 @@ if st.session_state.resultado:
 
 
 # ================= REPORTES =================
+df_reportes = cargar(GIDS["REPORTES"])
+df_reportes.columns = [c.strip().upper() for c in df_reportes.columns]
+
 elif menu == "Reportes":
-    st.title("🚨 Registro de Reportes")
-
     df = cargar(GIDS["ALUMNOS"])
+    df_r = df_reportes
 
-    with st.form("form_reportes", clear_on_submit=True):
+    if "rep_mat" not in st.session_state:
+        st.session_state.rep_mat = ""
+    if "rep_tipo" not in st.session_state:
+        st.session_state.rep_tipo = "Conducta"
+    if "rep_desc" not in st.session_state:
+        st.session_state.rep_desc = ""
 
-        mat = st.text_input("Matrícula")
+    mat = st.text_input("Matrícula", key="rep_mat").strip()
 
-        tipo = st.selectbox(
-            "Tipo de reporte",
-            ["Retardo", "Falta", "Uniforme", "Conducta"]
-        )
+    if mat:
+        a = df[df["MATRICULA"].astype(str) == mat]
 
-        obs = st.text_area("Descripción")
+        if not a.empty:
+            llamadas = df_r[
+                (df_r["MATRICULA"].astype(str) == mat) &
+                (df_r["NIVEL"].str.contains("LLAMADA", na=False))
+            ]
 
-        guardar = st.form_submit_button("Guardar reporte")
+            num_llamadas = len(llamadas)
 
-        if guardar:
-            a = df[df["MATRICULA"].astype(str) == mat.strip()]
-
-            if a.empty:
-                st.error("Matrícula no encontrada")
+            if num_llamadas == 0:
+                nivel = "LLAMADA 1"
+            elif num_llamadas == 1:
+                nivel = "LLAMADA 2"
+            elif num_llamadas == 2:
+                nivel = "LLAMADA 3"
             else:
+                nivel = "REPORTE"
+
+            st.info(f"📌 Nivel actual: {nivel}")
+
+            tipo = st.selectbox(
+                "Tipo de incidencia",
+                ["Conducta", "Uniforme", "Retardo", "Falta"],
+                key="rep_tipo"
+            )
+
+            obs = st.text_area("Descripción", key="rep_desc")
+
+            if st.button("Guardar"):
                 enviar({
                     "TIPO_REGISTRO": "REPORTE",
                     "FECHA": datetime.now(zona).strftime("%Y-%m-%d"),
                     "HORA": datetime.now(zona).strftime("%H:%M:%S"),
-                    "MATRICULA": mat.strip(),
+                    "MATRICULA": mat,
                     "NOMBRE": a.iloc[0]["NOMBRE"],
                     "GRUPO": a.iloc[0]["GRUPO"],
+                    "NIVEL": nivel,
                     "TIPO": tipo,
                     "DESCRIPCION": obs,
                     "REGISTRADO_POR": user["USUARIO"]
                 })
 
-                st.success("Reporte registrado correctamente")
+                st.success("Registro guardado")
+
+                st.session_state.rep_mat = ""
+                st.session_state.rep_desc = ""
+                st.rerun()
+
 
 
 # ================= USUARIOS =================
@@ -423,6 +452,7 @@ elif menu == "Dashboard Director":
         )
 
         st.dataframe(top_al.head(10), use_container_width=True)
+
 
 
 
