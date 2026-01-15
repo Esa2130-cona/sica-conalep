@@ -28,7 +28,7 @@ GIDS = {
     "ALUMNOS": 1882885827,
     "USUARIOS": 921806663,
     "ENTRADAS": 25814912,
-    "REPORTES": 2080119575,
+    "REPORTES": 1066783902,
     "ACADEMICO": 1794524153
 }
 
@@ -325,6 +325,7 @@ elif menu == "Historial Alumnos":
                 reportes.sort_values("FECHA", ascending=False),
                 use_container_width=True
             )
+
 
 
 
