@@ -77,7 +77,7 @@ if menu == "Puerta de Entrada":
     if "scan" not in st.session_state:
         st.session_state.scan = ""
 
-    st.text_input("Esperando lectura...", key="scan", autofocus=True)
+    st.text_input("Esperando lectura...", key="scan",)
 
     mat = st.session_state.scan.strip()
     if mat:
@@ -138,5 +138,6 @@ elif menu == "Historial Alumnos":
     m = st.text_input("Matrícula").strip()
     if m:
         st.dataframe(df[df["MATRICULA"].astype(str)==m])
+
 
 
