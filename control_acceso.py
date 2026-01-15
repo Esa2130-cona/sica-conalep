@@ -176,23 +176,24 @@ if menu == "Puerta de Entrada":
                 "mensaje": "MATRÍCULA NO ENCONTRADA"
             }
         else:
-            al = a.iloc[0]
+             al = a.iloc[0]
 
-            st.session_state.resultado = {
-                "tipo": "ok",
-                "alumno": al
-            }
+           # ✅ GUARDAR ENTRADA (KIOSKO / ADMIN)
+           enviar({
+        "TIPO_REGISTRO": "ENTRADA",
+        "FECHA": datetime.now(zona).strftime("%Y-%m-%d"),
+        "HORA": datetime.now(zona).strftime("%H:%M:%S"),
+        "MATRICULA": al["MATRICULA"],
+        "NOMBRE": al["NOMBRE"],
+        "GRUPO": al["GRUPO"],
+        "REGISTRO_POR": user["USUARIO"]
+    })
 
-            payload = {
-                "TIPO_REGISTRO": "ENTRADA",
-                "FECHA_REGISTRO": datetime.now(zona).strftime("%Y-%m-%d %H:%M:%S"),
-                "FECHA": datetime.now(zona).strftime("%Y-%m-%d"),
-                "HORA": datetime.now(zona).strftime("%H:%M:%S"),
-                "MATRICULA": str(al["MATRICULA"]),
-                "NOMBRE": al["NOMBRE"],
-                "GRUPO": al["GRUPO"],
-                "REGISTRO_POR": user["USUARIO"]
-            }
+    st.session_state.resultado = {
+        "tipo": "ok",
+        "mensaje": f"ACCESO PERMITIDO: {al['NOMBRE']}",
+        "alumno": al
+    }
 
             threading.Thread(target=enviar, args=(payload,)).start()
 
@@ -525,6 +526,7 @@ elif menu == "Dashboard Director":
         )
 
         st.dataframe(top_al.head(10), use_container_width=True)
+
 
 
 
