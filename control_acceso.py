@@ -1,3 +1,4 @@
+# ================= IMPORTS =================
 import streamlit as st
 import pandas as pd
 import requests
@@ -5,7 +6,7 @@ from datetime import datetime
 import pytz
 import threading
 import time 
-
+# ================= CONFIG =================
 st.set_page_config(page_title="SICA CONALEP CUAUTLA", layout="wide")
 zona = pytz.timezone("America/Mexico_City")
 
@@ -458,6 +459,7 @@ elif menu == "Dashboard Director":
         )
 
         st.dataframe(top_al.head(10), use_container_width=True)
+
 
 
 
