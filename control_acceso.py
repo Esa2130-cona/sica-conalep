@@ -213,28 +213,31 @@ if st.session_state.resultado:
 
 
 # ================= INCIDENCIAS =================
-elif menu == "Reportes":
+    elif menu == "Reportes":
     df = cargar(GIDS["ALUMNOS"])
     mat = st.text_input("Matrícula").strip()
-    if mat:
-        a = df[df["MATRICULA"].astype(str)==mat]
-        if not a.empty:
-            tipo = st.selectbox("Tipo",["Retardo","Falta","Uniforme","Conducta"])
-            obs = st.text_area("Observaciones")
-            if st.button("Guardar"):
-              enviar({
-    "TIPO_REGISTRO": "INCIDENCIA",
-    "FECHA": datetime.now(zona).strftime("%Y-%m-%d"),
-    "HORA": datetime.now(zona).strftime("%H:%M:%S"),
-    "MATRICULA": mat,
-    "NOMBRE": a.iloc[0]["NOMBRE"],
-    "GRUPO": a.iloc[0]["GRUPO"],
-    "TIPO": tipo,
-    "DESCRIPCION": obs,
-    "REGISTRADO_POR": user["USUARIO"]
-})
 
-                st.success("Incidencia registrada")
+    if mat:
+        a = df[df["MATRICULA"].astype(str) == mat]
+
+        if not a.empty:
+            tipo = st.selectbox("Tipo", ["Retardo", "Falta", "Uniforme", "Conducta"])
+            obs = st.text_area("Descripción")
+
+            if st.button("Guardar"):
+                enviar({
+                    "TIPO_REGISTRO": "REPORTE",
+                    "FECHA": datetime.now(zona).strftime("%Y-%m-%d"),
+                    "HORA": datetime.now(zona).strftime("%H:%M:%S"),
+                    "MATRICULA": mat,
+                    "NOMBRE": a.iloc[0]["NOMBRE"],
+                    "GRUPO": a.iloc[0]["GRUPO"],
+                    "TIPO": tipo,
+                    "DESCRIPCION": obs,
+                    "REGISTRADO_POR": user["USUARIO"]
+                })
+
+                st.success("Reporte registrado")
 
 # ================= USUARIOS =================
 elif menu == "Usuarios":
@@ -267,6 +270,7 @@ elif menu == "Historial Alumnos":
     m = st.text_input("Matrícula").strip()
     if m:
         st.dataframe(df[df["MATRICULA"].astype(str)==m])
+
 
 
 
