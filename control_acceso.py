@@ -259,7 +259,10 @@ if st.session_state.resultado:
 
 # ================= REPORTES =================
 elif menu == "Reportes":
-
+        # ✅ Mostrar mensaje después de guardar
+    if st.session_state.msg_reporte_ok:
+        st.success("✅ Registro guardado correctamente")
+        st.session_state.msg_reporte_ok = False
     # 🔄 Limpiar campos si se guardó un reporte
     if st.session_state.limpiar_reporte:
         st.session_state.rep_mat = ""
@@ -311,23 +314,27 @@ elif menu == "Reportes":
 
             obs = st.text_area("Descripción", key="rep_desc")
 
-            if st.button("Guardar"):
-                enviar({
-                    "TIPO_REGISTRO": "REPORTE",
-                    "FECHA": datetime.now(zona).strftime("%Y-%m-%d"),
-                    "HORA": datetime.now(zona).strftime("%H:%M:%S"),
-                    "MATRICULA": mat,
-                    "NOMBRE": a.iloc[0]["NOMBRE"],
-                    "GRUPO": a.iloc[0]["GRUPO"],
-                    "NIVEL": nivel,
-                    "TIPO": tipo,
-                    "DESCRIPCION": obs,
-                    "REGISTRADO_POR": user["USUARIO"]
-                })
+           if st.button("Guardar"):
+    enviar({
+        "TIPO_REGISTRO": "REPORTE",
+        "FECHA": datetime.now(zona).strftime("%Y-%m-%d"),
+        "HORA": datetime.now(zona).strftime("%H:%M:%S"),
+        "MATRICULA": mat,
+        "NOMBRE": a.iloc[0]["NOMBRE"],
+        "GRUPO": a.iloc[0]["GRUPO"],
+        "NIVEL": nivel,
+        "TIPO": tipo,
+        "DESCRIPCION": obs,
+        "REGISTRADO_POR": user["USUARIO"]
+    })
 
-                st.success("Registro guardado correctamente")
-                st.session_state.limpiar_reporte = True
-                st.rerun()
+    # 👉 activar mensaje
+    st.session_state.msg_reporte_ok = True
+
+    # 👉 limpiar formulario
+    st.session_state.limpiar_reporte = True
+
+    st.rerun()
 
 # ================= USUARIOS =================
 elif menu == "Usuarios":
@@ -481,6 +488,7 @@ elif menu == "Dashboard Director":
         )
 
         st.dataframe(top_al.head(10), use_container_width=True)
+
 
 
 
