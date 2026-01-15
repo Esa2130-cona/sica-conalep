@@ -175,6 +175,14 @@ if menu == "Puerta de Entrada":
     df = cargar(GIDS["ALUMNOS"])
     df.columns = [c.strip().upper() for c in df.columns]
 
+# 🔥 NORMALIZAR MATRÍCULAS DE LA BASE
+df["MATRICULA"] = (
+    df["MATRICULA"]
+    .astype(str)
+    .apply(normalizar_matricula)
+)
+
+
     st.markdown("<h4 style='text-align:center;'>ESCANEE CREDENCIAL</h4>", unsafe_allow_html=True)
 
     if "scan_input" not in st.session_state:
@@ -183,13 +191,15 @@ if menu == "Puerta de Entrada":
         st.session_state.resultado = None
 
     def procesar_scan():
-        mat = st.session_state.scan_input.strip()
+        mat = normalizar_matricula(st.session_state.scan_input)
+
         st.session_state.scan_input = ""
 
         if not mat:
             return
 
-        a = df[df["MATRICULA"].astype(str).str.strip() == mat]
+        a = df[df["MATRICULA"] == mat]
+
 
         if a.empty:
             st.session_state.resultado = {
@@ -479,6 +489,7 @@ elif menu == "Dashboard Director":
         )
 
         st.dataframe(top_al.head(10), use_container_width=True)
+
 
 
 
