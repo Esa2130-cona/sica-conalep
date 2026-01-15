@@ -103,6 +103,20 @@ if menu == "Puerta de Entrada":
                 "mensaje": f"ACCESO PERMITIDO: {al['NOMBRE']}",
                 "alumno": al
             }
+                # ===== REGISTRO DE ENTRADA (GUARDAR EN SHEETS) =====
+    payload = {
+        "TIPO_REGISTRO": "ENTRADA",
+        "FECHA_REGISTRO": datetime.now(zona).strftime("%Y-%m-%d %H:%M:%S"),
+        "FECHA": datetime.now(zona).strftime("%Y-%m-%d"),
+        "HORA": datetime.now(zona).strftime("%H:%M:%S"),
+        "MATRICULA": al["MATRICULA"],
+        "NOMBRE": al["NOMBRE"],
+        "GRUPO": al["GRUPO"],
+        "REGISTRO_POR": user["USUARIO"]
+    }
+
+    threading.Thread(target=enviar, args=(payload,)).start()
+
 
     st.text_input(
         "Esperando lectura...",
@@ -218,6 +232,7 @@ elif menu == "Historial Alumnos":
     m = st.text_input("Matrícula").strip()
     if m:
         st.dataframe(df[df["MATRICULA"].astype(str)==m])
+
 
 
 
