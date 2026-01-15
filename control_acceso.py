@@ -9,6 +9,19 @@ import time
 st.set_page_config(page_title="SICA CONALEP CUAUTLA", layout="wide")
 zona = pytz.timezone("America/Mexico_City")
 
+# ---------------- ESTADOS GLOBALES ----------------
+if "user" not in st.session_state:
+    st.session_state.user = None
+
+if "msg_reporte_ok" not in st.session_state:
+    st.session_state.msg_reporte_ok = False
+
+if "limpiar_reporte" not in st.session_state:
+    st.session_state.limpiar_reporte = False
+
+
+
+
 # ================= ESTILOS (NO TOCADO) =================
 st.markdown("""<style>
 .card-acceso {background:white;padding:40px;border-radius:20px;border-left:15px solid #1E8449;}
@@ -468,6 +481,7 @@ elif menu == "Dashboard Director":
         )
 
         st.dataframe(top_al.head(10), use_container_width=True)
+
 
 
 
