@@ -28,7 +28,7 @@ GIDS = {
     "ALUMNOS": 1882885827,
     "USUARIOS": 921806663,
     "ENTRADAS": 25814912,
-    "INCIDENCIAS": 2080119575,
+    "REPORTES": 2080119575,
     "ACADEMICO": 1794524153
 }
 
@@ -282,7 +282,7 @@ elif menu == "Historial Alumnos":
     st.title("📊 Historial del Alumno")
 
     df_e = cargar(GIDS["ENTRADAS"])
-    df_r = cargar(GIDS["INCIDENCIAS"])  # REPORTES
+    df_r = cargar(GIDS["REPORTES"])  # REPORTES
 
     df_e.columns = [c.strip().upper() for c in df_e.columns]
     df_r.columns = [c.strip().upper() for c in df_r.columns]
@@ -323,6 +323,7 @@ elif menu == "Historial Alumnos":
                 reportes.sort_values("FECHA", ascending=False),
                 use_container_width=True
             )
+
 
 
 
