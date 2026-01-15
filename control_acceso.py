@@ -82,7 +82,7 @@ if menu == "Puerta de Entrada":
     mat = st.session_state.scan.strip()
     if mat:
         st.session_state.scan = ""
-       a = df[df["MATRICULA"].astype(str).str.strip() == mat]
+        a = df[df["MATRICULA"].astype(str).str.strip() == mat]
         if not a.empty:
             al = a.iloc[0]
             nombre = f"{al['NOMBRE']} {al['PRIMER APELLIDO']}"
@@ -138,6 +138,7 @@ elif menu == "Historial Alumnos":
     m = st.text_input("Matrícula").strip()
     if m:
         st.dataframe(df[df["MATRICULA"].astype(str)==m])
+
 
 
 
