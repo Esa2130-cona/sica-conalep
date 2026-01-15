@@ -39,6 +39,7 @@ def cargar(gid):
 
 def enviar(payload):
     try: requests.post(APPS_SCRIPT_URL, json=payload, timeout=10)
+
     except: pass
 
 # ================= LOGIN =================
@@ -62,6 +63,10 @@ if not st.session_state.user:
 
 user = st.session_state.user
 rol = user.get("ROL","").upper()
+# ================= DATA GLOBAL =================
+df_reportes = cargar(GIDS["REPORTES"])
+df_reportes.columns = [c.strip().upper() for c in df_reportes.columns]
+
 # ===== Inicialización segura de estados globales =====
 
 if "resultado" not in st.session_state:
@@ -232,13 +237,11 @@ if st.session_state.resultado:
 
 
 # ================= REPORTES =================
-df_reportes = cargar(GIDS["REPORTES"])
-df_reportes.columns = [c.strip().upper() for c in df_reportes.columns]
-
-elif menu == "Reportes":
+    elif menu == "Reportes":
     df = cargar(GIDS["ALUMNOS"])
     df_r = df_reportes
 
+    # ---- estados ----
     if "rep_mat" not in st.session_state:
         st.session_state.rep_mat = ""
     if "rep_tipo" not in st.session_state:
@@ -294,11 +297,10 @@ elif menu == "Reportes":
 
                 st.success("Registro guardado")
 
+                # limpiar campos
                 st.session_state.rep_mat = ""
                 st.session_state.rep_desc = ""
                 st.rerun()
-
-
 
 # ================= USUARIOS =================
 elif menu == "Usuarios":
@@ -452,6 +454,7 @@ elif menu == "Dashboard Director":
         )
 
         st.dataframe(top_al.head(10), use_container_width=True)
+
 
 
 
