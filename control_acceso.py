@@ -147,9 +147,10 @@ if menu == "Puerta de Entrada":
             }
 
             threading.Thread(
-                target=enviar_registro_background,
-                args=(payload,)
-            ).start()
+    target=enviar,
+    args=(payload,)
+).start()
+
 
         st.rerun()
 
@@ -196,6 +197,7 @@ elif menu == "Historial Alumnos":
     m = st.text_input("Matrícula").strip()
     if m:
         st.dataframe(df[df["MATRICULA"].astype(str)==m])
+
 
 
 
