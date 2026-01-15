@@ -237,7 +237,7 @@ if st.session_state.resultado:
 
 
 # ================= REPORTES =================
-    elif menu == "Reportes":
+elif menu == "Reportes":
     df = cargar(GIDS["ALUMNOS"])
     df_r = df_reportes
 
@@ -454,6 +454,7 @@ elif menu == "Dashboard Director":
         )
 
         st.dataframe(top_al.head(10), use_container_width=True)
+
 
 
 
