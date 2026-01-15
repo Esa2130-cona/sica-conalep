@@ -222,7 +222,18 @@ elif menu == "Reportes":
             tipo = st.selectbox("Tipo",["Retardo","Falta","Uniforme","Conducta"])
             obs = st.text_area("Observaciones")
             if st.button("Guardar"):
-                enviar({"TIPO_REGISTRO":"INCIDENCIA","MATRICULA":mat,"TIPO":tipo,"OBS":obs})
+              enviar({
+    "TIPO_REGISTRO": "INCIDENCIA",
+    "FECHA": datetime.now(zona).strftime("%Y-%m-%d"),
+    "HORA": datetime.now(zona).strftime("%H:%M:%S"),
+    "MATRICULA": mat,
+    "NOMBRE": a.iloc[0]["NOMBRE"],
+    "GRUPO": a.iloc[0]["GRUPO"],
+    "TIPO": tipo,
+    "DESCRIPCION": obs,
+    "REGISTRADO_POR": user["USUARIO"]
+})
+
                 st.success("Incidencia registrada")
 
 # ================= USUARIOS =================
@@ -256,6 +267,7 @@ elif menu == "Historial Alumnos":
     m = st.text_input("Matrícula").strip()
     if m:
         st.dataframe(df[df["MATRICULA"].astype(str)==m])
+
 
 
 
