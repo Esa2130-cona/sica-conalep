@@ -236,16 +236,7 @@ elif menu == "Usuarios":
         p = st.text_input("PIN")
         r = st.selectbox("Rol",["ADMIN","PREFECTO"])
         if st.form_submit_button("Crear"):
-           enviar({
-    "TIPO_REGISTRO": "INCIDENCIA",
-    "FECHA": datetime.now(zona).strftime("%Y-%m-%d"),
-    "HORA": datetime.now(zona).strftime("%H:%M:%S"),
-    "MATRICULA": mat,
-    "NOMBRE": a.iloc[0]["NOMBRE"],
-    "GRUPO": a.iloc[0]["GRUPO"],
-    "TIPO": tipo,
-    "DESCRIPCION": obs,
-    "REGISTRADO_POR": user["USUARIO"]
+            enviar({"TIPO_REGISTRO":"USUARIO","USUARIO":u,"PIN":p,"ROL":r})
 })
 
             st.success("Usuario creado")
@@ -266,6 +257,7 @@ elif menu == "Historial Alumnos":
     m = st.text_input("Matrícula").strip()
     if m:
         st.dataframe(df[df["MATRICULA"].astype(str)==m])
+
 
 
 
