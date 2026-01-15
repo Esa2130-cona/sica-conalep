@@ -72,27 +72,38 @@ menu = st.sidebar.radio("MENÚ PRINCIPAL", opciones)
 # ================= PUERTA =================
 if menu == "Puerta de Entrada":
     df = cargar(GIDS["ALUMNOS"])
+    df.columns = [c.strip().upper() for c in df.columns]
+
     st.markdown("<h4 style='text-align:center;'>ESCANEE CREDENCIAL</h4>", unsafe_allow_html=True)
 
-    if "scan" not in st.session_state:
-        st.session_state.scan = ""
+    if "scan_input" not in st.session_state:
+        st.session_state.scan_input = ""
+    if "scan_value" not in st.session_state:
+        st.session_state.scan_value = ""
 
-    st.text_input("Esperando lectura...", key="scan",)
+    def procesar_scan():
+        st.session_state.scan_value = st.session_state.scan_input
+        st.session_state.scan_input = ""
 
-    mat = st.session_state.scan.strip()
+    st.text_input(
+        "Esperando lectura...",
+        key="scan_input",
+        on_change=procesar_scan
+    )
+
+    mat = st.session_state.scan_value.strip()
+
     if mat:
-        st.session_state.scan = ""
+        st.session_state.scan_value = ""
+
         a = df[df["MATRICULA"].astype(str).str.strip() == mat]
-        if not a.empty:
-            al = a.iloc[0]
-            nombre = f"{al['NOMBRE']} {al['PRIMER APELLIDO']}"
-            st.markdown(f"<div class='card-acceso'><div class='acceso-permitido'>✅ ACCESO</div><div class='nombre-alumno'>{nombre}</div></div>", unsafe_allow_html=True)
-            threading.Thread(target=enviar, args=({
-                "TIPO_REGISTRO":"ENTRADA","MATRICULA":mat,"NOMBRE":nombre,
-                "HORA":datetime.now(zona).strftime("%H:%M:%S")
-            },)).start()
+
+        if a.empty:
+            st.error("MATRÍCULA NO ENCONTRADA")
         else:
-            st.markdown("<div class='card-error'><div class='acceso-denegado'>🚫 NO REGISTRADO</div></div>", unsafe_allow_html=True)
+            al = a.iloc[0]
+            st.success(f"ACCESO PERMITIDO: {al['NOMBRE']}")
+
         st.rerun()
 
 # ================= INCIDENCIAS =================
@@ -138,6 +149,7 @@ elif menu == "Historial Alumnos":
     m = st.text_input("Matrícula").strip()
     if m:
         st.dataframe(df[df["MATRICULA"].astype(str)==m])
+
 
 
 
