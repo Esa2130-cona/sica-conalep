@@ -62,6 +62,23 @@ if not st.session_state.user:
 
 user = st.session_state.user
 rol = user.get("ROL","").upper()
+# ===== Inicialización segura de estados globales =====
+
+if "resultado" not in st.session_state:
+    st.session_state.resultado = None
+
+if "scan_input" not in st.session_state:
+    st.session_state.scan_input = ""
+
+if "rep_mat" not in st.session_state:
+    st.session_state.rep_mat = ""
+
+if "rep_tipo" not in st.session_state:
+    st.session_state.rep_tipo = "Retardo"
+
+if "rep_desc" not in st.session_state:
+    st.session_state.rep_desc = ""
+
 
 # ================= MENU =================
 opciones = ["Puerta de Entrada", "Historial Alumnos", "Dashboard"]
@@ -396,6 +413,7 @@ elif menu == "Dashboard Director":
     st.subheader("👤 Alumnos con más reportes")
 
     top_al_
+
 
 
 
