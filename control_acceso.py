@@ -81,51 +81,72 @@ if menu == "Puerta de Entrada":
         st.session_state.scan_input = ""
     if "resultado" not in st.session_state:
         st.session_state.resultado = None
-def procesar_scan():
-    mat = st.session_state.scan_input.strip()
-    st.session_state.scan_input = ""
 
-    if not mat:
-        return
+    def procesar_scan():
+        mat = st.session_state.scan_input.strip()
+        st.session_state.scan_input = ""
 
-    a = df[df["MATRICULA"].astype(str).str.strip() == mat]
+        if not mat:
+            return
 
-    if a.empty:
-        st.session_state.resultado = {
-            "tipo": "error",
-            "mensaje": "MATRÍCULA NO ENCONTRADA"
-        }
-    else:
-        al = a.iloc[0]
+        a = df[df["MATRICULA"].astype(str).str.strip() == mat]
 
-        st.session_state.resultado = {
-            "tipo": "ok",
-            "mensaje": f"ACCESO PERMITIDO: {al['NOMBRE']}",
-            "alumno": al
-        }
+        if a.empty:
+            st.session_state.resultado = {
+                "tipo": "error",
+                "mensaje": "MATRÍCULA NO ENCONTRADA"
+            }
+        else:
+            al = a.iloc[0]
 
-        payload = {
-            "TIPO_REGISTRO": "ENTRADA",
-            "FECHA_REGISTRO": datetime.now(zona).strftime("%Y-%m-%d %H:%M:%S"),
-            "FECHA": datetime.now(zona).strftime("%Y-%m-%d"),
-            "HORA": datetime.now(zona).strftime("%H:%M:%S"),
-            "MATRICULA": str(al["MATRICULA"]),
-            "NOMBRE": al["NOMBRE"],
-            "GRUPO": al["GRUPO"],
-            "REGISTRO_POR": user["USUARIO"]
-        }
+            st.session_state.resultado = {
+                "tipo": "ok",
+                "alumno": al
+            }
 
-        threading.Thread(target=enviar, args=(payload,)).start()
+            payload = {
+                "TIPO_REGISTRO": "ENTRADA",
+                "FECHA_REGISTRO": datetime.now(zona).strftime("%Y-%m-%d %H:%M:%S"),
+                "FECHA": datetime.now(zona).strftime("%Y-%m-%d"),
+                "HORA": datetime.now(zona).strftime("%H:%M:%S"),
+                "MATRICULA": str(al["MATRICULA"]),
+                "NOMBRE": al["NOMBRE"],
+                "GRUPO": al["GRUPO"],
+                "REGISTRO_POR": user["USUARIO"]
+            }
 
+            threading.Thread(target=enviar, args=(payload,)).start()
 
-
-
+    # 👉 ESTO SIEMPRE SE RENDERIZA
     st.text_input(
         "Esperando lectura...",
         key="scan_input",
-        on_change=procesar_scan 
-         
-)
+        on_change=procesar_scan
+    )
+
+    # 👉 RESULTADO VISUAL ABAJO
+    if st.session_state.resultado:
+        r = st.session_state.resultado
+
+        if r["tipo"] == "ok":
+            st.markdown(f"""
+            <div style="background:#0f5132;color:white;padding:40px;border-radius:20px;text-align:center;">
+                <h1>✔ ACCESO PERMITIDO</h1>
+                <h2>{r['alumno']['NOMBRE']}</h2>
+                <h3>Grupo: {r['alumno']['GRUPO']}</h3>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown("""
+            <div style="background:#842029;color:white;padding:40px;border-radius:20px;text-align:center;">
+                <h1>✖ ACCESO DENEGADO</h1>
+                <h2>MATRÍCULA NO VÁLIDA</h2>
+            </div>
+            """, unsafe_allow_html=True)
+
+        time.sleep(2)
+        st.session_state.resultado = None
+        st.rerun()
 
 
 # === VISTA VISUAL DE RESULTADO ===
@@ -234,6 +255,7 @@ elif menu == "Historial Alumnos":
     m = st.text_input("Matrícula").strip()
     if m:
         st.dataframe(df[df["MATRICULA"].astype(str)==m])
+
 
 
 
