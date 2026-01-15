@@ -172,39 +172,34 @@ if menu == "Puerta de Entrada":
 
         if a.empty:
             st.session_state.resultado = {
-                "tipo": "error",
-                "mensaje": "MATRÍCULA NO ENCONTRADA"
+                "tipo": "error"
             }
         else:
-             al = a.iloc[0]
+            al = a.iloc[0]
 
-           # ✅ GUARDAR ENTRADA (KIOSKO / ADMIN)
-           enviar({
-        "TIPO_REGISTRO": "ENTRADA",
-        "FECHA": datetime.now(zona).strftime("%Y-%m-%d"),
-        "HORA": datetime.now(zona).strftime("%H:%M:%S"),
-        "MATRICULA": al["MATRICULA"],
-        "NOMBRE": al["NOMBRE"],
-        "GRUPO": al["GRUPO"],
-        "REGISTRO_POR": user["USUARIO"]
-    })
+            # ✅ GUARDAR ENTRADA (KIOSKO / ADMIN)
+            enviar({
+                "TIPO_REGISTRO": "ENTRADA",
+                "FECHA": datetime.now(zona).strftime("%Y-%m-%d"),
+                "HORA": datetime.now(zona).strftime("%H:%M:%S"),
+                "MATRICULA": al["MATRICULA"],
+                "NOMBRE": al["NOMBRE"],
+                "GRUPO": al["GRUPO"],
+                "REGISTRO_POR": user["USUARIO"]
+            })
 
-    st.session_state.resultado = {
-        "tipo": "ok",
-        "mensaje": f"ACCESO PERMITIDO: {al['NOMBRE']}",
-        "alumno": al
-    }
+            st.session_state.resultado = {
+                "tipo": "ok",
+                "alumno": al
+            }
 
-            threading.Thread(target=enviar, args=(payload,)).start()
-
-    # 👉 ESTO SIEMPRE SE RENDERIZA
     st.text_input(
         "Esperando lectura...",
         key="scan_input",
         on_change=procesar_scan
     )
 
-    # 👉 RESULTADO VISUAL ABAJO
+    # 👉 RESULTADO VISUAL
     if st.session_state.resultado:
         r = st.session_state.resultado
 
@@ -227,69 +222,6 @@ if menu == "Puerta de Entrada":
         time.sleep(2)
         st.session_state.resultado = None
         st.rerun()
-
-
-# === VISTA VISUAL DE RESULTADO ===
-if st.session_state.resultado:
-    r = st.session_state.resultado
-
-    if r["tipo"] == "ok":
-        st.markdown(f"""
-        <div style="
-            background-color:#0f5132;
-            color:white;
-            padding:40px;
-            border-radius:20px;
-            text-align:center;
-            margin-top:20px;
-        ">
-            <h1>✔ ACCESO PERMITIDO</h1>
-            <h2>{r['alumno']['NOMBRE']}</h2>
-            <h3>Grupo: {r['alumno']['GRUPO']}</h3>
-        </div>
-        """, unsafe_allow_html=True)
-
-        # 🔊 sonido OK
-        # st.audio("ok.mp3", autoplay=True)
-
-    else:
-        st.markdown("""
-        <div style="
-            background-color:#842029;
-            color:white;
-            padding:40px;
-            border-radius:20px;
-            text-align:center;
-            margin-top:20px;
-        ">
-            <h1>✖ ACCESO DENEGADO</h1>
-            <h2>MATRÍCULA NO VÁLIDA</h2>
-        </div>
-        """, unsafe_allow_html=True)
-          # ⏱️ ESPERA 2 SEGUNDOS Y LIMPIA
-    time.sleep(2)
-    st.session_state.resultado = None
-    st.rerun()
-
-        # 🔊 sonido ERROR
-        # st.audio("error.mp3", autoplay=True)
-
-    # 👇 MOSTRAR RESULTADO
-    if st.session_state.resultado:
-        r = st.session_state.resultado
-
-        if r["tipo"] == "ok":
-            st.success(r["mensaje"])
-            # 🔊 sonido OK (si ya lo tenías)
-            # st.audio("ok.mp3", autoplay=True)
-
-        else:
-            st.error(r["mensaje"])
-            # 🔊 sonido ERROR
-            # st.audio("error.mp3", autoplay=True)
-
-        # limpiar después de mostrar
-        st.session_state.resultado = None
 
 
 # ================= REPORTES =================
@@ -526,6 +458,7 @@ elif menu == "Dashboard Director":
         )
 
         st.dataframe(top_al.head(10), use_container_width=True)
+
 
 
 
