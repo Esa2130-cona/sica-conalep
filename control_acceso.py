@@ -16,7 +16,7 @@ def normalizar_matricula(mat):
         return ""
     return (
         mat.strip()
-        .replace('"', '-')
+        .replace(''', '-')
         .replace("'", '-')
         .replace("/", '-')
         .replace("\\", '-')
@@ -479,6 +479,7 @@ elif menu == "Dashboard Director":
         )
 
         st.dataframe(top_al.head(10), use_container_width=True)
+
 
 
 
