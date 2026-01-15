@@ -89,6 +89,9 @@ if "rep_tipo" not in st.session_state:
 if "rep_desc" not in st.session_state:
     st.session_state.rep_desc = ""
 
+# ===== BANDERAS DE CONTROL =====
+if "limpiar_reporte" not in st.session_state:
+    st.session_state.limpiar_reporte = False
 
 # ================= MENU =================
 opciones = ["Puerta de Entrada", "Historial Alumnos", "Dashboard"]
@@ -243,6 +246,14 @@ if st.session_state.resultado:
 
 # ================= REPORTES =================
 elif menu == "Reportes":
+
+    # 🔄 Limpiar campos si se guardó un reporte
+    if st.session_state.limpiar_reporte:
+        st.session_state.rep_mat = ""
+        st.session_state.rep_tipo = "Conducta"
+        st.session_state.rep_desc = ""
+        st.session_state.limpiar_reporte = False
+
     df = cargar(GIDS["ALUMNOS"])
     df_r = df_reportes
 
@@ -260,9 +271,10 @@ elif menu == "Reportes":
         a = df[df["MATRICULA"].astype(str) == mat]
 
         if not a.empty:
+
             llamadas = df_r[
                 (df_r["MATRICULA"].astype(str) == mat) &
-                (df_r["NIVEL"].str.contains("LLAMADA", na=False))
+                (df_r["NIVEL"].astype(str).str.contains("LLAMADA", na=False))
             ]
 
             num_llamadas = len(llamadas)
@@ -300,11 +312,8 @@ elif menu == "Reportes":
                     "REGISTRADO_POR": user["USUARIO"]
                 })
 
-                st.success("Registro guardado")
-
-                # limpiar campos
-                st.session_state.rep_mat = ""
-                st.session_state.rep_desc = ""
+                st.success("Registro guardado correctamente")
+                st.session_state.limpiar_reporte = True
                 st.rerun()
 
 # ================= USUARIOS =================
@@ -459,6 +468,7 @@ elif menu == "Dashboard Director":
         )
 
         st.dataframe(top_al.head(10), use_container_width=True)
+
 
 
 
