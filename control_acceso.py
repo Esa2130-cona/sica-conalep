@@ -270,10 +270,43 @@ elif menu == "Dashboard":
 
 # ================= HISTORIAL =================
 elif menu == "Historial Alumnos":
-    df = cargar(GIDS["ENTRADAS"])
-    m = st.text_input("Matrícula").strip()
-    if m:
-        st.dataframe(df[df["MATRICULA"].astype(str)==m])
+    st.title("📊 Historial del Alumno")
+
+    df_e = cargar(GIDS["ENTRADAS"])
+    df_r = cargar(GIDS["INCIDENCIAS"])  # aquí están tus REPORTES
+
+    # normalizar columnas
+    df_e.columns = [c.strip().upper() for c in df_e.columns]
+    df_r.columns = [c.strip().upper() for c in df_r.columns]
+
+    matricula = st.text_input("Escanee o ingrese la matrícula").strip()
+
+    if matricula:
+        entradas = df_e[df_e["MATRICULA"].astype(str) == matricula]
+        reportes = df_r[df_r["MATRICULA"].astype(str) == matricula]
+
+        # ===== ENTRADAS =====
+        st.subheader("📥 Historial de Entradas")
+
+        if entradas.empty:
+            st.info("No hay registros de entrada para este alumno")
+        else:
+            st.dataframe(
+                entradas.sort_values("FECHA_REGISTRO", ascending=False),
+                use_container_width=True
+            )
+
+        # ===== REPORTES =====
+        st.subheader("🚨 Historial de Reportes")
+
+        if reportes.empty:
+            st.success("Este alumno no tiene reportes registrados")
+        else:
+            st.dataframe(
+                reportes.sort_values("FECHA", ascending=False),
+                use_container_width=True
+            )
+
 
 
 
