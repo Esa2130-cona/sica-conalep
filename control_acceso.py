@@ -238,25 +238,25 @@ elif menu == "Reportes":
 
             obs = st.text_area("Descripción", key="rep_desc")
 
-            if st.button("Guardar reporte"):
-                enviar({
-                    "TIPO_REGISTRO": "REPORTE",
-                    "FECHA": datetime.now(zona).strftime("%Y-%m-%d"),
-                    "HORA": datetime.now(zona).strftime("%H:%M:%S"),
-                    "MATRICULA": mat,
-                    "NOMBRE": a.iloc[0]["NOMBRE"],
-                    "GRUPO": a.iloc[0]["GRUPO"],
-                    "TIPO": tipo,
-                    "DESCRIPCION": obs,
-                    "REGISTRADO_POR": user["USUARIO"]
-                })
+         if st.button("Guardar reporte"):
+    enviar({
+        "TIPO_REGISTRO": "REPORTE",
+        "FECHA": datetime.now(zona).strftime("%Y-%m-%d"),
+        "HORA": datetime.now(zona).strftime("%H:%M:%S"),
+        "MATRICULA": mat,
+        "NOMBRE": a.iloc[0]["NOMBRE"],
+        "GRUPO": a.iloc[0]["GRUPO"],
+        "TIPO": tipo,
+        "DESCRIPCION": obs,
+        "REGISTRADO_POR": user["USUARIO"]
+    })
 
-                # 🔄 LIMPIAR CAMPOS AUTOMÁTICAMENTE
-                st.session_state.rep_mat = ""
-                st.session_state.rep_tipo = "Retardo"
-                st.session_state.rep_desc = ""
+    st.success("Reporte registrado correctamente")
 
-                st.success("Reporte registrado correctamente")
+    # 🔄 limpiar usando rerun (FORMA CORRECTA)
+    st.session_state.clear()
+    st.rerun()
+
 
 
 
@@ -331,6 +331,7 @@ elif menu == "Historial Alumnos":
                 reportes.sort_values("FECHA", ascending=False),
                 use_container_width=True
             )
+
 
 
 
