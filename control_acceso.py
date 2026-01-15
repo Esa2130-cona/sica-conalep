@@ -282,47 +282,51 @@ elif menu == "Historial Alumnos":
     st.title("📊 Historial del Alumno")
 
     df_e = cargar(GIDS["ENTRADAS"])
-    df_r = cargar(GIDS["REPORTES"])  # REPORTES
+    df_r = cargar(GIDS["REPORTES"])  # 👈 AQUÍ ESTÁ LA CLAVE
 
     df_e.columns = [c.strip().upper() for c in df_e.columns]
     df_r.columns = [c.strip().upper() for c in df_r.columns]
 
     if "hist_mat" not in st.session_state:
         st.session_state.hist_mat = ""
+    if "hist_buscar" not in st.session_state:
+        st.session_state.hist_buscar = ""
 
-    def buscar_historial():
-        st.session_state.matricula_busqueda = st.session_state.hist_mat
+    def buscar():
+        st.session_state.hist_buscar = st.session_state.hist_mat
         st.session_state.hist_mat = ""
 
     st.text_input(
         "Escanee o ingrese la matrícula",
         key="hist_mat",
-        on_change=buscar_historial
+        on_change=buscar
     )
 
-    mat = st.session_state.get("matricula_busqueda", "").strip()
+    mat = st.session_state.hist_buscar.strip()
 
     if mat:
         entradas = df_e[df_e["MATRICULA"].astype(str) == mat]
         reportes = df_r[df_r["MATRICULA"].astype(str) == mat]
 
-        st.subheader("📥 Historial de Entradas")
+        st.subheader("📥 Entradas")
         if entradas.empty:
-            st.info("No hay entradas registradas")
+            st.info("Sin registros de entrada")
         else:
             st.dataframe(
                 entradas.sort_values("FECHA_REGISTRO", ascending=False),
                 use_container_width=True
             )
 
-        st.subheader("🚨 Historial de Reportes")
+        st.subheader("🚨 Reportes")
         if reportes.empty:
-            st.success("Sin reportes registrados")
+            st.success("El alumno no tiene reportes")
         else:
             st.dataframe(
                 reportes.sort_values("FECHA", ascending=False),
                 use_container_width=True
             )
+
+
 
 
 
