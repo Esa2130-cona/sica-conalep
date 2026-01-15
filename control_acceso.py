@@ -271,10 +271,10 @@ elif menu == "Usuarios":
 elif menu == "Dashboard":
     st.title("📊 Dashboard Analítico")
     df_e = cargar(GIDS["ENTRADAS"])
-    df_i = cargar(GIDS["INCIDENCIAS"])
+    df_i = cargar(GIDS["REPORTES"])
 
     st.metric("Total Entradas", len(df_e))
-    st.metric("Total Incidencias", len(df_i))
+    st.metric("Total Reportes", len(df_i))
     st.bar_chart(df_i["TIPO"].value_counts())
 
 # ================= HISTORIAL =================
@@ -325,6 +325,7 @@ elif menu == "Historial Alumnos":
                 reportes.sort_values("FECHA", ascending=False),
                 use_container_width=True
             )
+
 
 
 
