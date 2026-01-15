@@ -4,6 +4,7 @@ import requests
 from datetime import datetime
 import pytz
 import threading
+import time 
 
 st.set_page_config(page_title="SICA CONALEP CUAUTLA", layout="wide")
 zona = pytz.timezone("America/Mexico_City")
@@ -148,6 +149,10 @@ if st.session_state.resultado:
             <h2>MATRÍCULA NO VÁLIDA</h2>
         </div>
         """, unsafe_allow_html=True)
+          # ⏱️ ESPERA 2 SEGUNDOS Y LIMPIA
+    time.sleep(2)
+    st.session_state.resultado = None
+    st.rerun()
 
         # 🔊 sonido ERROR
         # st.audio("error.mp3", autoplay=True)
@@ -213,6 +218,7 @@ elif menu == "Historial Alumnos":
     m = st.text_input("Matrícula").strip()
     if m:
         st.dataframe(df[df["MATRICULA"].astype(str)==m])
+
 
 
 
