@@ -108,6 +108,46 @@ if menu == "Puerta de Entrada":
         key="scan_input",
         on_change=procesar_scan
     )
+# === VISTA VISUAL DE RESULTADO ===
+if st.session_state.resultado:
+    r = st.session_state.resultado
+
+    if r["tipo"] == "ok":
+        st.markdown(f"""
+        <div style="
+            background-color:#0f5132;
+            color:white;
+            padding:40px;
+            border-radius:20px;
+            text-align:center;
+            margin-top:20px;
+        ">
+            <h1>✔ ACCESO PERMITIDO</h1>
+            <h2>{r['alumno']['NOMBRE']}</h2>
+            <h3>Grupo: {r['alumno']['GRUPO']}</h3>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # 🔊 sonido OK
+        # st.audio("ok.mp3", autoplay=True)
+
+    else:
+        st.markdown("""
+        <div style="
+            background-color:#842029;
+            color:white;
+            padding:40px;
+            border-radius:20px;
+            text-align:center;
+            margin-top:20px;
+        ">
+            <h1>✖ ACCESO DENEGADO</h1>
+            <h2>MATRÍCULA NO VÁLIDA</h2>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # 🔊 sonido ERROR
+        # st.audio("error.mp3", autoplay=True)
 
     # 👇 MOSTRAR RESULTADO
     if st.session_state.resultado:
@@ -170,6 +210,7 @@ elif menu == "Historial Alumnos":
     m = st.text_input("Matrícula").strip()
     if m:
         st.dataframe(df[df["MATRICULA"].astype(str)==m])
+
 
 
 
