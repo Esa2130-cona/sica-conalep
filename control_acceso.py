@@ -67,6 +67,8 @@ rol = user.get("ROL","").upper()
 opciones = ["Puerta de Entrada", "Historial Alumnos", "Dashboard"]
 if rol == "ADMIN": opciones += ["Usuarios"]
 if rol in ["ADMIN","PREFECTO"]: opciones += ["Reportes"]
+if rol == "DIRECTOR": opciones = ["Dashboard Director"]
+
 
 menu = st.sidebar.radio("MENÚ PRINCIPAL", opciones)
 
@@ -325,6 +327,77 @@ elif menu == "Historial Alumnos":
                 reportes.sort_values("FECHA", ascending=False),
                 use_container_width=True
             )
+
+# ================= MENU DIRECTOR =================
+elif menu == "Dashboard Director":
+    st.title("📱 Dashboard Dirección")
+
+    df_e = cargar(GIDS["ENTRADAS"])
+    df_r = cargar(GIDS["REPORTES"])
+
+    # Normalizar
+    df_e.columns = [c.strip().upper() for c in df_e.columns]
+    df_r.columns = [c.strip().upper() for c in df_r.columns]
+
+    df_e["FECHA"] = pd.to_datetime(df_e["FECHA"], errors="coerce")
+    df_r["FECHA"] = pd.to_datetime(df_r["FECHA"], errors="coerce")
+
+    hoy = datetime.now(zona).date()
+
+    col1, col2, col3 = st.columns(3)
+
+    col1.metric(
+        "👨‍🎓 Entradas Hoy",
+        len(df_e[df_e["FECHA"].dt.date == hoy])
+    )
+
+    col2.metric(
+        "⚠ Reportes Hoy",
+        len(df_r[df_r["FECHA"].dt.date == hoy])
+    )
+
+    col3.metric(
+        "📊 Total Entradas",
+        len(df_e)
+    )
+
+    st.divider()
+
+    # 📈 Entradas por periodo
+    st.subheader("📈 Entradas por periodo")
+
+    periodo = st.selectbox("Periodo", ["Día", "Semana", "Mes"])
+
+    if periodo == "Día":
+        rep = df_e.groupby(df_e["FECHA"].dt.date).size()
+    elif periodo == "Semana":
+        rep = df_e.groupby(df_e["FECHA"].dt.to_period("W")).size()
+    else:
+        rep = df_e.groupby(df_e["FECHA"].dt.to_period("M")).size()
+
+    st.line_chart(rep)
+
+    st.divider()
+
+    # 🚨 Grupos con más reportes
+    st.subheader("🚨 Grupos con más reportes")
+
+    grp_rep = (
+        df_r.groupby("GRUPO")
+        .size()
+        .sort_values(ascending=False)
+    )
+
+    st.bar_chart(grp_rep)
+
+    st.divider()
+
+    # 👤 Alumnos con más reportes
+    st.subheader("👤 Alumnos con más reportes")
+
+    top_al_
+
+
 
 
 
