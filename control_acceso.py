@@ -107,13 +107,33 @@ if "limpiar_reporte" not in st.session_state:
     st.session_state.limpiar_reporte = False
 
 # ================= MENU =================
-opciones = ["Puerta de Entrada", "Historial Alumnos", "Dashboard"]
-if rol == "ADMIN": opciones += ["Usuarios"]
-if rol in ["ADMIN","PREFECTO"]: opciones += ["Reportes"]
-if rol == "DIRECTOR": opciones = ["Dashboard Director"]
+if rol == "PREFECTO":
+    opciones = [
+        "Reportes",
+        "Historial Alumnos"
+    ]
 
+elif rol == "DIRECTOR":
+    opciones = [
+        "Dashboard Director",
+        "Historial Alumnos"
+    ]
 
-menu = st.sidebar.radio("MENÚ PRINCIPAL", opciones)
+elif rol == "ADMIN":
+    opciones = [
+        "Puerta de Entrada",
+        "Dashboard",
+        "Reportes",
+        "Historial Alumnos",
+        "Usuarios"
+    ]
+
+else:
+    st.error("Rol no autorizado")
+    st.stop()
+
+menu = st.sidebar.radio("📋 MENÚ PRINCIPAL", opciones)
+
 
 # ================= PUERTA =================
 if menu == "Puerta de Entrada":
@@ -491,6 +511,7 @@ elif menu == "Dashboard Director":
         )
 
         st.dataframe(top_al.head(10), use_container_width=True)
+
 
 
 
