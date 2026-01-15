@@ -72,10 +72,11 @@ menu = st.sidebar.radio("MENÚ PRINCIPAL", opciones)
 # ================= PUERTA =================
 if menu == "Puerta de Entrada":
     df = cargar(GIDS["ALUMNOS"])
-    df.columns = [c.strip().upper() for c in df.columns]
+    df.columns = [str(c).strip().upper() for c in df.columns]
 
-    st.markdown("<h4 style='text-align:center;'>ESCANEE CREDENCIAL</h4>", unsafe_allow_html=True)
+    st.markdown("<h4 style='text-align: center; color: gray;'>ESCANEE CREDENCIAL</h4>", unsafe_allow_html=True)
 
+    # ---- estados seguros ----
     if "scan_input" not in st.session_state:
         st.session_state.scan_input = ""
     if "scan_value" not in st.session_state:
@@ -91,7 +92,7 @@ if menu == "Puerta de Entrada":
         on_change=procesar_scan
     )
 
-    mat = st.session_state.scan_value.strip()
+    mat = st.session_state.scan_value.replace("'", "-").strip()
 
     if mat:
         st.session_state.scan_value = ""
@@ -99,10 +100,56 @@ if menu == "Puerta de Entrada":
         a = df[df["MATRICULA"].astype(str).str.strip() == mat]
 
         if a.empty:
-            st.error("MATRÍCULA NO ENCONTRADA")
+            # ---- ACCESO NO PERMITIDO ----
+            play_audio("https://www.soundjay.com/buttons/beep-04.mp3")
+            st.markdown(f"""
+                <div class='card-error'>
+                    <div class='acceso-denegado'>🚫 ACCESO NO PERMITIDO</div>
+                    <div class='msg-error'>MATRÍCULA NO REGISTRADA O BAJA</div>
+                    <p style='font-size:30px;'>La matrícula <b>{mat}</b> no existe en la base de datos.</p>
+                </div>
+            """, unsafe_allow_html=True)
+
         else:
+            # ---- ACCESO PERMITIDO ----
             al = a.iloc[0]
-            st.success(f"ACCESO PERMITIDO: {al['NOMBRE']}")
+            nombre = f"{al['NOMBRE']} {al['PRIMER APELLIDO']} {al.get('SEGUNDO APELLIDO','')}"
+
+            st.divider()
+            c1, c2 = st.columns([1, 2.5])
+
+            with c1:
+                st.image(
+                    al.get('FOTO', "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"),
+                    use_container_width=True
+                )
+
+            with c2:
+                st.markdown(f"""
+                    <div class='card-acceso'>
+                        <div class='acceso-permitido'>✅ ACCESO PERMITIDO</div>
+                        <div class='nombre-alumno'>{nombre}</div>
+                        <div class='datos-escolares'>
+                            <b>GRUPO:</b> {al['GRUPO']}<br>
+                            <b>HORA:</b> {datetime.now(zona).strftime('%H:%M:%S')}
+                        </div>
+                    </div>
+                """, unsafe_allow_html=True)
+
+            payload = {
+                "TIPO_REGISTRO": "ENTRADA",
+                "FECHA": datetime.now(zona).strftime("%Y-%m-%d"),
+                "HORA": datetime.now(zona).strftime("%H:%M:%S"),
+                "MATRICULA": mat,
+                "NOMBRE": nombre,
+                "GRUPO": al["GRUPO"],
+                "REGISTRO_POR": user["NOMBRE"]
+            }
+
+            threading.Thread(
+                target=enviar_registro_background,
+                args=(payload,)
+            ).start()
 
         st.rerun()
 
@@ -149,6 +196,7 @@ elif menu == "Historial Alumnos":
     m = st.text_input("Matrícula").strip()
     if m:
         st.dataframe(df[df["MATRICULA"].astype(str)==m])
+
 
 
 
