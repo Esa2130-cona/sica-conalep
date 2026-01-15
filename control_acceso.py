@@ -213,9 +213,18 @@ if st.session_state.resultado:
 
 
 # ================= INCIDENCIAS =================
-elif menu == "Reportes":
+    elif menu == "Reportes":
     df = cargar(GIDS["ALUMNOS"])
-    mat = st.text_input("Matrícula").strip()
+
+    # ---- estados ----
+    if "rep_mat" not in st.session_state:
+        st.session_state.rep_mat = ""
+    if "rep_tipo" not in st.session_state:
+        st.session_state.rep_tipo = "Retardo"
+    if "rep_desc" not in st.session_state:
+        st.session_state.rep_desc = ""
+
+    mat = st.text_input("Matrícula", key="rep_mat").strip()
 
     if mat:
         a = df[df["MATRICULA"].astype(str) == mat]
@@ -223,9 +232,11 @@ elif menu == "Reportes":
         if not a.empty:
             tipo = st.selectbox(
                 "Tipo de reporte",
-                ["Retardo", "Falta", "Uniforme", "Conducta"]
+                ["Retardo", "Falta", "Uniforme", "Conducta"],
+                key="rep_tipo"
             )
-            obs = st.text_area("Descripción")
+
+            obs = st.text_area("Descripción", key="rep_desc")
 
             if st.button("Guardar reporte"):
                 enviar({
@@ -240,7 +251,13 @@ elif menu == "Reportes":
                     "REGISTRADO_POR": user["USUARIO"]
                 })
 
+                # 🔄 LIMPIAR CAMPOS AUTOMÁTICAMENTE
+                st.session_state.rep_mat = ""
+                st.session_state.rep_tipo = "Retardo"
+                st.session_state.rep_desc = ""
+
                 st.success("Reporte registrado correctamente")
+
 
 
 # ================= USUARIOS =================
@@ -314,6 +331,7 @@ elif menu == "Historial Alumnos":
                 reportes.sort_values("FECHA", ascending=False),
                 use_container_width=True
             )
+
 
 
 
