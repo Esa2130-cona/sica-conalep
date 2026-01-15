@@ -22,7 +22,7 @@ st.markdown("""<style>
 
 # ================= CONFIG =================
 SHEET_ID = "11RZyoBo_MyQkGWfc21WCY_xPFZdKkwTG12YagiZf3yM"
-APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyTEmY1jodL4zippIf28JMwB9sEV1HmWhjp2Qg44wEHXkaB03ghNWWI9EyG63jn-fbwjg/exec"
+APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwK34FQ5zo5yW7FKl_O1gpdzu8pYB4Q_UfL9QiRUH-jyZ0vHd738MQnJcTbHibmbO6RLA/exec"
 
 GIDS = {
     "ALUMNOS": 1882885827,
@@ -255,6 +255,7 @@ elif menu == "Historial Alumnos":
     m = st.text_input("Matrícula").strip()
     if m:
         st.dataframe(df[df["MATRICULA"].astype(str)==m])
+
 
 
 
