@@ -9,6 +9,26 @@ import time
 # ================= CONFIG =================
 st.set_page_config(page_title="SICA CONALEP CUAUTLA", layout="wide")
 zona = pytz.timezone("America/Mexico_City")
+# ================= FUNCIONES GLOBALES =================
+
+def normalizar_matricula(mat):
+    if not mat:
+        return ""
+    return (
+        mat.strip()
+        .replace('"', '-')
+        .replace("'", '-')
+        .replace("/", '-')
+        .replace("\\", '-')
+        .upper()
+    )
+
+def cargar(gid):
+    ...
+
+def enviar(payload):
+    ...
+
 
 # ---------------- ESTADOS GLOBALES ----------------
 if "user" not in st.session_state:
@@ -459,6 +479,7 @@ elif menu == "Dashboard Director":
         )
 
         st.dataframe(top_al.head(10), use_container_width=True)
+
 
 
 
