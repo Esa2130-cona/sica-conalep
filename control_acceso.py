@@ -409,22 +409,21 @@ elif menu == "Dashboard Director":
 
     st.divider()
 
-   
-# 👤 Alumnos con más reportes
+    # 👤 Alumnos con más reportes
+    st.subheader("👤 Alumnos con más reportes")
 
-st.subheader("👤 Alumnos con más reportes")
+    if df_r.empty:
+        st.info("Aún no hay reportes registrados")
+    else:
+        top_al = (
+            df_r.groupby(["MATRICULA", "NOMBRE"])
+            .size()
+            .reset_index(name="REPORTES")
+            .sort_values("REPORTES", ascending=False)
+        )
 
-if df_r.empty:
-    st.info("Aún no hay reportes registrados")
-else:
-    top_al = (
-        df_r.groupby(["MATRICULA", "NOMBRE"])
-        .size()
-        .reset_index(name="REPORTES")
-        .sort_values("REPORTES", ascending=False)
-    )
+        st.dataframe(top_al.head(10), use_container_width=True)
 
-    st.dataframe(top_al.head(10), use_container_width=True)
 
 
 
