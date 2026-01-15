@@ -66,7 +66,7 @@ rol = user.get("ROL","").upper()
 # ================= MENU =================
 opciones = ["Puerta de Entrada", "Historial Alumnos", "Dashboard"]
 if rol == "ADMIN": opciones += ["Usuarios"]
-if rol in ["ADMIN","PREFECTO"]: opciones += ["Incidencias"]
+if rol in ["ADMIN","PREFECTO"]: opciones += ["Reportes"]
 
 menu = st.sidebar.radio("MENÚ PRINCIPAL", opciones)
 
@@ -213,7 +213,7 @@ if st.session_state.resultado:
 
 
 # ================= INCIDENCIAS =================
-elif menu == "Incidencias":
+elif menu == "Reportes":
     df = cargar(GIDS["ALUMNOS"])
     mat = st.text_input("Matrícula").strip()
     if mat:
@@ -255,6 +255,7 @@ elif menu == "Historial Alumnos":
     m = st.text_input("Matrícula").strip()
     if m:
         st.dataframe(df[df["MATRICULA"].astype(str)==m])
+
 
 
 
