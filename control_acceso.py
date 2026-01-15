@@ -150,13 +150,6 @@ menu = st.sidebar.radio("📋 MENÚ PRINCIPAL", opciones)
 
 
 # ================= PUERTA =================
-elif menu == "Puerta de Entrada":
-    if rol not in ["ADMIN", "KIOSKO"]:
-        st.error("Acceso no autorizado")
-        st.stop()
-
-    # 👇 tu código actual de escaneo
-
 if menu == "Puerta de Entrada":
     df = cargar(GIDS["ALUMNOS"])
     df.columns = [c.strip().upper() for c in df.columns]
@@ -532,6 +525,7 @@ elif menu == "Dashboard Director":
         )
 
         st.dataframe(top_al.head(10), use_container_width=True)
+
 
 
 
