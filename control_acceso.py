@@ -107,9 +107,7 @@ if menu == "Puerta de Entrada":
         "Esperando lectura...",
         key="scan_input",
         on_change=procesar_scan 
-        time.sleep(2)
-        st.session_state.resultado = None
-    st.rerun()    
+         
 )
 
 
@@ -215,6 +213,7 @@ elif menu == "Historial Alumnos":
     m = st.text_input("Matrícula").strip()
     if m:
         st.dataframe(df[df["MATRICULA"].astype(str)==m])
+
 
 
 
