@@ -273,28 +273,48 @@ elif menu == "Historial Alumnos":
     st.title("📊 Historial del Alumno")
 
     df_e = cargar(GIDS["ENTRADAS"])
-    df_r = cargar(GIDS["INCIDENCIAS"])  # aquí están tus REPORTES
+    df_r = cargar(GIDS["INCIDENCIAS"])  # REPORTES
 
-    # normalizar columnas
     df_e.columns = [c.strip().upper() for c in df_e.columns]
     df_r.columns = [c.strip().upper() for c in df_r.columns]
 
-    matricula = st.text_input("Escanee o ingrese la matrícula").strip()
+    if "hist_mat" not in st.session_state:
+        st.session_state.hist_mat = ""
 
-    if matricula:
-        entradas = df_e[df_e["MATRICULA"].astype(str) == matricula]
-        reportes = df_r[df_r["MATRICULA"].astype(str) == matricula]
+    def buscar_historial():
+        st.session_state.matricula_busqueda = st.session_state.hist_mat
+        st.session_state.hist_mat = ""
 
-        # ===== ENTRADAS =====
+    st.text_input(
+        "Escanee o ingrese la matrícula",
+        key="hist_mat",
+        on_change=buscar_historial
+    )
+
+    mat = st.session_state.get("matricula_busqueda", "").strip()
+
+    if mat:
+        entradas = df_e[df_e["MATRICULA"].astype(str) == mat]
+        reportes = df_r[df_r["MATRICULA"].astype(str) == mat]
+
         st.subheader("📥 Historial de Entradas")
-
         if entradas.empty:
-            st.info("No hay registros de entrada para este alumno")
+            st.info("No hay entradas registradas")
         else:
             st.dataframe(
                 entradas.sort_values("FECHA_REGISTRO", ascending=False),
                 use_container_width=True
             )
+
+        st.subheader("🚨 Historial de Reportes")
+        if reportes.empty:
+            st.success("Sin reportes registrados")
+        else:
+            st.dataframe(
+                reportes.sort_values("FECHA", ascending=False),
+                use_container_width=True
+            )
+
 
         # ===== REPORTES =====
         st.subheader("🚨 Historial de Reportes")
@@ -306,6 +326,7 @@ elif menu == "Historial Alumnos":
                 reportes.sort_values("FECHA", ascending=False),
                 use_container_width=True
             )
+
 
 
 
