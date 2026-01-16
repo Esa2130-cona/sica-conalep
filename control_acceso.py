@@ -169,93 +169,145 @@ else:
 
 menu = st.sidebar.radio("📋 MENÚ PRINCIPAL", opciones)
 
-# ================= PUERTA DE ENTRADA =================
+
+# ================= PUERTA DE ENTRADA (REDiseño MODERNO) =================
 if menu == "Puerta de Entrada":
     df = cargar(GIDS["ALUMNOS"])
     df.columns = [c.strip().upper() for c in df.columns]
 
-    # ==== ESTILO MODERNO PARA KIOSKO ====
+    # ==== ESTILO ULTRA MODERNO PARA KIOSKO ====
     st.markdown("""
     <style>
-    /* Contenedor principal */
-    .kiosko-container {
-        display:flex;
-        flex-direction:column;
-        align-items:center;
-        justify-content:flex-start;
-        padding-top:40px;
-        height:95vh;
-        font-family: 'Segoe UI', sans-serif;
-        background: linear-gradient(135deg, #73a5ff, #5477f5);
+    /* Fondo General Profundo */
+    .stApp {
+        background: #0d1117;
+    }
+    
+    .kiosko-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Inter', 'Segoe UI', sans-serif;
+        margin-top: -20px;
+    }
+
+    /* Caja de Escaneo - Minimalista y Futurista */
+    .scan-card {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        padding: 30px;
+        border-radius: 24px;
+        text-align: center;
+        width: 100%;
+        max-width: 500px;
+        margin-bottom: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    .scan-text {
+        color: #00e676;
+        font-size: 24px;
+        font-weight: 800;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+    }
+
+    .sub-text {
+        color: #8b949e;
+        font-size: 14px;
+    }
+
+    /* Tarjetas de Resultado - Grandes para monitores chicos */
+    .res-card {
+        width: 100%;
+        max-width: 600px;
+        border-radius: 30px;
+        padding: 40px;
+        text-align: center;
+        animation: slideUp 0.4s ease-out;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+    }
+
+    .res-ok {
+        background: linear-gradient(145deg, #1b5e20, #2e7d32);
+        border: 2px solid #00e676;
+    }
+
+    .res-error {
+        background: linear-gradient(145deg, #b71c1c, #d32f2f);
+        border: 2px solid #ff5252;
+    }
+
+    .status-title {
+        font-size: 45px;
+        font-weight: 900;
+        margin: 0;
         color: white;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
     }
-    /* Caja de escaneo */
-    .scan-box {
-        background:#ffffff20;
-        padding:40px;
-        border-radius:20px;
-        text-align:center;
-        width:450px;
-        font-size:28px;
-        font-weight:bold;
-        margin-bottom:30px;
-        box-shadow:0 8px 20px rgba(0,0,0,0.3);
-        backdrop-filter: blur(5px);
+
+    .student-name {
+        font-size: 55px;
+        font-weight: 900;
+        color: #ffffff;
+        margin: 20px 0;
+        line-height: 1.1;
+        text-transform: uppercase;
     }
-    /* Resultado acceso */
-    .resultado-card {
-        padding:60px;
-        border-radius:25px;
-        text-align:center;
-        color:white;
-        width:80%;
-        max-width:700px;
-        margin-top:30px;
-        font-size:36px;
-        font-weight:bold;
-        animation: bounce 0.6s;
+
+    .student-group {
+        font-size: 35px;
+        background: rgba(0,0,0,0.2);
+        display: inline-block;
+        padding: 5px 25px;
+        border-radius: 50px;
+        color: rgba(255,255,255,0.9);
     }
-    /* Animación */
-    @keyframes bounce {
-      0% { transform: scale(0.5); opacity:0; }
-      60% { transform: scale(1.1); opacity:1; }
-      80% { transform: scale(0.95); }
-      100% { transform: scale(1); }
+
+    @keyframes slideUp {
+        from { transform: translateY(30px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
+    /* Ocultar input feo de Streamlit */
+    div[data-baseweb="input"] {
+        background: transparent !important;
+        border: none !important;
+    }
+    input {
+        text-align: center !important;
+        font-size: 20px !important;
+        color: white !important;
+        border-bottom: 2px solid #00e676 !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
-    # Contenedor principal
-    st.markdown("<div class='kiosko-container'>", unsafe_allow_html=True)
+    # Layout Principal
+    st.markdown("<div class='kiosko-wrapper'>", unsafe_allow_html=True)
+    
+    # Encabezado Kiosko
+    st.markdown("""
+        <div class='scan-card'>
+            <div class='scan-text'>📡 SISTEMA DE ACCESO</div>
+            <div class='sub-text'>LISTO PARA ESCANEAR CREDENCIAL</div>
+        </div>
+    """, unsafe_allow_html=True)
 
-    # Caja de escaneo
-    st.markdown("<div class='scan-box'>📸 ESCANEA TU CREDENCIAL</div>", unsafe_allow_html=True)
-
-    # Inicializar estados si no existen
-    if "scan_input" not in st.session_state:
-        st.session_state.scan_input = ""
-    if "resultado" not in st.session_state:
-        st.session_state.resultado = None
-
-    # Función para procesar lectura
+    # El input se mantiene funcional (sin cambios en lógica)
     def procesar_scan():
         mat = normalizar_matricula(st.session_state.scan_input)
         st.session_state.scan_input = ""
-
-        if not mat:
-            return
-
+        if not mat: return
+        
         a = df[df["MATRICULA"].astype(str).str.strip() == mat]
-
         if a.empty:
-            st.session_state.resultado = {
-                "tipo": "error",
-                "mensaje": "MATRÍCULA NO VÁLIDA"
-            }
+            st.session_state.resultado = {"tipo": "error", "mensaje": "NO REGISTRADO"}
         else:
             al = a.iloc[0]
-
-            # ✅ Guardar entrada
             enviar({
                 "TIPO_REGISTRO": "ENTRADA",
                 "FECHA": datetime.now(zona).strftime("%Y-%m-%d"),
@@ -265,41 +317,32 @@ if menu == "Puerta de Entrada":
                 "GRUPO": al["GRUPO"],
                 "REGISTRO_POR": user["USUARIO"]
             })
+            st.session_state.resultado = {"tipo": "ok", "alumno": al}
 
-            st.session_state.resultado = {
-                "tipo": "ok",
-                "alumno": al,
-                "mensaje": f"ACCESO PERMITIDO: {al['NOMBRE']}"
-            }
+    st.text_input("", key="scan_input", on_change=procesar_scan, placeholder="Esperando lectura...")
 
-    # Input invisible, solo para lector
-    st.text_input(
-        "",
-        key="scan_input",
-        on_change=procesar_scan,
-        placeholder="Coloca tu credencial frente al lector",
-        label_visibility="collapsed"
-    )
-
-    # Mostrar resultado
+    # Renderizado de Resultados Modernos
     if st.session_state.resultado:
         r = st.session_state.resultado
-        color = "#28a745" if r["tipo"]=="ok" else "#dc3545"
-        emoji = "🎉" if r["tipo"]=="ok" else "❌"
-        mensaje = f"{emoji} {'ACCESO PERMITIDO' if r['tipo']=='ok' else 'ACCESO DENEGADO'}"
-        nombre = r["alumno"]["NOMBRE"] if r["tipo"]=="ok" else ""
-        grupo = r["alumno"]["GRUPO"] if r["tipo"]=="ok" else ""
+        
+        if r["tipo"] == "ok":
+            st.markdown(f"""
+                <div class='res-card res-ok'>
+                    <div class='status-title'>✅ ACCESO PERMITIDO</div>
+                    <div class='student-name'>{r['alumno']['NOMBRE']}</div>
+                    <div class='student-group'>{r['alumno']['GRUPO']}</div>
+                </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+                <div class='res-card res-error'>
+                    <div class='status-title'>❌ ERROR</div>
+                    <div class='student-name'>{r['mensaje']}</div>
+                    <div class='student-group'>INTENTA DE NUEVO</div>
+                </div>
+            """, unsafe_allow_html=True)
 
-        st.markdown(f"""
-        <div class='resultado-card' style='background:{color};'>
-            <h1>{mensaje}</h1>
-            <h2>{nombre}</h2>
-            <h3>{grupo}</h3>
-        </div>
-        """, unsafe_allow_html=True)
-
-        # ⏱️ Espera 2 segundos y limpia
-        time.sleep(2)
+        time.sleep(2.5)
         st.session_state.resultado = None
         st.rerun()
 
@@ -540,6 +583,7 @@ elif menu == "Dashboard Director":
         )
 
         st.dataframe(top_al.head(10), use_container_width=True)
+
 
 
 
