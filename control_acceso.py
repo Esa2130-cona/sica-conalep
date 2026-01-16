@@ -53,7 +53,43 @@ st.markdown("""<style>
 .msg-error {color:#943126;font-size:50px;font-weight:bold;}
 .datos-escolares {color:#566573;font-size:35px;}
 </style>""", unsafe_allow_html=True)
+ st.markdown("""
+    <style>
+    .kiosko-container {
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        justify-content:flex-start;
+        padding-top:50px;
+        height:90vh;
+        font-family:sans-serif;
+    }
+    .scan-box {
+        background:#F0F0F0;
+        padding:30px;
+        border-radius:15px;
+        text-align:center;
+        width:400px;
+        font-size:25px;
+        margin-bottom:20px;
+        box-shadow:0 4px 10px rgba(0,0,0,0.2);
+    }
+    .resultado-card {
+        padding:60px;
+        border-radius:20px;
+        text-align:center;
+        color:white;
+        width:80%;
+        max-width:600px;
+        margin-top:20px;
+        font-size:30px;
+        font-weight:bold;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
+    st.markdown("<div class='kiosko-container'>", unsafe_allow_html=True)
+    st.markdown("<div class='scan-box'>📸 ESCANEA TU CREDENCIAL</div>", unsafe_allow_html=True)
 
 
 # ================= CONFIG =================
@@ -498,6 +534,7 @@ elif menu == "Dashboard Director":
         )
 
         st.dataframe(top_al.head(10), use_container_width=True)
+
 
 
 
