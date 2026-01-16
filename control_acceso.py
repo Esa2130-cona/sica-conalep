@@ -169,57 +169,75 @@ else:
 
 menu = st.sidebar.radio("📋 MENÚ PRINCIPAL", opciones)
 
-
-
-
 # ================= PUERTA DE ENTRADA =================
 if menu == "Puerta de Entrada":
     df = cargar(GIDS["ALUMNOS"])
     df.columns = [c.strip().upper() for c in df.columns]
 
+    # ==== ESTILO MODERNO PARA KIOSKO ====
     st.markdown("""
     <style>
+    /* Contenedor principal */
     .kiosko-container {
         display:flex;
         flex-direction:column;
         align-items:center;
         justify-content:flex-start;
-        padding-top:50px;
-        height:90vh;
-        font-family:sans-serif;
+        padding-top:40px;
+        height:95vh;
+        font-family: 'Segoe UI', sans-serif;
+        background: linear-gradient(135deg, #73a5ff, #5477f5);
+        color: white;
     }
+    /* Caja de escaneo */
     .scan-box {
-        background:#F0F0F0;
-        padding:30px;
-        border-radius:15px;
+        background:#ffffff20;
+        padding:40px;
+        border-radius:20px;
         text-align:center;
-        width:400px;
-        font-size:25px;
-        margin-bottom:20px;
-        box-shadow:0 4px 10px rgba(0,0,0,0.2);
+        width:450px;
+        font-size:28px;
+        font-weight:bold;
+        margin-bottom:30px;
+        box-shadow:0 8px 20px rgba(0,0,0,0.3);
+        backdrop-filter: blur(5px);
     }
+    /* Resultado acceso */
     .resultado-card {
         padding:60px;
-        border-radius:20px;
+        border-radius:25px;
         text-align:center;
         color:white;
         width:80%;
-        max-width:600px;
-        margin-top:20px;
-        font-size:30px;
+        max-width:700px;
+        margin-top:30px;
+        font-size:36px;
         font-weight:bold;
+        animation: bounce 0.6s;
+    }
+    /* Animación */
+    @keyframes bounce {
+      0% { transform: scale(0.5); opacity:0; }
+      60% { transform: scale(1.1); opacity:1; }
+      80% { transform: scale(0.95); }
+      100% { transform: scale(1); }
     }
     </style>
     """, unsafe_allow_html=True)
 
+    # Contenedor principal
     st.markdown("<div class='kiosko-container'>", unsafe_allow_html=True)
+
+    # Caja de escaneo
     st.markdown("<div class='scan-box'>📸 ESCANEA TU CREDENCIAL</div>", unsafe_allow_html=True)
 
+    # Inicializar estados si no existen
     if "scan_input" not in st.session_state:
         st.session_state.scan_input = ""
     if "resultado" not in st.session_state:
         st.session_state.resultado = None
 
+    # Función para procesar lectura
     def procesar_scan():
         mat = normalizar_matricula(st.session_state.scan_input)
         st.session_state.scan_input = ""
@@ -254,6 +272,7 @@ if menu == "Puerta de Entrada":
                 "mensaje": f"ACCESO PERMITIDO: {al['NOMBRE']}"
             }
 
+    # Input invisible, solo para lector
     st.text_input(
         "",
         key="scan_input",
@@ -262,11 +281,12 @@ if menu == "Puerta de Entrada":
         label_visibility="collapsed"
     )
 
-    # ===== RESULTADO VISUAL =====
+    # Mostrar resultado
     if st.session_state.resultado:
         r = st.session_state.resultado
-        color = "#0f5132" if r["tipo"]=="ok" else "#842029"
-        mensaje = "✔ ACCESO PERMITIDO" if r["tipo"]=="ok" else "✖ ACCESO DENEGADO"
+        color = "#28a745" if r["tipo"]=="ok" else "#dc3545"
+        emoji = "🎉" if r["tipo"]=="ok" else "❌"
+        mensaje = f"{emoji} {'ACCESO PERMITIDO' if r['tipo']=='ok' else 'ACCESO DENEGADO'}"
         nombre = r["alumno"]["NOMBRE"] if r["tipo"]=="ok" else ""
         grupo = r["alumno"]["GRUPO"] if r["tipo"]=="ok" else ""
 
@@ -284,6 +304,7 @@ if menu == "Puerta de Entrada":
         st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 # ================= REPORTES =================
 elif menu == "Reportes":
@@ -519,6 +540,7 @@ elif menu == "Dashboard Director":
         )
 
         st.dataframe(top_al.head(10), use_container_width=True)
+
 
 
 
