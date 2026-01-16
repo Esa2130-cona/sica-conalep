@@ -53,6 +53,53 @@ st.markdown("""<style>
 .msg-error {color:#943126;font-size:50px;font-weight:bold;}
 .datos-escolares {color:#566573;font-size:35px;}
 </style>""", unsafe_allow_html=True)
+st.markdown("""
+<style>
+.kiosko-container {
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    height:80vh;
+}
+
+.kiosko-title {
+    font-size:70px;
+    font-weight:900;
+    color:#1B4F72;
+    margin-bottom:20px;
+}
+
+.kiosko-sub {
+    font-size:28px;
+    color:#566573;
+    margin-bottom:40px;
+}
+
+.scan-box {
+    border:6px dashed #1E8449;
+    border-radius:30px;
+    padding:50px 80px;
+    font-size:40px;
+    color:#1E8449;
+    text-align:center;
+    margin-bottom:30px;
+    animation:pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% {opacity:1}
+    50% {opacity:.4}
+    100% {opacity:1}
+}
+
+.kiosko-hint {
+    font-size:22px;
+    color:#7DCEA0;
+}
+</style>
+""", unsafe_allow_html=True)
+
 
 # ================= CONFIG =================
 SHEET_ID = "11RZyoBo_MyQkGWfc21WCY_xPFZdKkwTG12YagiZf3yM"
@@ -489,6 +536,7 @@ elif menu == "Dashboard Director":
         )
 
         st.dataframe(top_al.head(10), use_container_width=True)
+
 
 
 
