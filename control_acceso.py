@@ -230,7 +230,14 @@ if menu == "Puerta de Entrada":
 )
 
 
-    st.markdown("<h4 style='text-align:center;'>ESCANEE CREDENCIAL</h4>", unsafe_allow_html=True)
+    st.markdown("""
+<div class="kiosko-container">
+    <div class="kiosko-title">🎓 CONALEP CUAUTLA</div>
+    <div class="kiosko-sub">Control de Acceso Escolar</div>
+    <div class="scan-box">📸 ESCANEA TU CREDENCIAL</div>
+    <div class="kiosko-hint">Coloca tu credencial frente al lector</div>
+</div>
+""", unsafe_allow_html=True)
 
     if "scan_input" not in st.session_state:
         st.session_state.scan_input = ""
@@ -536,6 +543,7 @@ elif menu == "Dashboard Director":
         )
 
         st.dataframe(top_al.head(10), use_container_width=True)
+
 
 
 
