@@ -53,19 +53,8 @@ st.markdown("""<style>
 .msg-error {color:#943126;font-size:50px;font-weight:bold;}
 .datos-escolares {color:#566573;font-size:35px;}
 </style>""", unsafe_allow_html=True)
- st.markdown("""
-    <style>
-    .kiosko-container {
-        display:flex;
-        flex-direction:column;
-        align-items:center;
-        justify-content:flex-start;
-        padding-top:50px;
-        height:90vh;
-        font-family:sans-serif;
-    }
-    .scan-box {
-        background:#F0F0F0;
+st.markdown("""<style>.kiosko-container { display:flex; flex-direction:column;  align-items:center;   justify-content:flex-start;  padding-top:50px;
+  height:90vh;font-family:sans-serif; }.scan-box {  background:#F0F0F0;
         padding:30px;
         border-radius:15px;
         text-align:center;
@@ -534,6 +523,7 @@ elif menu == "Dashboard Director":
         )
 
         st.dataframe(top_al.head(10), use_container_width=True)
+
 
 
 
