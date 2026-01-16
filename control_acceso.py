@@ -171,27 +171,49 @@ menu = st.sidebar.radio("📋 MENÚ PRINCIPAL", opciones)
 
 
 
-# ================= PUERTA =================
+
+# ================= PUERTA DE ENTRADA =================
 if menu == "Puerta de Entrada":
     df = cargar(GIDS["ALUMNOS"])
     df.columns = [c.strip().upper() for c in df.columns]
 
-# 🔥 NORMALIZAR MATRÍCULAS DE LA BASE
-    df["MATRICULA"] = (
-    df["MATRICULA"]
-    .astype(str)
-    .apply(normalizar_matricula)
-)
-
-
     st.markdown("""
-<div class="kiosko-container">
-    <div class="kiosko-title">🎓 CONALEP CUAUTLA</div>
-    <div class="kiosko-sub">Control de Acceso Escolar</div>
-    <div class="scan-box">📸 ESCANEA TU CREDENCIAL</div>
-    <div class="kiosko-hint">Coloca tu credencial frente al lector</div>
-</div>
-""", unsafe_allow_html=True)
+    <style>
+    .kiosko-container {
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        justify-content:flex-start;
+        padding-top:50px;
+        height:90vh;
+        font-family:sans-serif;
+    }
+    .scan-box {
+        background:#F0F0F0;
+        padding:30px;
+        border-radius:15px;
+        text-align:center;
+        width:400px;
+        font-size:25px;
+        margin-bottom:20px;
+        box-shadow:0 4px 10px rgba(0,0,0,0.2);
+    }
+    .resultado-card {
+        padding:60px;
+        border-radius:20px;
+        text-align:center;
+        color:white;
+        width:80%;
+        max-width:600px;
+        margin-top:20px;
+        font-size:30px;
+        font-weight:bold;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    st.markdown("<div class='kiosko-container'>", unsafe_allow_html=True)
+    st.markdown("<div class='scan-box'>📸 ESCANEA TU CREDENCIAL</div>", unsafe_allow_html=True)
 
     if "scan_input" not in st.session_state:
         st.session_state.scan_input = ""
@@ -200,23 +222,22 @@ if menu == "Puerta de Entrada":
 
     def procesar_scan():
         mat = normalizar_matricula(st.session_state.scan_input)
-
         st.session_state.scan_input = ""
 
         if not mat:
             return
 
-        a = df[df["MATRICULA"] == mat]
-
+        a = df[df["MATRICULA"].astype(str).str.strip() == mat]
 
         if a.empty:
             st.session_state.resultado = {
-                "tipo": "error"
+                "tipo": "error",
+                "mensaje": "MATRÍCULA NO VÁLIDA"
             }
         else:
             al = a.iloc[0]
 
-            # ✅ GUARDAR ENTRADA (KIOSKO / ADMIN)
+            # ✅ Guardar entrada
             enviar({
                 "TIPO_REGISTRO": "ENTRADA",
                 "FECHA": datetime.now(zona).strftime("%Y-%m-%d"),
@@ -229,39 +250,40 @@ if menu == "Puerta de Entrada":
 
             st.session_state.resultado = {
                 "tipo": "ok",
-                "alumno": al
+                "alumno": al,
+                "mensaje": f"ACCESO PERMITIDO: {al['NOMBRE']}"
             }
 
     st.text_input(
-        "Esperando lectura...",
+        "",
         key="scan_input",
-        on_change=procesar_scan
+        on_change=procesar_scan,
+        placeholder="Coloca tu credencial frente al lector",
+        label_visibility="collapsed"
     )
 
-    # 👉 RESULTADO VISUAL
+    # ===== RESULTADO VISUAL =====
     if st.session_state.resultado:
         r = st.session_state.resultado
+        color = "#0f5132" if r["tipo"]=="ok" else "#842029"
+        mensaje = "✔ ACCESO PERMITIDO" if r["tipo"]=="ok" else "✖ ACCESO DENEGADO"
+        nombre = r["alumno"]["NOMBRE"] if r["tipo"]=="ok" else ""
+        grupo = r["alumno"]["GRUPO"] if r["tipo"]=="ok" else ""
 
-        if r["tipo"] == "ok":
-            st.markdown(f"""
-            <div style="background:#0f5132;color:white;padding:40px;border-radius:20px;text-align:center;">
-                <h1>✔ ACCESO PERMITIDO</h1>
-                <h2>{r['alumno']['NOMBRE']}</h2>
-                <h3>Grupo: {r['alumno']['GRUPO']}</h3>
-            </div>
-            """, unsafe_allow_html=True)
-        else:
-            st.markdown("""
-            <div style="background:#842029;color:white;padding:40px;border-radius:20px;text-align:center;">
-                <h1>✖ ACCESO DENEGADO</h1>
-                <h2>MATRÍCULA NO VÁLIDA</h2>
-            </div>
-            """, unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class='resultado-card' style='background:{color};'>
+            <h1>{mensaje}</h1>
+            <h2>{nombre}</h2>
+            <h3>{grupo}</h3>
+        </div>
+        """, unsafe_allow_html=True)
 
+        # ⏱️ Espera 2 segundos y limpia
         time.sleep(2)
         st.session_state.resultado = None
         st.rerun()
 
+    st.markdown("</div>", unsafe_allow_html=True)
 
 # ================= REPORTES =================
 elif menu == "Reportes":
@@ -497,6 +519,7 @@ elif menu == "Dashboard Director":
         )
 
         st.dataframe(top_al.head(10), use_container_width=True)
+
 
 
 
