@@ -12,9 +12,13 @@ zona = pytz.timezone("America/Mexico_City")
 # --- CONEXIÓN A SUPABASE ---
 @st.cache_resource
 def init_connection():
-    url = st.secrets["SUPABASE_URL"]
-    key = st.secrets["SUPABASE_KEY"]
-    return create_client(url, key)
+    try:
+        url = st.secrets["SUPABASE_URL"]
+        key = st.secrets["SUPABASE_KEY"]
+        return create_client(url, key)
+    except Exception as e:
+        st.error("Error en Secrets: Verifica SUPABASE_URL y SUPABASE_KEY")
+        st.stop()
 
 supabase = init_connection()
 
@@ -24,6 +28,7 @@ def normalizar_matricula(mat):
     return mat.strip().upper().replace('"', '-').replace("'", '-')
 
 def enviar(tabla, datos):
+    # Forzamos nombres de columnas en minúsculas para coincidir con Supabase
     datos_db = {k.lower(): v for k, v in datos.items()}
     return supabase.table(tabla).insert(datos_db).execute()
 
@@ -38,7 +43,6 @@ st.markdown("""
     .res-ok { background: linear-gradient(145deg, #1b5e20, #2e7d32); border: 2px solid #00e676; }
     .res-error { background: linear-gradient(145deg, #b71c1c, #d32f2f); border: 2px solid #ff5252; }
     .student-name { font-size: 50px; font-weight: 900; color: white; margin: 15px 0; text-transform: uppercase; }
-    div[data-baseweb="input"] { background: transparent !important; border: none !important; }
     input { text-align: center !important; font-size: 24px !important; color: white !important; border-bottom: 2px solid #00e676 !important; }
     @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 </style>
@@ -51,24 +55,33 @@ if "user" not in st.session_state:
 if not st.session_state.user:
     st.markdown("<h1 style='color:white; text-align:center;'>🔐 SICA CONALEP CUAUTLA</h1>", unsafe_allow_html=True)
     with st.container():
-        u = st.text_input("Usuario")
-        p = st.text_input("PIN", type="password")
+        u = st.text_input("Usuario").strip()
+        p = st.text_input("PIN", type="password").strip()
         if st.button("Ingresar"):
-            query = supabase.table("usuarios").select("*").eq("usuario", u).eq("pin", p).execute()
-            if query.data:
-                st.session_state.user = query.data[0]
-                st.rerun()
-            else:
-                st.error("Credenciales incorrectas")
+            try:
+                # Usamos filtros explícitos para evitar conflictos de nombres
+                query = supabase.table("usuarios").select("*").filter("usuario", "eq", u).filter("pin", "eq", p).execute()
+                if query.data:
+                    st.session_state.user = query.data[0]
+                    st.rerun()
+                else:
+                    st.error("Credenciales incorrectas")
+            except Exception as e:
+                st.error(f"Error de base de datos: {e}")
+                st.info("Verifica que las columnas se llamen 'usuario' y 'pin' en minúsculas y el RLS esté desactivado.")
     st.stop()
 
 user = st.session_state.user
-rol = user.get("rol", "").upper()
+rol = str(user.get("rol", user.get("ROL", ""))).upper()
 
 # ================= MENÚ PRINCIPAL =================
 opciones = ["Puerta de Entrada", "Reportes", "Historial", "Bitácora Maestros"]
 if rol == "KIOSKO": opciones = ["Puerta de Entrada"]
 menu = st.sidebar.radio("📋 MENÚ", opciones)
+
+if st.sidebar.button("Cerrar Sesión"):
+    st.session_state.user = None
+    st.rerun()
 
 # ================= MÓDULO: PUERTA DE ENTRADA =================
 if menu == "Puerta de Entrada":
@@ -82,27 +95,33 @@ if menu == "Puerta de Entrada":
         st.session_state.scan_input = ""
         if not mat: return
         
-        # Buscar Alumno y Avisos al mismo tiempo
-        al_query = supabase.table("alumnos").select("*").eq("MATRICULA", mat).execute()
-        av_query = supabase.table("avisos").select("mensaje").eq("matricula", mat).eq("activo", True).execute()
+        try:
+            # Busqueda flexible (soporta min/MAY en las columnas de la DB)
+            al_query = supabase.table("alumnos").select("*").filter("matricula", "eq", mat).execute()
+            av_query = supabase.table("avisos").select("mensaje").filter("matricula", "eq", mat).filter("activo", "eq", True).execute()
 
-        if not al_query.data:
-            st.session_state.resultado = {"tipo": "error", "mensaje": "NO REGISTRADO"}
-        else:
-            al = al_query.data[0]
-            aviso = av_query.data[0]["mensaje"] if av_query.data else None
-            
-            enviar("entradas", {
-                "FECHA": datetime.now(zona).strftime("%Y-%m-%d"),
-                "HORA": datetime.now(zona).strftime("%H:%M:%S"),
-                "MATRICULA": al["MATRICULA"],
-                "NOMBRE": al["NOMBRE"],
-                "GRUPO": al.get("GRUPO", "N/A"),
-                "REGISTRO_POR": user["usuario"]
-            })
-            st.session_state.resultado = {"tipo": "ok", "alumno": al, "aviso": aviso}
+            if not al_query.data:
+                st.session_state.resultado = {"tipo": "error", "mensaje": "NO REGISTRADO"}
+            else:
+                al = al_query.data[0]
+                nombre = al.get("nombre", al.get("NOMBRE", "Estudiante"))
+                grupo = al.get("grupo", al.get("GRUPO", "N/A"))
+                
+                aviso = av_query.data[0]["mensaje"] if av_query.data else None
+                
+                enviar("entradas", {
+                    "fecha": datetime.now(zona).strftime("%Y-%m-%d"),
+                    "hora": datetime.now(zona).strftime("%H:%M:%S"),
+                    "matricula": mat,
+                    "nombre": nombre,
+                    "grupo": grupo,
+                    "registro_por": user.get("usuario", "Sistema")
+                })
+                st.session_state.resultado = {"tipo": "ok", "nombre": nombre, "grupo": grupo, "aviso": aviso}
+        except Exception as e:
+            st.session_state.resultado = {"tipo": "error", "mensaje": f"Error DB: {str(e)[:40]}"}
 
-    st.text_input("", key="scan_input", on_change=procesar_scan, placeholder="ESCANEE AQUÍ")
+    st.text_input("", key="scan_input", on_change=procesar_scan, placeholder="ESCANEE AQUÍ", autocomplete="off")
 
     if st.session_state.resultado:
         res = st.session_state.resultado
@@ -110,8 +129,8 @@ if menu == "Puerta de Entrada":
             st.markdown(f"""
                 <div class='res-card res-ok'>
                     <div style='font-size:30px; color:#00e676;'>✅ ACCESO PERMITIDO</div>
-                    <div class='student-name'>{res['alumno']['NOMBRE']}</div>
-                    <div style='font-size:25px; color:white;'>GRUPO: {res['alumno'].get('GRUPO','N/A')}</div>
+                    <div class='student-name'>{res['nombre']}</div>
+                    <div style='font-size:25px; color:white;'>GRUPO: {res['grupo']}</div>
                 </div>
             """, unsafe_allow_html=True)
             if res["aviso"]: st.warning(f"⚠️ AVISO: {res['aviso']}")
@@ -126,64 +145,40 @@ if menu == "Puerta de Entrada":
 # ================= MÓDULO: REPORTES =================
 elif menu == "Reportes":
     st.title("🚨 Gestión de Reportes")
-    mat = st.text_input("Ingrese Matrícula del Alumno").strip()
-    
-    if mat:
-        al_query = supabase.table("alumnos").select("*").eq("MATRICULA", mat).execute()
-        if al_query.data:
-            al = al_query.data[0]
-            st.write(f"**Alumno:** {al['NOMBRE']} | **Grupo:** {al.get('GRUPO','N/A')}")
-            
-            # Lógica de niveles automática
-            rep_count = supabase.table("reportes").select("id", count="exact").eq("matricula", mat).execute()
-            count = rep_count.count if rep_count.count else 0
-            niveles = ["LLAMADA 1", "LLAMADA 2", "LLAMADA 3", "REPORTE"]
-            nivel_actual = niveles[min(count, 3)]
-            
-            st.info(f"Nivel de incidencia sugerido: {nivel_actual}")
-            
-            tipo = st.selectbox("Tipo", ["Uniforme", "Conducta", "Retardo", "Falta"])
-            desc = st.text_area("Descripción de la incidencia")
-            foto = st.camera_input("Capturar Evidencia (Opcional)")
-            
-            if st.button("Guardar Reporte"):
-                enviar("reportes", {
-                    "FECHA": datetime.now(zona).strftime("%Y-%m-%d"),
-                    "MATRICULA": mat,
-                    "NOMBRE": al["NOMBRE"],
-                    "GRUPO": al.get("GRUPO","N/A"),
-                    "NIVEL": nivel_actual,
-                    "TIPO": tipo,
-                    "DESCRIPCION": desc,
-                    "REGISTRADO_POR": user["usuario"]
-                })
-                st.success("Reporte guardado con éxito.")
-                time.sleep(1)
-                st.rerun()
-        else:
-            st.error("Alumno no encontrado.")
+    mat_rep = st.text_input("Matrícula para reporte").strip().upper()
+    if mat_rep:
+        try:
+            al_res = supabase.table("alumnos").select("*").filter("matricula", "eq", mat_rep).execute()
+            if al_res.data:
+                al = al_res.data[0]
+                st.subheader(f"Alumno: {al.get('nombre', al.get('NOMBRE'))}")
+                tipo = st.selectbox("Incidencia", ["Uniforme", "Conducta", "Retardo", "Falta"])
+                desc = st.text_area("Detalles")
+                if st.button("Guardar Reporte"):
+                    enviar("reportes", {
+                        "fecha": datetime.now(zona).strftime("%Y-%m-%d"),
+                        "matricula": mat_rep,
+                        "nombre": al.get('nombre', al.get('NOMBRE')),
+                        "tipo": tipo,
+                        "descripcion": desc,
+                        "registrado_por": user.get("usuario")
+                    })
+                    st.success("Reporte guardado")
+            else:
+                st.error("No se encontró el alumno")
+        except: st.error("Error al buscar alumno")
 
-# ================= MÓDULO: BITÁCORA MAESTROS =================
-elif menu == "Bitácora Maestros":
-    st.title("📖 Bitácora de Laboratorios")
-    with st.form("bitacora"):
-        aula = st.selectbox("Aula", ["Info 1", "Info 2", "Redes"])
-        tema = st.text_input("Tema de la Práctica")
-        grupo_clase = st.text_input("Grupo")
-        estado = st.radio("Estado de Equipos", ["Todo OK", "Fallas Reportadas"], horizontal=True)
-        obs = st.text_area("Observaciones")
-        if st.form_submit_button("Registrar Clase"):
-            enviar("bitacora_maestros", {
-                "FECHA": datetime.now(zona).strftime("%Y-%m-%d"),
-                "MAESTRO": user["usuario"],
-                "AULA": aula,
-                "TEMA": tema,
-                "GRUPO": grupo_clase,
-                "ESTADO_EQUIPOS": estado,
-                "INCIDENCIAS": obs
-            })
-            st.success("Registro completado.")
-
+# ================= MÓDULO: HISTORIAL =================
+elif menu == "Historial":
+    st.title("📊 Consulta de Historial")
+    mat_h = st.text_input("Matrícula a consultar").strip().upper()
+    if mat_h:
+        try:
+            ent = supabase.table("entradas").select("*").filter("matricula", "eq", mat_h).execute()
+            if ent.data:
+                st.table(pd.DataFrame(ent.data)[["fecha", "hora", "nombre"]])
+            else: st.info("Sin registros")
+        except: st.error("Error en consulta")
 
 
 
