@@ -147,9 +147,11 @@ if menu == "Puerta de Entrada":
         if not mat: return
         
         try:
-            # Busqueda flexible (soporta min/MAY en las columnas de la DB)
+            # 1. Buscamos al alumno
             al_query = supabase.table("alumnos").select("*").filter("matricula", "eq", mat).execute()
-            av_query = supabase.table("avisos").select("mensaje").filter("matricula", "eq", mat).filter("activo", "eq", True).execute()
+            
+            # 2. Buscamos avisos incluyendo la PRIORIDAD
+            av_query = supabase.table("avisos").select("mensaje, prioridad").filter("matricula", "eq", mat).filter("activo", "eq", True).execute()
 
             if not al_query.data:
                 st.session_state.resultado = {"tipo": "error", "mensaje": "NO REGISTRADO"}
@@ -158,7 +160,8 @@ if menu == "Puerta de Entrada":
                 nombre = al.get("nombre", al.get("NOMBRE", "Estudiante"))
                 grupo = al.get("grupo", al.get("GRUPO", "N/A"))
                 
-                aviso = av_query.data[0]["mensaje"] if av_query.data else None
+                # Extraemos mensaje y prioridad si existen
+                aviso_data = av_query.data[0] if av_query.data else None
                 
                 enviar("entradas", {
                     "fecha": datetime.now(zona).strftime("%Y-%m-%d"),
@@ -168,7 +171,13 @@ if menu == "Puerta de Entrada":
                     "grupo": grupo,
                     "registro_por": user.get("usuario", "Sistema")
                 })
-                st.session_state.resultado = {"tipo": "ok", "nombre": nombre, "grupo": grupo, "aviso": aviso}
+                
+                st.session_state.resultado = {
+                    "tipo": "ok", 
+                    "nombre": nombre, 
+                    "grupo": grupo, 
+                    "aviso": aviso_data  # Guardamos el objeto completo del aviso
+                }
         except Exception as e:
             st.session_state.resultado = {"tipo": "error", "mensaje": f"Error DB: {str(e)[:40]}"}
 
@@ -177,6 +186,7 @@ if menu == "Puerta de Entrada":
     if st.session_state.resultado:
         res = st.session_state.resultado
         if res["tipo"] == "ok":
+            # Card principal de acceso
             st.markdown(f"""
                 <div class='res-card res-ok'>
                     <div style='font-size:30px; color:#00e676;'>✅ ACCESO PERMITIDO</div>
@@ -184,11 +194,31 @@ if menu == "Puerta de Entrada":
                     <div style='font-size:25px; color:white;'>GRUPO: {res['grupo']}</div>
                 </div>
             """, unsafe_allow_html=True)
-            if res["aviso"]: st.warning(f"⚠️ AVISO: {res['aviso']}")
+            
+            # Lógica de Avisos por Prioridad
+            if res["aviso"]:
+                msg = res["aviso"]["mensaje"]
+                prio = str(res["aviso"].get("prioridad", "BAJA")).upper()
+                
+                # Definimos color según prioridad para que sea visualmente moderno
+                # Rojo para ALTA, Naranja para MEDIA, Azul para BAJA
+                colores = {"ALTA": "#e74c3c", "MEDIA": "#f39c12", "BAJA": "#3498db"}
+                color_fondo = colores.get(prio, "#3498db")
+
+                st.markdown(f"""
+                    <div style='background-color: {color_fondo}; padding: 20px; border-radius: 15px; 
+                                color: white; text-align: center; margin-top: 15px; border: 2px solid white;'>
+                        <div style='font-size: 18px; font-weight: bold; opacity: 0.9;'>⚠️ AVISO PRIORIDAD {prio}</div>
+                        <div style='font-size: 24px; font-weight: bold;'>{msg}</div>
+                    </div>
+                """, unsafe_allow_html=True)
+                
         else:
             st.markdown(f"<div class='res-card res-error'><h1>❌ {res['mensaje']}</h1></div>", unsafe_allow_html=True)
         
-        time.sleep(2.0)
+        # Aumentamos un poco el tiempo si hay aviso para que alcancen a leer
+        tiempo = 4.0 if res.get("aviso") else 2.0
+        time.sleep(tiempo)
         st.session_state.resultado = None
         st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
@@ -351,6 +381,7 @@ elif menu == "Historial":
                 
         except Exception as e:
             st.error(f"Error de conexión: {e}")
+
 
 
 
