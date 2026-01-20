@@ -624,6 +624,7 @@ elif menu == "Servicios y Técnica":
     except Exception as e:
         st.error(f"Error en Panel de Servicios: {e}")
 # ================= EXPEDIENTE DIGITAL (CON BOTÓN DE BLOQUEO) =================
+# ================= EXPEDIENTE DIGITAL ACTUALIZADO =================
 elif menu == "Expediente Digital":
     st.title("🗂️ Expediente Digital Integral")
     
@@ -631,21 +632,48 @@ elif menu == "Expediente Digital":
 
     if mat_exp:
         try:
-            # 1. CARGA DE DATOS COMPLETA (Incluyendo estatus)
+            # 1. CARGA DE DATOS COMPLETA
             al_res = supabase.table("alumnos").select("*").eq("matricula", mat_exp).execute()
             
             if al_res.data:
                 al = al_res.data[0]
-                estatus_actual = al.get("estatus", True) # Por defecto True si es nulo
+                estatus_actual = al.get("estatus", True)
+                
+                # Consultas adicionales para reportes, entradas y avisos
+                res_rep = supabase.table("reportes").select("*").eq("matricula", mat_exp).execute()
+                res_ent = supabase.table("entradas").select("*").eq("matricula", mat_exp).execute()
+                res_av = supabase.table("avisos").select("*").eq("matricula", mat_exp).eq("activo", True).execute()
+                
+                # Definición de variables para evitar el error 'is not defined'
+                df_rep = pd.DataFrame(res_rep.data) if res_rep.data else pd.DataFrame()
+                df_ent = pd.DataFrame(res_ent.data) if res_ent.data else pd.DataFrame()
+                list_av = res_av.data if res_av.data else [] # AQUÍ SE DEFINE LA VARIABLE DEL ERROR
 
-                # --- 2. LÓGICA DE BLOQUEO/DESBLOQUEO ---
-                def cambiar_estatus(nueva_accion):
-                    nuevo_valor = True if nueva_accion == "ACTIVAR" else False
-                    supabase.table("alumnos").update({"estatus": nuevo_valor}).eq("matricula", mat_exp).execute()
-                    st.toast(f"Estatus actualizado a: {nueva_accion}")
+                # --- 2. FUNCIÓN DE BLOQUEO CON AVISO AUTOMÁTICO ---
+                def gestionar_acceso(bloquear=True):
+                    nuevo_estatus = not bloquear
+                    # Actualizar estatus
+                    supabase.table("alumnos").update({"estatus": nuevo_estatus}).eq("matricula", mat_exp).execute()
+                    
+                    if bloquear:
+                        # Crear aviso automático al bloquear
+                        nuevo_aviso = {
+                            "matricula": mat_exp,
+                            "mensaje": "⚠️ ACCESO RESTRINGIDO: PASAR A DIRECCIÓN / PREFECTURA",
+                            "prioridad": "ALTA",
+                            "activo": True
+                        }
+                        supabase.table("avisos").insert(nuevo_aviso).execute()
+                        st.warning("Alumno bloqueado y aviso de dirección generado.")
+                    else:
+                        # Desactivar avisos de bloqueo al activar
+                        supabase.table("avisos").update({"activo": False}).eq("matricula", mat_exp).execute()
+                        st.success("Acceso restaurado y avisos archivados.")
+                    
                     time.sleep(1)
+                    st.rerun()
 
-                # --- 3. DISEÑO DE PANTALLA (ENCABEZADO, RIESGO Y ACCIÓN) ---
+                # --- 3. DISEÑO DE INTERFAZ ---
                 col_perfil, col_riesgo, col_accion = st.columns([2, 1, 1])
                 
                 with col_perfil:
@@ -657,34 +685,36 @@ elif menu == "Expediente Digital":
                     """, unsafe_allow_html=True)
 
                 with col_riesgo:
-                    # Perfil de riesgo (tu lógica actual se mantiene aquí...)
-                    puntos_riesgo = len(supabase.table("reportes").select("id").eq("matricula", mat_exp).execute().data)
-                    color_r = "#00e676" if puntos_riesgo < 2 else "#ff5252"
+                    puntos = len(df_rep)
+                    color_r = "#00e676" if puntos < 3 else "#ff5252"
                     st.markdown(f"""
                     <div style='background:#161b22; padding:20px; border-radius:15px; text-align:center; border: 2px solid {color_r};'>
-                        <p style='margin:0; color:#8b949e; font-size:12px;'>RIESGO CONDUCTUAL</p>
-                        <h2 style='margin:0; color:{color_r};'>{puntos_riesgo}</h2>
+                        <p style='margin:0; color:#8b949e; font-size:12px;'>REPORTES</p>
+                        <h2 style='margin:0; color:{color_r};'>{puntos}</h2>
                     </div>
                     """, unsafe_allow_html=True)
 
                 with col_accion:
-                    st.markdown("<p style='text-align:center; color:white; font-size:12px;'>ESTADO DE ACCESO</p>", unsafe_allow_html=True)
                     if estatus_actual:
-                        if st.button("🚫 BLOQUEAR QR", use_container_width=True, type="secondary"):
-                            cambiar_estatus("BLOQUEAR")
-                            st.rerun()
+                        if st.button("🚫 BLOQUEAR ACCESO", use_container_width=True):
+                            gestionar_acceso(bloquear=True)
                     else:
-                        if st.button("✅ ACTIVAR QR", use_container_width=True, type="primary"):
-                            cambiar_estatus("ACTIVAR")
-                            st.rerun()
+                        if st.button("✅ ACTIVAR ACCESO", use_container_width=True, type="primary"):
+                            gestionar_acceso(bloquear=False)
 
-                # El resto de tu código de Expediente (PDF, Avisos, Pestañas) sigue igual abajo...
-
-                # --- 4. SECCIÓN DE AVISOS ACTIVOS ---
+                # --- 4. SECCIÓN DE AVISOS Y PDF (Tu código original) ---
                 if list_av:
-                    st.subheader("🔔 Avisos Activos en Puerta")
+                    st.subheader("🔔 Avisos Activos")
                     for av in list_av:
-                        st.warning(f"**Aviso:** {av['mensaje']} | **Prioridad:** {av.get('prioridad', 'Normal')}")
+                        st.warning(f"**{av.get('prioridad', 'AVISO')}:** {av['mensaje']}")
+
+                # Aquí continuaría tu función de generar_pdf_completo usando list_av
+                # ...
+                
+            else:
+                st.error("Matrícula no encontrada.")
+        except Exception as e:
+            st.error(f"Error en sistema: {e}")
 
                 # --- 5. FUNCIÓN PDF ACTUALIZADA ---
                 def generar_pdf_completo(datos_al, reporte_df, avisos, riesgo_txt):
@@ -752,6 +782,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error: {e}")
+
 
 
 
