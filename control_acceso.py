@@ -124,9 +124,6 @@ if not st.session_state.user:
                 st.error(f"Error de base de datos: {e}")
                 st.info("Verifica que las columnas se llamen 'usuario' y 'pin' en minúsculas y el RLS esté desactivado.")
     st.stop()
-
-user = st.session_state.user
-rol = str(user.get("rol", user.get("ROL", ""))).upper()
 # ================= CONFIGURACIÓN DE ROLES Y MENÚ =================
 # 1. Obtener datos del usuario logueado
 rol = str(user.get("rol", user.get("ROL", ""))).upper().strip()
@@ -811,6 +808,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error: {e}")
+
 
 
 
