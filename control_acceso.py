@@ -270,7 +270,7 @@ elif menu == "Historial":
                 st.info(f"Grupo actual: {al['grupo']}")
                 
                 # Creamos dos pestañas para organizar la información
-                tab1, tab2 = st.tabs(["🕒 Historial de Entradas", "🚨 Historial de Incidencias"])
+                tab1, tab2 = st.tabs(["🕒 Historial de Entradas", "🚨 Historial de Reportes"])
                 
                 with tab1:
                     # Consultamos la tabla 'entradas'
@@ -298,6 +298,7 @@ elif menu == "Historial":
                 
         except Exception as e:
             st.error(f"Error al consultar el historial: {e}")
+
 
 
 
