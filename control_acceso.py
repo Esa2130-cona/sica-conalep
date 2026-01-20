@@ -491,75 +491,99 @@ elif menu == "Dashboard":
         res_ent = supabase.table("entradas").select("*").execute()
         res_al = supabase.table("alumnos").select("matricula, grupo").execute()
 
-        if res_rep.data and res_ent.data and res_al.data:
+        if res_rep.data and res_ent.data:
             df_rep = pd.DataFrame(res_rep.data)
             df_ent = pd.DataFrame(res_ent.data)
             df_al = pd.DataFrame(res_al.data)
 
-            # 2. NORMALIZACIÓN TOTAL (Limpieza de nombres de columnas)
-            # Esto evita el error 'grupo' si en la DB está como 'GRUPO'
+            # Normalización de columnas
             df_rep.columns = [c.lower().strip() for c in df_rep.columns]
             df_al.columns = [c.lower().strip() for c in df_al.columns]
             df_ent.columns = [c.lower().strip() for c in df_ent.columns]
 
-            # 3. UNIÓN ESTRATÉGICA
-            # Solo traemos 'grupo' de la tabla alumnos usando 'matricula' como puente
-            if 'matricula' in df_rep.columns and 'matricula' in df_al.columns:
-                # Eliminamos la columna 'grupo' si ya existía en reportes para evitar duplicados
-                if 'grupo' in df_rep.columns:
-                    df_rep = df_rep.drop(columns=['grupo'])
-                
-                df_rep = df_rep.merge(df_al[['matricula', 'grupo']], on="matricula", how="left")
-                df_rep['grupo'] = df_rep['grupo'].fillna("SIN GRUPO")
-            else:
-                st.error("Falta la columna 'matricula' en una de las tablas.")
-                st.stop()
+            # Unión para obtener grupos
+            df_rep = df_rep.merge(df_al[['matricula', 'grupo']], on="matricula", how="left")
+            df_rep['grupo'] = df_rep['grupo'].fillna("SIN GRUPO")
 
-            # --- MÉTRICAS ---
+            # --- SECCIÓN DE MÉTRICAS ---
             c1, c2, c3, c4 = st.columns(4)
-            with c1:
-                st.metric("Asistencias", len(df_ent))
-            with c2:
-                st.metric("Incidencias", len(df_rep), delta="Alerta", delta_color="inverse")
-            with c3:
-                # Buscamos 'nivel' sin importar si es 'nivel' o 'NIVEL'
-                col_nivel = 'nivel' if 'nivel' in df_rep.columns else None
-                graves = len(df_rep[df_rep[col_nivel].astype(str).str.upper() == 'REPORTE']) if col_nivel else 0
-                st.metric("Casos Graves", graves)
-            with c4:
-                top_f = df_rep['tipo'].mode()[0] if not df_rep.empty and 'tipo' in df_rep.columns else "N/A"
-                st.metric("Motivo Común", top_f)
+            total_ent = len(df_ent)
+            total_inc = len(df_rep)
+            graves = len(df_rep[df_rep['nivel'].astype(str).str.upper() == 'REPORTE']) if 'nivel' in df_rep.columns else 0
+            motivo = df_rep['tipo'].mode()[0] if not df_rep.empty else "N/A"
 
-            st.markdown("### 📈 Análisis de Conducta")
+            c1.metric("Asistencias", total_ent)
+            c2.metric("Incidencias", total_inc, delta="Alerta", delta_color="inverse")
+            c3.metric("Casos Graves", graves)
+            c4.metric("Motivo Común", motivo)
+
+            # --- GRÁFICAS ---
+            st.markdown("### 📈 Análisis Visual")
+            col_a, col_b = st.columns(2)
+
+            with col_a:
+                st.subheader("Reportes por Grupo")
+                fig_grupos = px.bar(df_rep['grupo'].value_counts().reset_index(), 
+                                   x='count', y='grupo', orientation='h',
+                                   color='count', color_continuous_scale='Reds')
+                fig_grupos.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
+                st.plotly_chart(fig_grupos, use_container_width=True)
+
+            with col_b:
+                st.subheader("Tendencia de Asistencia")
+                df_ent['fecha'] = pd.to_datetime(df_ent['fecha'])
+                asistencia_diaria = df_ent.groupby('fecha').size().reset_index(name='asistencias')
+                fig_asistencia = px.line(asistencia_diaria, x='fecha', y='asistencias', markers=True)
+                fig_asistencia.update_traces(line_color='#1e8449')
+                fig_asistencia.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
+                st.plotly_chart(fig_asistencia, use_container_width=True)
+
+            # --- SECCIÓN DE ACCIONES (WhatsApp e Impresión) ---
+            st.markdown("---")
+            st.subheader("📤 Exportar y Notificar")
             
-            # --- GRÁFICA DE BARRAS POR GRUPO ---
-            # Ahora 'grupo' siempre existirá por la normalización del paso 2
-            conteo_grupos = df_rep['grupo'].value_counts().reset_index()
-            conteo_grupos.columns = ['grupo', 'cantidad']
-            
-            fig_grupos = px.bar(conteo_grupos, 
-                               x='cantidad', y='grupo', orientation='h',
-                               title="Reportes acumulados por Grupo",
-                               color='cantidad', color_continuous_scale='Reds')
-            
-            fig_grupos.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
-            st.plotly_chart(fig_grupos, use_container_width=True)
+            # 1. Preparar texto del reporte
+            fecha_hoy = datetime.now(zona).strftime('%d/%m/%Y')
+            texto_reporte = f"""*RESUMEN DIRECTIVO SICA - CONALEP CUAUTLA*
+Fecha: {fecha_hoy}
+-----------------------------------
+✅ Total Asistencias: {total_ent}
+⚠️ Total Incidencias: {total_inc}
+🚫 Casos en Nivel Crítico: {graves}
+📌 Motivo más frecuente: {motivo}
+-----------------------------------
+_Reporte generado automáticamente por SICA._"""
+
+            col_btn1, col_btn2 = st.columns(2)
+
+            with col_btn1:
+                # Botón de WhatsApp
+                # Sustituye el número por el del Director o el tuyo para pruebas
+                numero_tel = "527351234567" 
+                msg_url = f"https://wa.me/{numero_tel}?text={texto_reporte.replace(' ', '%20').replace('', '%0A')}"
+                st.markdown(f'''
+                    <a href="{msg_url}" target="_blank" style="text-decoration:none;">
+                        <div style="background-color:#25d366; color:white; padding:10px; border-radius:10px; text-align:center; font-weight:bold;">
+                            📲 Enviar Resumen por WhatsApp
+                        </div>
+                    </a>''', unsafe_allow_html=True)
+
+            with col_btn2:
+                # Bloque para copiar/imprimir
+                st.text_area("Copia este texto para tu oficio/minuta:", value=texto_reporte, height=200)
 
             # --- TABLA DE ALUMNOS CRÍTICOS ---
             st.subheader("🚩 Alumnos con más reportes")
-            col_nom = 'nombre' if 'nombre' in df_rep.columns else None
-            if col_nom:
-                top_al = df_rep[col_nom].value_counts().reset_index().head(10)
-                top_al.columns = ["Estudiante", "Cantidad"]
+            if 'nombre' in df_rep.columns:
+                top_al = df_rep['nombre'].value_counts().reset_index().head(10)
+                top_al.columns = ["Estudiante", "Total de Reportes"]
                 st.table(top_al)
 
         else:
-            st.info("No hay datos suficientes para mostrar estadísticas. Verifique que las tablas tengan registros.")
+            st.info("Sin datos suficientes.")
 
     except Exception as e:
-        st.error(f"Error al generar Dashboard: {e}")
-
-
+        st.error(f"Error: {e}")
 
 
 
