@@ -126,36 +126,54 @@ if not st.session_state.user:
     st.stop()
 
 # ================= CONFIGURACIÓN DE ROLES Y MENÚ =================
+# ================= CONFIGURACIÓN DE ROLES Y MENÚ =================
+# Obtenemos datos de forma segura para evitar el NameError de la imagen 10
 rol = str(user.get("rol", user.get("ROL", ""))).upper().strip()
 nombre_usuario = user.get("usuario", "Usuario")
 
-# Mensaje de Bienvenida Institucional
+# Mensaje de Bienvenida
 st.sidebar.markdown(f"""
 <div style='background-color: #161b22; padding: 15px; border-radius: 10px; border: 1px solid #30363d; margin-bottom: 20px;'>
     <p style='margin: 0; color: #8b949e; font-size: 11px;'>BIENVENIDO(A)</p>
     <h3 style='margin: 0; color: #ffffff; font-size: 18px;'>{nombre_usuario}</h3>
-    <span style='background-color: #1e8449; color: white; padding: 2px 8px; border-radius: 5px; font-size: 10px; font-weight: bold;'>
-        ROL: {rol}
-    </span>
+    <span style='background-color: #1e8449; color: white; padding: 2px 8px; border-radius: 5px; font-size: 10px; font-weight: bold;'>ROL: {rol}</span>
 </div>
 """, unsafe_allow_html=True)
 
 # Lógica de Opciones por Rol
-if rol == "KIOSKO":
-    opciones = ["Puerta de Entrada"]
-elif rol == "DIRECTOR":
-    opciones = ["Dashboard", "Expediente Digital"]
-elif rol == "PREFECTO":
-    opciones = ["Reportes", "Historial", "Avisos", "Expediente Digital"]
-elif rol == "GENERAL":
-    opciones = ["Reportes", "Avisos", "Servicios y Técnica", "Expediente Digital"]
-elif rol == "ADMIN":
-    opciones = ["Puerta de Entrada", "Reportes", "Historial", "Avisos", 
-                "Bitácora Maestros", "Dashboard", "Servicios y Técnica", "Expediente Digital"]
-else:
-    opciones = ["Puerta de Entrada"]
+if rol == "KIOSKO": opciones = ["Puerta de Entrada"]
+elif rol == "DIRECTOR": opciones = ["Dashboard", "Expediente Digital"]
+elif rol == "PREFECTO": opciones = ["Reportes", "Historial", "Avisos", "Expediente Digital"]
+elif rol == "GENERAL": opciones = ["Reportes", "Avisos", "Servicios y Técnica", "Expediente Digital"]
+elif rol == "ADMIN": opciones = ["Puerta de Entrada", "Reportes", "Historial", "Avisos", "Bitácora Maestros", "Dashboard", "Servicios y Técnica", "Expediente Digital"]
+else: opciones = ["Puerta de Entrada"]
 
 menu = st.sidebar.radio("📋 MENÚ PRINCIPAL", opciones)
+
+# ================= MÓDULO DASHBOARD (PROTEGIDO) =================
+if menu == "Dashboard":
+    st.title("🏛️ Panel de Control Directivo")
+    try:
+        res_rep = supabase.table("reportes").select("*").execute()
+        res_al = supabase.table("alumnos").select("matricula, grupo").execute()
+        
+        if res_rep.data and res_al.data:
+            df_rep = pd.DataFrame(res_rep.data)
+            df_al = pd.DataFrame(res_al.data)
+            
+            # NORMALIZACIÓN: Forzamos minúsculas para evitar errores 'grupo'
+            df_rep.columns = [c.lower().strip() for c in df_rep.columns]
+            df_al.columns = [c.lower().strip() for c in df_al.columns]
+            
+            # UNIÓN: Pegamos el grupo a los reportes
+            df_final = df_rep.merge(df_al[['matricula', 'grupo']], on="matricula", how="left")
+            df_final['grupo'] = df_final['grupo'].fillna("SIN GRUPO")
+            
+            # Gráfica segura
+            fig = px.bar(df_final['grupo'].value_counts().reset_index(), x='count', y='grupo', orientation='h', title="Reportes por Grupo")
+            st.plotly_chart(fig, use_container_width=True)
+    except Exception as e:
+        st.error(f"Error al generar Dashboard: {e}")
 
 # ================= MÓDULO: PUERTA DE ENTRADA =================
 if menu == "Puerta de Entrada":
@@ -794,6 +812,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error: {e}")
+
 
 
 
