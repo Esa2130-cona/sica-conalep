@@ -40,39 +40,34 @@ st.markdown("""
         border-radius: 8px !important;
     }
     input, textarea { color: #000000 !important; font-weight: 500 !important; }
-    .stWidgetLabel p { color: #ffffff !important; font-weight: 600 !important; }
+    .stWidgetLabel p { color: #ffffff !important; font-weight: 600 !important; font-size: 16px !important; }
     .stButton>button { background-color: #1e8449 !important; color: white !important; font-weight: 700 !important; }
-</style>
-""", unsafe_allow_html=True)
-/* Mejora del contenedor del Kiosko */
+    
     .scan-card {
         background: rgba(255, 255, 255, 0.05);
         border-radius: 25px;
-        padding: 50px; /* Más espacio interno */
+        padding: 50px;
         text-align: center;
         border: 2px solid rgba(30, 132, 73, 0.3);
-        border-top: 10px solid #1e8449; /* Borde superior más grueso */
+        border-top: 10px solid #1e8449;
         box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     }
-
-    /* Texto principal gigante y centrado */
     .scan-title {
-        font-size: 55px !important; /* Tamaño masivo */
+        font-size: 55px !important;
         font-weight: 900 !important;
         color: #ffffff !important;
-        text-shadow: 0 0 20px rgba(30, 132, 73, 0.6); /* Resplandor verde */
-        letter-spacing: -1px;
+        text-shadow: 0 0 20px rgba(30, 132, 73, 0.6);
         line-height: 1.1;
-        margin-bottom: 10px;
     }
-
     .scan-subtitle {
         font-size: 24px !important;
-        color: #1e8449 !important; /* Verde institucional */
+        color: #1e8449 !important;
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 2px;
     }
+</style>
+""", unsafe_allow_html=True)
 
 # ================= 1. SISTEMA DE LOGIN =================
 if "user" not in st.session_state:
@@ -741,6 +736,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error: {e}")
+
 
 
 
