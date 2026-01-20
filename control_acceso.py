@@ -128,7 +128,7 @@ user = st.session_state.user
 rol = str(user.get("rol", user.get("ROL", ""))).upper()
 # ================= MENÚ PRINCIPAL =================
 # 1. Agregamos "Avisos" a la lista base
-opciones = ["Puerta de Entrada", "Reportes", "Historial", "Avisos", "Bitácora Maestros","Dashboard"]
+opciones = ["Puerta de Entrada", "Reportes", "Historial", "Avisos", "Bitácora Maestros","Dashboard","Servicios y Técnica"]
 
 # 2. Filtramos según el rol
 if rol == "KIOSKO": 
@@ -574,6 +574,81 @@ elif menu == "Dashboard":
 
     except Exception as e:
         st.error(f"Error al generar Dashboard: {e}")
+# ================= CONFIGURACIÓN INICIAL =================
+elif menu == "Servicios y Técnica":
+    st.title("⚙️ Panel de Servicios Escolares y Formación Técnica")
+    st.markdown("---")
+
+    try:
+        # 1. CARGA DE DATOS
+        res_rep = supabase.table("reportes").select("*").execute()
+        res_al = supabase.table("alumnos").select("matricula, grupo, turno").execute()
+        res_av = supabase.table("avisos").select("*").eq("activo", True).execute()
+
+        if res_rep.data and res_al.data:
+            df_rep = pd.DataFrame(res_rep.data)
+            df_al = pd.DataFrame(res_al.data)
+            df_av = pd.DataFrame(res_av.data) if res_av.data else pd.DataFrame()
+
+            # Normalización
+            df_rep.columns = [c.lower().strip() for c in df_rep.columns]
+            df_al.columns = [c.lower().strip() for c in df_al.columns]
+
+            # Unión de datos
+            df_master = df_rep.merge(df_al, on="matricula", how="left")
+            df_master['grupo'] = df_master['grupo'].fillna("N/A")
+
+            # --- FILTROS ESPECÍFICOS ---
+            st.sidebar.subheader("🔍 Filtros Operativos")
+            turno_sel = st.sidebar.multiselect("Turno", options=df_al['turno'].unique(), default=df_al['turno'].unique())
+            
+            df_filtrado = df_master[df_master['turno'].isin(turno_sel)]
+
+            # --- MÉTRICAS OPERATIVAS ---
+            m1, m2, m3 = st.columns(3)
+            with m1:
+                # Alumnos con más de 3 registros (Riesgo de deserción o sanción)
+                conteo_alumno = df_filtrado['matricula'].value_counts()
+                alumnos_riesgo = len(conteo_alumno[conteo_alumno >= 3])
+                st.metric("Alumnos en Riesgo", alumnos_riesgo, help="Alumnos con 3 o más reportes registrados")
+            with m2:
+                # Avisos activos en el sistema
+                total_avisos = len(df_av) if not df_av.empty else 0
+                st.metric("Avisos Vigentes", total_avisos)
+            with m3:
+                # Incidencias del turno seleccionado
+                st.metric("Reportes en Turno", len(df_filtrado))
+
+            # --- ANÁLISIS DE FORMACIÓN TÉCNICA ---
+            st.subheader("🛠️ Análisis de Incidencias en Áreas Técnicas")
+            
+            # Buscamos palabras clave en las descripciones para identificar problemas en talleres
+            talleres_keywords = ['taller', 'laboratorio', 'maquina', 'herramienta', 'practica']
+            df_tecnica = df_filtrado[df_filtrado['descripcion'].str.contains('|'.join(talleres_keywords), case=False, na=False)]
+            
+            if not df_tecnica.empty:
+                fig_tec = px.bar(df_tecnica, x='tipo', title="Faltas detectadas en Talleres/Laboratorios",
+                                color_discrete_sequence=['#3498db'])
+                st.plotly_chart(fig_tec, use_container_width=True)
+            else:
+                st.info("No se han detectado incidencias relacionadas con talleres o formación técnica.")
+
+            # --- LISTA DE SEGUIMIENTO (PARA SERVICIOS ESCOLARES) ---
+            st.subheader("📋 Lista de Seguimiento Prioritario")
+            st.markdown("Alumnos que requieren atención inmediata por acumulación de faltas:")
+            
+            # Agrupamos para ver quiénes son los alumnos más reportados
+            top_riesgo = df_filtrado.groupby(['matricula', 'nombre', 'grupo']).size().reset_index(name='Total')
+            top_riesgo = top_al_riesgo = top_riesgo[top_riesgo['Total'] >= 2].sort_values(by='Total', ascending=False)
+            
+            st.dataframe(top_riesgo, use_container_width=True, hide_index=True)
+
+        else:
+            st.info("Datos insuficientes para este panel.")
+
+    except Exception as e:
+        st.error(f"Error en Dashboard Operativo: {e}")
+
 
 
 
