@@ -12,7 +12,6 @@ from fpdf import FPDF
 st.set_page_config(page_title="SICA CONALEP CUAUTLA", layout="wide")
 zona = pytz.timezone("America/Mexico_City")
 
-# --- CONEXIÓN A SUPABASE ---
 @st.cache_resource
 def init_connection():
     try:
@@ -25,84 +24,31 @@ def init_connection():
 
 supabase = init_connection()
 
-# --- FUNCIONES GLOBALES ---
 def normalizar_matricula(mat):
     if not mat: return ""
     return mat.strip().upper().replace('"', '-').replace("'", '-')
 
 def enviar(tabla, datos):
-    # Forzamos nombres de columnas en minúsculas para coincidir con Supabase
     datos_db = {k.lower(): v for k, v in datos.items()}
     return supabase.table(tabla).insert(datos_db).execute()
-# ================= ESTILOS CSS REFINADOS (TEXTO NEGRO) =================
+
+# ================= ESTILOS CSS REFINADOS =================
 st.markdown("""
 <style>
-    /* 1. Fondo general de la App */
-    .stApp { 
-        background-color: #050a10; 
-        color: #f0f6fc;
-    }
-
-    /* 2. CAJAS DE TEXTO CON FONDO CLARO Y TEXTO NEGRO */
+    .stApp { background-color: #050a10; color: #f0f6fc; }
     div[data-baseweb="input"], div[data-baseweb="textarea"], div[data-baseweb="select"] {
-        background-color: #e0e6ed !important; /* Fondo gris claro/blanco */
+        background-color: #e0e6ed !important;
         border: 2px solid #30363d !important;
         border-radius: 8px !important;
     }
-    
-    div[data-baseweb="input"]:focus-within {
-        border-color: #1e8449 !important; /* Verde Conalep al seleccionar */
-        background-color: #ffffff !important; /* Se vuelve blanco puro al escribir */
-    }
-
-    /* 3. COLOR DEL TEXTO EN NEGRO (Lo que tú pediste) */
-    input, textarea {
-        color: #000000 !important; /* Negro puro */
-        -webkit-text-fill-color: #000000 !important; /* Forzar en móviles */
-        font-weight: 500 !important;
-    }
-
-    /* 4. ETIQUETAS (Labels) - Se mantienen blancas para el fondo oscuro de la app */
-    .stWidgetLabel p {
-        color: #ffffff !important;
-        font-weight: 600 !important;
-        font-size: 16px !important;
-    }
-
-    /* 5. BOTONES INSTITUCIONALES */
-    .stButton>button {
-        background-color: #1e8449 !important;
-        color: white !important;
-        border-radius: 8px !important;
-        font-weight: 700 !important;
-        width: 100% !important;
-        border: none !important;
-    }
-    
-    .stButton>button:hover {
-        background-color: #145a32 !important;
-        box-shadow: 0 4px 12px rgba(30, 132, 73, 0.4) !important;
-    }
-
-    /* 6. DISEÑO DEL KIOSKO (SCANNER) */
-    .scan-card {
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 20px;
-        padding: 30px;
-        text-align: center;
-        border-top: 6px solid #1e8449;
-    }
-    
-    .student-name {
-        font-size: 42px !important;
-        font-weight: 900 !important;
-        color: white !important;
-    }
+    input, textarea { color: #000000 !important; font-weight: 500 !important; }
+    .stWidgetLabel p { color: #ffffff !important; font-weight: 600 !important; }
+    .stButton>button { background-color: #1e8449 !important; color: white !important; font-weight: 700 !important; width: 100% !important; }
+    .scan-card { background: rgba(255, 255, 255, 0.03); border-radius: 20px; padding: 30px; text-align: center; border-top: 6px solid #1e8449; }
+    .student-name { font-size: 42px !important; font-weight: 900 !important; color: white !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# ================= SISTEMA DE LOGIN =================
 # ================= SISTEMA DE LOGIN =================
 if "user" not in st.session_state:
     st.session_state.user = None
@@ -124,13 +70,13 @@ if not st.session_state.user:
                 st.error(f"Error de base de datos: {e}")
     st.stop()
 
-# ================= CONFIGURACIÓN DE ROLES Y MENÚ (DENTRO DEL LOGIN) =================
+# ================= TODO LO SIGUIENTE OCURRE SI HAY USUARIO =================
 if st.session_state.user:
     user = st.session_state.user
     rol = str(user.get("rol", user.get("ROL", ""))).upper().strip()
     nombre_usuario = user.get("usuario", "Usuario")
 
-    # Mensaje de Bienvenida
+    # Sidebar
     st.sidebar.markdown(f"""
     <div style='background-color: #161b22; padding: 15px; border-radius: 10px; border: 1px solid #30363d; margin-bottom: 20px;'>
         <p style='margin: 0; color: #8b949e; font-size: 11px;'>BIENVENIDO(A)</p>
@@ -139,7 +85,6 @@ if st.session_state.user:
     </div>
     """, unsafe_allow_html=True)
 
-    # Lógica de Opciones por Rol
     if rol == "KIOSKO": opciones = ["Puerta de Entrada"]
     elif rol == "DIRECTOR": opciones = ["Dashboard", "Expediente Digital"]
     elif rol == "PREFECTO": opciones = ["Reportes", "Historial", "Avisos", "Expediente Digital"]
@@ -153,32 +98,23 @@ if st.session_state.user:
         st.session_state.user = None
         st.rerun()
 
-    # ================= MÓDULO DASHBOARD =================
+    # --- NAVEGACIÓN DE MÓDULOS ---
     if menu == "Dashboard":
         st.title("🏛️ Panel de Control Directivo")
         try:
             res_rep = supabase.table("reportes").select("*").execute()
             res_ent = supabase.table("entradas").select("*").execute()
             res_al = supabase.table("alumnos").select("matricula, grupo").execute()
-            
             if res_rep.data and res_al.data:
-                df_rep = pd.DataFrame(res_rep.data)
-                df_al = pd.DataFrame(res_al.data)
-                df_ent = pd.DataFrame(res_ent.data)
-                
+                df_rep, df_al, df_ent = pd.DataFrame(res_rep.data), pd.DataFrame(res_al.data), pd.DataFrame(res_ent.data)
                 df_rep.columns = [c.lower().strip() for c in df_rep.columns]
                 df_al.columns = [c.lower().strip() for c in df_al.columns]
-                
                 df_final = df_rep.merge(df_al[['matricula', 'grupo']], on="matricula", how="left")
                 df_final['grupo'] = df_final['grupo'].fillna("SIN GRUPO")
-                
-                # Gráfica
                 fig = px.bar(df_final['grupo'].value_counts().reset_index(), x='count', y='grupo', orientation='h', title="Reportes por Grupo")
                 st.plotly_chart(fig, use_container_width=True)
-            else:
-                st.info("Sin datos para el Dashboard.")
-        except Exception as e:
-            st.error(f"Error en Dashboard: {e}")
+            else: st.info("Sin datos para el Dashboard.")
+        except Exception as e: st.error(f"Error: {e}")
 
 # ================= MÓDULO: PUERTA DE ENTRADA =================
 if menu == "Puerta de Entrada":
@@ -817,6 +753,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error: {e}")
+
 
 
 
