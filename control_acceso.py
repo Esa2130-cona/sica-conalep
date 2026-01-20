@@ -288,48 +288,57 @@ elif menu == "Reportes":
 elif menu == "Historial":
     st.title("📊 Consulta Integral de Historial")
     
-    # Caja de búsqueda con el estilo que definimos (Fondo claro, texto negro)
     mat_h = st.text_input("Ingrese Matrícula para consultar").strip().upper()
     
     if mat_h:
         try:
-            # 1. Buscamos datos del alumno para el encabezado
             al_res = supabase.table("alumnos").select("nombre, grupo").eq("matricula", mat_h).execute()
             
             if al_res.data:
                 al = al_res.data[0]
                 st.subheader(f"Expediente de: {al['nombre']}")
-                st.info(f"Grupo actual: {al['grupo']}")
+                st.markdown(f"**Grupo:** {al['grupo']}")
                 
-                # Creamos dos pestañas para organizar la información
-                tab1, tab2 = st.tabs(["🕒 Historial de Entradas", "🚨 Historial de Reportes"])
+                tab1, tab2 = st.tabs(["🕒 Entradas", "🚨 Reportes e Incidencias"])
                 
                 with tab1:
-                    # Consultamos la tabla 'entradas'
                     res_ent = supabase.table("entradas").select("fecha, hora").eq("matricula", mat_h).order("fecha", desc=True).execute()
                     if res_ent.data:
-                        df_ent = pd.DataFrame(res_ent.data)
-                        # Renombrar columnas para que se vean bien en la tabla
-                        df_ent.columns = ["FECHA", "HORA"]
-                        st.dataframe(df_ent, use_container_width=True)
+                        st.dataframe(pd.DataFrame(res_ent.data), use_container_width=True)
                     else:
-                        st.write("No hay registros de entrada para esta matrícula.")
+                        st.info("Sin registros de entrada.")
 
                 with tab2:
-                    # Consultamos la tabla 'reportes'
-                    res_rep = supabase.table("reportes").select("fecha, nivel, tipo, descripcion, registrado_por").eq("matricula", mat_h).order("fecha", desc=True).execute()
+                    # Traemos también la columna 'foto_url'
+                    res_rep = supabase.table("reportes").select("fecha, nivel, tipo, descripcion, registrado_por, foto_url").eq("matricula", mat_h).order("fecha", desc=True).execute()
+                    
                     if res_rep.data:
-                        df_rep = pd.DataFrame(res_rep.data)
-                        # Renombrar columnas para el usuario
-                        df_rep.columns = ["FECHA", "NIVEL", "MOTIVO", "DETALLES", "CAPTURÓ"]
-                        st.table(df_rep) # Usamos st.table para que sea más fácil leer las descripciones largas
+                        for rep in res_rep.data:
+                            # Diseño de "Card" para cada reporte
+                            with st.container():
+                                col_texto, col_foto = st.columns([3, 1])
+                                
+                                with col_texto:
+                                    st.markdown(f"**📅 {rep['fecha']} - {rep['nivel']}**")
+                                    st.markdown(f"**Motivo:** {rep['tipo']}")
+                                    st.write(f"_{rep['descripcion']}_")
+                                    st.caption(f"Registrado por: {rep['registrado_por']}")
+                                
+                                with col_foto:
+                                    url = rep.get("foto_url")
+                                    if url: # Si existe la URL, mostramos la miniatura
+                                        st.image(url, caption="Evidencia", width=120)
+                                    else:
+                                        st.caption("Sin foto")
+                                
+                                st.divider() # Línea divisoria entre reportes
                     else:
-                        st.write("El alumno no cuenta con reportes o llamadas de atención.")
+                        st.write("El alumno no cuenta con reportes.")
             else:
-                st.error("La matrícula no existe en la base de datos de alumnos.")
+                st.error("Matrícula no encontrada.")
                 
         except Exception as e:
-            st.error(f"Error al consultar el historial: {e}")
+            st.error(f"Error al consultar: {e}")
 
 
 
