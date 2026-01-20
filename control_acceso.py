@@ -128,7 +128,7 @@ user = st.session_state.user
 rol = str(user.get("rol", user.get("ROL", ""))).upper()
 # ================= MENÚ PRINCIPAL =================
 # 1. Agregamos "Avisos" a la lista base
-opciones = ["Puerta de Entrada", "Reportes", "Historial", "Avisos", "Bitácora Maestros"]
+opciones = ["Puerta de Entrada", "Reportes", "Historial", "Avisos", "Bitácora Maestros","Dashboard"]
 
 # 2. Filtramos según el rol
 if rol == "KIOSKO": 
@@ -568,6 +568,7 @@ elif menu == "Dashboard":
 
     except Exception as e:
         st.error(f"Error al generar Dashboard: {e}")
+
 
 
 
