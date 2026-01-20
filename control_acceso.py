@@ -137,7 +137,7 @@ if st.sidebar.button("Cerrar Sesión"):
 # ================= MÓDULO: PUERTA DE ENTRADA =================
 if menu == "Puerta de Entrada":
     st.markdown("<div class='kiosko-wrapper'>", unsafe_allow_html=True)
-    st.markdown("<div class='scan-card'><div class='scan-text'>📡 SISTEMA DE ACCESO</div></div>", unsafe_allow_html=True)
+    st.markdown("<div class='scan-card'><div class='scan-text'>📡 SISTEMA DE ACCESO CONALEP PLANTEL CUAUTLA</div></div>", unsafe_allow_html=True)
 
     if "resultado" not in st.session_state: st.session_state.resultado = None
 
@@ -298,6 +298,7 @@ elif menu == "Historial":
                 
         except Exception as e:
             st.error(f"Error al consultar el historial: {e}")
+
 
 
 
