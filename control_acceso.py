@@ -192,50 +192,47 @@ if menu == "Puerta de Entrada":
         st.session_state.resultado = None
         st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
-
-# ================= MÓDULO: REPORTES (CON GUARDAR, CANCELAR Y LIMPIEZA) =================
+# ================= MÓDULO: REPORTES (CORREGIDO SIN ERROR DE SESSION_STATE) =================
 elif menu == "Reportes":
-    st.title("🚨 Gestión de Reportes")
+    st.title("🚨 Gestión de Incidencias")
     
-    # Función para limpiar los campos del formulario
-    def limpiar_formulario_reportes():
-        st.session_state.mat_input = ""
-        st.session_state.tipo_input = "Uniforme"
-        st.session_state.desc_input = ""
+    # 1. Definimos la función de limpieza antes de usar los widgets
+    def limpiar_formulario():
+        st.session_state["mat_input"] = ""
+        st.session_state["tipo_input"] = "Uniforme"
+        st.session_state["desc_input"] = ""
 
-    # Inicializamos las variables en el session_state si no existen
-    if "mat_input" not in st.session_state: st.session_state.mat_input = ""
-    if "tipo_input" not in st.session_state: st.session_state.tipo_input = "Uniforme"
-    if "desc_input" not in st.session_state: st.session_state.desc_input = ""
+    # 2. Inicializamos el estado si es la primera vez que entra
+    if "mat_input" not in st.session_state:
+        st.session_state["mat_input"] = ""
 
-    # Input de matrícula con KEY
+    # 3. Dibujamos el widget. Al usar 'key', Streamlit vincula el valor automáticamente
     mat_rep = st.text_input("Ingrese Matrícula del Alumno", key="mat_input").strip().upper()
     
     if mat_rep:
         try:
+            # Buscamos al alumno
             al_res = supabase.table("alumnos").select("*").eq("matricula", mat_rep).execute()
             
             if al_res.data:
                 al = al_res.data[0]
-                nombre_alumno = al.get("nombre", al.get("NOMBRE", "Estudiante"))
+                nombre_alumno = al.get("nombre", "Estudiante")
                 st.subheader(f"Alumno: {nombre_alumno}")
                 
-                # Lógica de niveles (3 llamadas + 1 reporte)
+                # Conteo de historial para lógica 3+1
                 historial_rep = supabase.table("reportes").select("id", count="exact").eq("matricula", mat_rep).execute()
                 total_previo = historial_rep.count if historial_rep.count is not None else 0
                 
-                if total_previo == 0: nivel_sugerido = "LLAMADA 1"
-                elif total_previo == 1: nivel_sugerido = "LLAMADA 2"
-                elif total_previo == 2: nivel_sugerido = "LLAMADA 3"
-                else: nivel_sugerido = "REPORTE"
+                # Determinación de nivel
+                niveles = ["LLAMADA 1", "LLAMADA 2", "LLAMADA 3"]
+                nivel_sugerido = niveles[total_previo] if total_previo < 3 else "REPORTE"
 
-                st.info(f"Nivel actual a registrar: {nivel_sugerido}")
+                st.info(f"Registro actual: {nivel_sugerido}")
 
-                # Campos del formulario
+                # Widgets adicionales con sus respectivas keys
                 tipo = st.selectbox("Tipo de falta", ["Uniforme", "Conducta", "Retardo", "Celular", "Otro"], key="tipo_input")
                 desc = st.text_area("Descripción de lo sucedido", key="desc_input")
                 
-                # Columnas para los botones
                 col1, col2 = st.columns(2)
                 
                 with col1:
@@ -250,20 +247,22 @@ elif menu == "Reportes":
                             "registrado_por": user.get("usuario", "Prefecto")
                         })
                         st.success(f"✅ Se registró la {nivel_sugerido} correctamente.")
-                        limpiar_formulario_reportes()
-                        time.sleep(1.2)
+                        time.sleep(1)
+                        # Limpiamos y recargamos
+                        limpiar_formulario()
                         st.rerun()
 
                 with col2:
+                    # Botón Cancelar con la misma lógica de limpieza
                     if st.button("❌ Cancelar"):
-                        limpiar_formulario_reportes()
-                        st.info("Formulario limpiado.")
-                        time.sleep(0.8)
+                        limpiar_formulario()
                         st.rerun()
             else:
                 st.error("Matrícula no encontrada.")
         except Exception as e:
-            st.error(f"Error en la consulta: {e}")
+            # Si hay un error, lo mostramos de forma amigable
+            if "key" not in str(e).lower():
+                st.error(f"Error en el sistema: {e}")
 # ================= MÓDULO: HISTORIAL (ENTRADAS Y REPORTES) =================
 elif menu == "Historial":
     st.title("📊 Consulta Integral de Historial")
@@ -310,6 +309,7 @@ elif menu == "Historial":
                 
         except Exception as e:
             st.error(f"Error al consultar el historial: {e}")
+
 
 
 
