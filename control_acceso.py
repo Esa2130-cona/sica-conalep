@@ -195,7 +195,7 @@ if menu == "Puerta de Entrada":
 
 # ================= MÓDULO: REPORTES (LÓGICA 3 LLAMADAS + 1 REPORTE) =================
 elif menu == "Reportes":
-    st.title("🚨 Gestión de Incidencias")
+    st.title("🚨 Gestión de Reportes")
     
     # Input de matrícula
     mat_rep = st.text_input("Ingrese Matrícula del Alumno").strip().upper()
@@ -263,6 +263,7 @@ elif menu == "Historial":
                 st.table(pd.DataFrame(ent.data)[["fecha", "hora", "nombre"]])
             else: st.info("Sin registros")
         except: st.error("Error en consulta")
+
 
 
 
