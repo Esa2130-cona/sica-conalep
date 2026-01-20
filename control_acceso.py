@@ -132,26 +132,6 @@ if menu == "Dashboard":
                 st.plotly_chart(fig_asist, use_container_width=True)
     except Exception as e: st.error(f"Error en Dashboard: {e}")
 
-elif menu == "Puerta de Entrada":
-    st.markdown("<h2 style='text-align:center;'>📡 ACCESO CONALEP</h2>", unsafe_allow_html=True)
-    # Aquí iría tu lógica de scanner...
-
-elif menu == "Servicios y Técnica":
-    st.title("⚙️ Panel de Servicios Escolares")
-    try:
-        res_al = supabase.table("alumnos").select("*").execute()
-        df_al = pd.DataFrame(res_al.data)
-        st.dataframe(df_al, use_container_width=True)
-    except Exception as e: st.error(f"Error operativo: {e}")
-
-elif menu == "Expediente Digital":
-    st.title("🗂️ Expediente Digital Integral")
-    # Aquí iría tu lógica de búsqueda de alumnos y PDF...
-
-elif menu == "Reportes":
-    st.title("🚨 Gestión de Reportes")
-    # Tu código de reportes...
-
 # ================= MÓDULO: PUERTA DE ENTRADA =================
 if menu == "Puerta de Entrada":
     st.markdown("<div class='kiosko-wrapper'>", unsafe_allow_html=True)
@@ -789,6 +769,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error: {e}")
+
 
 
 
