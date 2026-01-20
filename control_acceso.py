@@ -582,7 +582,7 @@ elif menu == "Servicios y Técnica":
     try:
         # 1. CARGA DE DATOS
         res_rep = supabase.table("reportes").select("*").execute()
-        res_al = supabase.table("alumnos").select("matricula, grupo, turno").execute()
+        res_al = supabase.table("alumnos").select("*").execute() # Traemos todo para validar
         res_av = supabase.table("avisos").select("*").eq("activo", True).execute()
 
         if res_rep.data and res_al.data:
@@ -590,61 +590,52 @@ elif menu == "Servicios y Técnica":
             df_al = pd.DataFrame(res_al.data)
             df_av = pd.DataFrame(res_av.data) if res_av.data else pd.DataFrame()
 
-            # Normalización
+            # Normalización de columnas a minúsculas
             df_rep.columns = [c.lower().strip() for c in df_rep.columns]
             df_al.columns = [c.lower().strip() for c in df_al.columns]
 
             # Unión de datos
-            df_master = df_rep.merge(df_al, on="matricula", how="left")
+            df_master = df_rep.merge(df_al[['matricula', 'nombre', 'grupo'] + (['turno'] if 'turno' in df_al.columns else [])], on="matricula", how="left")
             df_master['grupo'] = df_master['grupo'].fillna("N/A")
 
-            # --- FILTROS ESPECÍFICOS ---
+            # --- FILTROS SEGUROS ---
             st.sidebar.subheader("🔍 Filtros Operativos")
-            turno_sel = st.sidebar.multiselect("Turno", options=df_al['turno'].unique(), default=df_al['turno'].unique())
             
-            df_filtrado = df_master[df_master['turno'].isin(turno_sel)]
+            # Solo muestra el filtro de Turno si la columna existe en la base de datos
+            if 'turno' in df_master.columns:
+                opciones_turno = df_master['turno'].unique()
+                turno_sel = st.sidebar.multiselect("Turno", options=opciones_turno, default=opciones_turno)
+                df_filtrado = df_master[df_master['turno'].isin(turno_sel)]
+            else:
+                st.sidebar.info("Columna 'turno' no detectada en la DB.")
+                df_filtrado = df_master
 
             # --- MÉTRICAS OPERATIVAS ---
             m1, m2, m3 = st.columns(3)
             with m1:
-                # Alumnos con más de 3 registros (Riesgo de deserción o sanción)
                 conteo_alumno = df_filtrado['matricula'].value_counts()
-                alumnos_riesgo = len(conteo_alumno[conteo_alumno >= 3])
-                st.metric("Alumnos en Riesgo", alumnos_riesgo, help="Alumnos con 3 o más reportes registrados")
+                alumnos_riesgo = len(conteo_alumno[conteo_alumno >= 2]) # Alerta desde 2 reportes
+                st.metric("Alumnos en Seguimiento", alumnos_riesgo)
             with m2:
-                # Avisos activos en el sistema
                 total_avisos = len(df_av) if not df_av.empty else 0
                 st.metric("Avisos Vigentes", total_avisos)
             with m3:
-                # Incidencias del turno seleccionado
-                st.metric("Reportes en Turno", len(df_filtrado))
+                st.metric("Total Reportes", len(df_filtrado))
 
-            # --- ANÁLISIS DE FORMACIÓN TÉCNICA ---
-            st.subheader("🛠️ Análisis de Incidencias en Áreas Técnicas")
+            # --- DETECCIÓN DE INCIDENCIAS TÉCNICAS ---
+            st.subheader("🛠️ Alerta de Áreas Técnicas / Talleres")
+            palabras_clave = ['taller', 'maquina', 'herramienta', 'practica', 'laboratorio', 'seguridad']
+            # Filtramos descripciones que mencionen temas técnicos
+            df_tec = df_filtrado[df_filtrado['descripcion'].str.contains('|'.join(palabras_clave), case=False, na=False)]
             
-            # Buscamos palabras clave en las descripciones para identificar problemas en talleres
-            talleres_keywords = ['taller', 'laboratorio', 'maquina', 'herramienta', 'practica']
-            df_tecnica = df_filtrado[df_filtrado['descripcion'].str.contains('|'.join(talleres_keywords), case=False, na=False)]
-            
-            if not df_tecnica.empty:
-                fig_tec = px.bar(df_tecnica, x='tipo', title="Faltas detectadas en Talleres/Laboratorios",
-                                color_discrete_sequence=['#3498db'])
-                st.plotly_chart(fig_tec, use_container_width=True)
+            if not df_tec.empty:
+                st.warning(f"Se han detectado {len(df_tec)} reportes en áreas de talleres.")
+                st.dataframe(df_tec[['fecha', 'nombre', 'grupo', 'descripcion']], use_container_width=True)
             else:
-                st.info("No se han detectado incidencias relacionadas con talleres o formación técnica.")
-
-            # --- LISTA DE SEGUIMIENTO (PARA SERVICIOS ESCOLARES) ---
-            st.subheader("📋 Lista de Seguimiento Prioritario")
-            st.markdown("Alumnos que requieren atención inmediata por acumulación de faltas:")
-            
-            # Agrupamos para ver quiénes son los alumnos más reportados
-            top_riesgo = df_filtrado.groupby(['matricula', 'nombre', 'grupo']).size().reset_index(name='Total')
-            top_riesgo = top_al_riesgo = top_riesgo[top_riesgo['Total'] >= 2].sort_values(by='Total', ascending=False)
-            
-            st.dataframe(top_riesgo, use_container_width=True, hide_index=True)
+                st.success("No hay reportes técnicos recientes.")
 
         else:
-            st.info("Datos insuficientes para este panel.")
+            st.info("No hay datos suficientes para generar este panel.")
 
     except Exception as e:
         st.error(f"Error en Dashboard Operativo: {e}")
