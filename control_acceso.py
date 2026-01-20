@@ -124,10 +124,17 @@ if not st.session_state.user:
 
 user = st.session_state.user
 rol = str(user.get("rol", user.get("ROL", ""))).upper()
-
 # ================= MENÚ PRINCIPAL =================
-opciones = ["Puerta de Entrada", "Reportes", "Historial", "Bitácora Maestros"]
-if rol == "KIOSKO": opciones = ["Puerta de Entrada"]
+# 1. Agregamos "Avisos" a la lista base
+opciones = ["Puerta de Entrada", "Reportes", "Historial", "Avisos", "Bitácora Maestros"]
+
+# 2. Filtramos según el rol
+if rol == "KIOSKO": 
+    opciones = ["Puerta de Entrada"]
+else:
+    # Si no es kiosko, puede ver todo, incluyendo la gestión de avisos
+    pass
+
 menu = st.sidebar.radio("📋 MENÚ", opciones)
 
 if st.sidebar.button("Cerrar Sesión"):
@@ -471,6 +478,7 @@ elif menu == "Avisos":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error: {e}")
+
 
 
 
