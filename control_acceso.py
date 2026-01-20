@@ -558,7 +558,7 @@ elif menu == "Dashboard":
             # --- EXPORTACIÓN Y WHATSAPP ---
             st.markdown("---")
             fecha_hoy = datetime.now(zona).strftime('%d/%m/%Y')
-            texto_reporte = f"*RESUMEN DIRECTIVO SICA - {fecha_hoy}*\nTotal Asistencias: {total_ent}\nTotal Incidencias: {total_inc}\nCasos Graves: {graves}"
+            texto_reporte = f"*RESUMEN DIRECTIVO SICA - {fecha_hoy}*\nTotal Asistencias: {total_ent}\nTotal Reportes: {total_inc}\nCasos Graves: {graves}"
             
             col_w1, col_w2 = st.columns(2)
             with col_w1:
@@ -574,6 +574,7 @@ elif menu == "Dashboard":
 
     except Exception as e:
         st.error(f"Error al generar Dashboard: {e}")
+
 
 
 
