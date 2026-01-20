@@ -284,6 +284,40 @@ elif menu == "Reportes":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en consulta: {e}")
+            with tab2:
+    # 1. Asegúrate de incluir 'foto_url' en la consulta
+    res_rep = supabase.table("reportes").select("fecha, nivel, tipo, descripcion, registrado_por, foto_url").eq("matricula", mat_h).order("fecha", desc=True).execute()
+    
+    if res_rep.data:
+        for rep in res_rep.data:
+            with st.container():
+                col_texto, col_foto = st.columns([3, 1.2]) # Ajustamos el ancho para la miniatura
+                
+                with col_texto:
+                    st.markdown(f"**📅 {rep['fecha']} - {rep['nivel']}**")
+                    st.markdown(f"**Motivo:** {rep['tipo']}")
+                    st.write(f"_{rep['descripcion']}_")
+                    st.caption(f"Registrado por: {rep.get('registrado_por', 'Admin')}")
+                
+                with col_foto:
+                    # VALIDACIÓN MEJORADA:
+                    # Verificamos que la URL exista, no sea nula y no esté vacía
+                    foto_url = rep.get("foto_url")
+                    
+                    if foto_url and str(foto_url).strip() != "":
+                        # Agregamos borde y redondeado con HTML para que se vea moderno
+                        st.markdown(f"""
+                            <a href="{foto_url}" target="_blank">
+                                <img src="{foto_url}" style="width:100%; border-radius:10px; border: 1px solid #30363d;">
+                            </a>
+                        """, unsafe_allow_html=True)
+                        st.caption("Ver tamaño completo 🔍")
+                    else:
+                        st.info("No hay evidencia")
+                
+                st.markdown("---")
+    else:
+        st.write("El alumno no cuenta con reportes.")
 # ================= MÓDULO: HISTORIAL (ENTRADAS Y REPORTES) =================
 elif menu == "Historial":
     st.title("📊 Consulta Integral de Historial")
@@ -339,6 +373,7 @@ elif menu == "Historial":
                 
         except Exception as e:
             st.error(f"Error al consultar: {e}")
+
 
 
 
