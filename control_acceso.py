@@ -481,39 +481,65 @@ elif menu == "Avisos":
         except Exception as e:
             st.error(f"Error: {e}")
 # =================DASHBOARD DIRECTOR=================
-
 elif menu == "Dashboard":
     st.title("🏛️ Panel de Control Directivo - CONALEP")
     st.markdown("---")
 
     try:
         # --- CARGA DE DATOS ---
-        # --- CARGA DE DATOS PARA EL DIRECTOR ---
-try:
-    res_rep = supabase.table("reportes").select("*").execute()
-    res_ent = supabase.table("entradas").select("*").execute()
-    res_al = supabase.table("alumnos").select("matricula, grupo").execute()
+        # Todo este bloque debe estar movido 4 espacios a la derecha del 'try'
+        res_rep = supabase.table("reportes").select("*").execute()
+        res_ent = supabase.table("entradas").select("*").execute()
+        res_al = supabase.table("alumnos").select("matricula, grupo").execute()
 
-    if res_rep.data and res_ent.data:
-        df_rep = pd.DataFrame(res_rep.data)
-        df_ent = pd.DataFrame(res_ent.data)
-        df_al = pd.DataFrame(res_al.data)
+        if res_rep.data and res_ent.data:
+            df_rep = pd.DataFrame(res_rep.data)
+            df_ent = pd.DataFrame(res_ent.data)
+            df_al = pd.DataFrame(res_al.data)
 
-        # NORMALIZACIÓN: Forzamos que las columnas de unión se llamen igual y estén en minúsculas
-        df_rep.columns = [c.lower() for c in df_rep.columns]
-        df_al.columns = [c.lower() for c in df_al.columns]
-        df_ent.columns = [c.lower() for c in df_ent.columns]
+            # Normalizamos nombres de columnas a minúsculas para evitar el error 'grupo'
+            df_rep.columns = [c.lower() for c in df_rep.columns]
+            df_al.columns = [c.lower() for c in df_al.columns]
+            df_ent.columns = [c.lower() for c in df_ent.columns]
 
-        # UNIÓN: Ahora intentamos el merge con nombres normalizados
-        if 'matricula' in df_rep.columns and 'matricula' in df_al.columns:
+            # Unimos reportes con alumnos para tener el grupo
             df_rep = df_rep.merge(df_al, on="matricula", how="left")
-            # Si después del merge 'grupo' sigue sin existir (porque en la DB era 'GRUPO')
-            # el merge lo habrá traído correctamente gracias a la normalización anterior.
-        else:
-            st.error("Error técnico: No se encontró la columna 'matricula' para cruzar datos.")
-            st.stop()
 
-        # ... (aquí sigue el resto de tu código de gráficas) ...
+            # --- MÉTRICAS DE ALTO NIVEL ---
+            c1, c2, c3, c4 = st.columns(4)
+            with c1:
+                st.metric("Asistencias Totales", len(df_ent))
+            with c2:
+                st.metric("Total Incidencias", len(df_rep), delta="Alerta", delta_color="inverse")
+            with c3:
+                casos_graves = len(df_rep[df_rep['nivel'].str.upper() == 'REPORTE']) if 'nivel' in df_rep.columns else 0
+                st.metric("Casos Graves", casos_graves)
+            with c4:
+                if not df_rep.empty and 'tipo' in df_rep.columns:
+                    top_falta = df_rep['tipo'].mode()[0]
+                    st.metric("Principal Motivo", top_falta)
+                else:
+                    st.metric("Principal Motivo", "N/A")
+
+            st.markdown("### 📈 Análisis de Conducta por Grupo")
+            
+            # Gráfica de barras si existe la columna grupo
+            if 'grupo' in df_rep.columns:
+                fig_grupos = px.bar(df_rep['grupo'].value_counts().reset_index(), 
+                                   x='count', y='grupo', orientation='h',
+                                   title="Reportes por Grupo",
+                                   color='count', color_continuous_scale='Reds')
+                fig_grupos.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
+                st.plotly_chart(fig_grupos, use_container_width=True)
+            else:
+                st.warning("No se encontró información de grupos para graficar.")
+
+        else:
+            st.info("Esperando datos suficientes para generar el análisis...")
+
+    except Exception as e:
+        # Este bloque también debe estar alineado con el 'try'
+        st.error(f"Error al generar Dashboard: {e}")
 
 
 
