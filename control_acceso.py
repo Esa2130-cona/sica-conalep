@@ -36,15 +36,27 @@ def enviar(tabla, datos):
 st.markdown("""
 <style>
     .stApp { background: #0d1117; }
+    
+    /* Etiquetas de los campos (ej. "Usuario", "PIN") */
+    .stWidgetLabel p {
+        color: white !important;
+        font-weight: 600;
+    }
+
+    /* Color del texto que se escribe en inputs y textareas */
+    input, textarea {
+        color: #00e676 !important; /* Verde neón */
+        background-color: rgba(255, 255, 255, 0.05) !important;
+        border-radius: 10px !important;
+    }
+
+    /* Estilo para el Kiosko */
     .kiosko-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: center; margin-top: -20px; }
     .scan-card { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); padding: 30px; border-radius: 24px; text-align: center; width: 100%; max-width: 500px; margin-bottom: 20px; }
     .scan-text { color: #00e676; font-size: 24px; font-weight: 800; text-transform: uppercase; }
-    .res-card { width: 100%; max-width: 600px; border-radius: 30px; padding: 40px; text-align: center; animation: slideUp 0.4s ease-out; }
-    .res-ok { background: linear-gradient(145deg, #1b5e20, #2e7d32); border: 2px solid #00e676; }
-    .res-error { background: linear-gradient(145deg, #b71c1c, #d32f2f); border: 2px solid #ff5252; }
+    
+    /* Resultados */
     .student-name { font-size: 50px; font-weight: 900; color: white; margin: 15px 0; text-transform: uppercase; }
-    input { text-align: center !important; font-size: 24px !important; color: white !important; border-bottom: 2px solid #00e676 !important; }
-    @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 </style>
 """, unsafe_allow_html=True)
 
@@ -212,6 +224,7 @@ elif menu == "Historial":
                 st.table(pd.DataFrame(ent.data)[["fecha", "hora", "nombre"]])
             else: st.info("Sin registros")
         except: st.error("Error en consulta")
+
 
 
 
