@@ -35,56 +35,49 @@ def enviar(tabla, datos):
 # ================= ESTILOS CSS =================
 st.markdown("""
 <style>
-    /* Fondo General (Azul muy oscuro/negro institucional) */
+    /* Fondo General de la App */
     .stApp { background: #050a10; }
-    
-    /* Etiquetas de los campos (Usuario, PIN, etc.) */
+
+    /* FORZAR ESTILO DE CAJAS DE TEXTO (Inputs y Textareas) */
+    div[data-baseweb="input"], div[data-baseweb="textarea"] {
+        background-color: #161b22 !important; /* Gris muy oscuro para contraste */
+        border: 1px solid #30363d !important;
+        border-radius: 10px !important;
+    }
+
+    /* COLOR DEL TEXTO AL ESCRIBIR (Lo más importante) */
+    input, textarea {
+        color: #ffffff !important; /* Texto blanco brillante */
+        -webkit-text-fill-color: #ffffff !important;
+        background-color: transparent !important;
+        font-size: 18px !important;
+    }
+
+    /* COLOR DE LAS ETIQUETAS (Labels arriba de las cajas) */
     .stWidgetLabel p {
-        color: #e0e0e0 !important;
-        font-weight: 500;
-        letter-spacing: 0.5px;
+        color: #f0f6fc !important;
+        font-weight: 500 !important;
         font-size: 16px !important;
     }
 
-    /* Cajas de Texto (Inputs y Textareas) */
-    input, textarea, [data-baseweb="select"] > div {
-        color: #ffffff !important; /* Texto Blanco Puro */
-        -webkit-text-fill-color: #ffffff !important;
-        background-color: rgba(255, 255, 255, 0.07) !important; /* Fondo sutil */
-        border: 1px solid rgba(30, 132, 73, 0.3) !important; /* Borde verde institucional sutil */
-        border-radius: 12px !important;
-        padding: 10px !important;
-    }
-
-    /* Efecto al hacer clic en una caja (Focus) */
-    input:focus, textarea:focus {
-        border: 1px solid #1E8449 !important; /* Verde Conalep brillante al seleccionar */
-        box-shadow: 0 0 10px rgba(30, 132, 73, 0.2) !important;
-        outline: none !important;
-    }
-
-    /* Estilo para los botones (Moderno Institucional) */
+    /* ESTILO DE LOS BOTONES */
     .stButton>button {
-        background-color: #1E8449 !important;
+        background-color: #1e8449 !important; /* Verde Institucional */
         color: white !important;
-        border-radius: 10px !important;
+        border-radius: 8px !important;
         border: none !important;
-        font-weight: 600 !important;
-        width: 100%;
-        transition: 0.3s;
-    }
-    .stButton>button:hover {
-        background-color: #145A32 !important;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.4) !important;
+        height: 3em !important;
+        width: 100% !important;
     }
 
-    /* Ajustes para el Kiosko */
+    /* DISEÑO DEL KIOSKO (SCANNER) */
     .scan-card {
-        background: rgba(255, 255, 255, 0.03);
+        background: rgba(255, 255, 255, 0.05);
         border: 1px solid rgba(255, 255, 255, 0.1);
-        border-top: 4px solid #1E8449; /* Detalle institucional arriba */
-        padding: 30px;
         border-radius: 20px;
+        padding: 25px;
+        text-align: center;
+        border-top: 5px solid #1e8449;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -253,6 +246,7 @@ elif menu == "Historial":
                 st.table(pd.DataFrame(ent.data)[["fecha", "hora", "nombre"]])
             else: st.info("Sin registros")
         except: st.error("Error en consulta")
+
 
 
 
