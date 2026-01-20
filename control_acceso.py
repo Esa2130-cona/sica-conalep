@@ -528,79 +528,73 @@ elif menu == "Servicios y Técnica":
     st.markdown("---")
 
     try:
-        # 1. CARGA DE DATOS SEGURA
+        # 1. CARGA DE DATOS
         res_rep = supabase.table("reportes").select("*").execute()
         res_al = supabase.table("alumnos").select("*").execute()
-        res_av = supabase.table("avisos").select("*").eq("activo", True).execute()
-
+        
         if res_rep.data and res_al.data:
             df_rep = pd.DataFrame(res_rep.data)
             df_al = pd.DataFrame(res_al.data)
-            df_av = pd.DataFrame(res_av.data) if res_av.data else pd.DataFrame()
 
-            # Normalización a minúsculas para evitar errores de escritura (GRUPO vs grupo)
+            # Normalización
             df_rep.columns = [c.lower().strip() for c in df_rep.columns]
             df_al.columns = [c.lower().strip() for c in df_al.columns]
 
-            # 2. IDENTIFICAR COLUMNAS DISPONIBLES
-            # Verificamos si existen las columnas críticas para no tronar
-            cols_al = df_al.columns.tolist()
-            
-            # Definimos qué columnas de alumnos queremos traer al reporte
-            columnas_interes = ['matricula']
-            if 'nombre' in cols_al: columnas_interes.append('nombre')
-            if 'grupo' in cols_al: columnas_interes.append('grupo')
-            if 'turno' in cols_al: columnas_interes.append('turno')
+            # --- SECCIÓN: PRODUCTIVIDAD DE PREFECTURA Y PERSONAL ---
+            st.subheader("👮 Control de Desempeño Operativo")
+            st.info("Métricas de reportes generados por cada miembro del personal.")
 
-            # 3. UNIÓN DE TABLAS (Merge)
-            df_master = df_rep.merge(df_al[columnas_interes], on="matricula", how="left")
-            
-            # Si 'grupo' existe, llenamos los vacíos para que no falle la visualización
-            if 'grupo' in df_master.columns:
-                df_master['grupo'] = df_master['grupo'].fillna("N/A")
-
-            # --- MÉTRICAS OPERATIVAS ---
-            m1, m2, m3 = st.columns(3)
-            with m1:
-                # Alumnos con 2 o más reportes (Seguimiento preventivo)
-                conteo = df_master['matricula'].value_counts()
-                riesgo = len(conteo[conteo >= 2])
-                st.metric("Alumnos en Seguimiento", riesgo)
-            with m2:
-                st.metric("Avisos Activos", len(df_av))
-            with m3:
-                st.metric("Total de Reportes", len(df_master))
-
-            # --- DETECCIÓN DE INCIDENCIAS TÉCNICAS ---
-            st.subheader("🛠️ Alertas en Talleres y Laboratorios")
-            palabras_clave = ['taller', 'laboratorio', 'maquina', 'herramienta', 'practica', 'seguridad']
-            
-            # Buscamos en la descripción (si existe la columna)
-            if 'descripcion' in df_master.columns:
-                df_tec = df_master[df_master['descripcion'].str.contains('|'.join(palabras_clave), case=False, na=False)]
+            if 'registrado_por' in df_rep.columns:
+                # Calculamos el conteo por persona
+                prod_personal = df_rep['registrado_por'].value_counts().reset_index()
+                prod_personal.columns = ['Personal / Prefecto', 'Total Reportes']
                 
-                if not df_tec.empty:
-                    st.warning(f"Se detectaron {len(df_tec)} incidencias técnicas.")
-                    # Mostramos solo las columnas que sabemos que existen
-                    columnas_ver = [c for c in ['fecha', 'nombre', 'grupo', 'descripcion'] if c in df_tec.columns]
-                    st.dataframe(df_tec[columnas_ver], use_container_width=True)
-                else:
-                    st.success("No hay reportes técnicos pendientes.")
-            
-            # --- LISTA DE SEGUIMIENTO ---
-            st.subheader("📋 Estudiantes con Reportes Recurrentes")
-            if 'nombre' in df_master.columns:
-                # Agrupamos por los datos disponibles
-                cols_agrupar = [c for c in ['matricula', 'nombre', 'grupo'] if c in df_master.columns]
-                seguimiento = df_master.groupby(cols_agrupar).size().reset_index(name='Total')
-                seguimiento = seguimiento[seguimiento['Total'] >= 2].sort_values(by='Total', ascending=False)
-                st.table(seguimiento.head(10))
+                col_m1, col_m2 = st.columns([2, 1])
+                
+                with col_m1:
+                    # Gráfica de barras de productividad
+                    fig_prod = px.bar(prod_personal, 
+                                     x='Total Reportes', y='Personal / Prefecto', 
+                                     orientation='h',
+                                     color='Total Reportes',
+                                     color_continuous_scale='Greens',
+                                     text_auto=True)
+                    fig_prod.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
+                    st.plotly_chart(fig_prod, use_container_width=True)
+                
+                with col_m2:
+                    st.markdown("**Top 5 Mayor Actividad**")
+                    st.table(prod_personal.head(5))
+
+                # --- FILTRO POR PREFECTO ---
+                st.markdown("---")
+                st.subheader("🔍 Consultar Trabajo por Persona")
+                lista_personal = df_rep['registrado_por'].unique()
+                prefecto_sel = st.selectbox("Seleccione al Prefecto/Personal para ver su detalle:", lista_personal)
+                
+                if prefecto_sel:
+                    detalle_pref = df_rep[df_rep['registrado_por'] == prefecto_sel]
+                    st.write(f"Mostrando los últimos {len(detalle_pref)} reportes levantados por **{prefecto_sel}**:")
+                    # Mostramos columnas clave para Servicios Escolares
+                    columnas_ver = [c for c in ['fecha', 'matricula', 'nombre', 'tipo', 'nivel'] if c in detalle_pref.columns]
+                    st.dataframe(detalle_pref[columnas_ver], use_container_width=True, hide_index=True)
+
+            else:
+                st.warning("No se ha detectado la columna 'registrado_por' en la base de datos de reportes.")
+
+            # --- SECCIÓN: ALUMNOS EN SEGUIMIENTO ---
+            st.markdown("---")
+            st.subheader("📋 Lista de Alumnos en Riesgo")
+            conteo_al = df_rep['matricula'].value_counts().reset_index()
+            conteo_al.columns = ['matricula', 'Total']
+            alumnos_riesgo = conteo_al[conteo_al['Total'] >= 2]
+            st.table(alumnos_riesgo.head(10))
 
         else:
-            st.info("Aún no hay datos suficientes en las tablas de alumnos o reportes.")
+            st.info("No hay datos suficientes para mostrar métricas operativas.")
 
     except Exception as e:
-        st.error(f"Error en Dashboard Operativo: {e}")
+        st.error(f"Error en Panel de Servicios: {e}")
 # ================= EXPEDIENTE DIGITAL =================
 elif menu == "Expediente Digital":
     st.title("🗂️ Expediente Digital Integral")
@@ -728,6 +722,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error: {e}")
+
 
 
 
