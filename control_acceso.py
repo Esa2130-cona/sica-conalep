@@ -127,19 +127,49 @@ if not st.session_state.user:
 
 user = st.session_state.user
 rol = str(user.get("rol", user.get("ROL", ""))).upper()
-# ================= MENÚ PRINCIPAL =================
-# 1. Agregamos "Avisos" a la lista base
-opciones = ["Puerta de Entrada", "Reportes", "Historial", "Avisos", "Bitácora Maestros","Dashboard","Servicios y Técnica","Expediente Digital"]
+# ================= CONFIGURACIÓN DE ROLES Y MENÚ =================
+# 1. Obtener datos del usuario logueado
+rol = str(user.get("rol", user.get("ROL", ""))).upper().strip()
+nombre_usuario = user.get("usuario", "Usuario")
 
-# 2. Filtramos según el rol
-if rol == "KIOSKO": 
+# 2. Mensaje de Bienvenida Institucional en el Sidebar
+st.sidebar.markdown(f"""
+<div style='background-color: #161b22; padding: 15px; border-radius: 10px; border: 1px solid #30363d; margin-bottom: 20px;'>
+    <p style='margin: 0; color: #8b949e; font-size: 12px;'>BIENVENIDO(A)</p>
+    <h3 style='margin: 0; color: #ffffff;'>{nombre_usuario}</h3>
+    <span style='background-color: #1e8449; color: white; padding: 2px 8px; border-radius: 5px; font-size: 10px; font-weight: bold;'>
+        ROL: {rol}
+    </span>
+</div>
+""", unsafe_allow_html=True)
+
+# 3. Definición de opciones según el perfil
+if rol == "KIOSKO":
     opciones = ["Puerta de Entrada"]
+
+elif rol == "DIRECTOR":
+    opciones = ["Dashboard", "Expediente Digital"]
+
+elif rol == "PREFECTO":
+    opciones = ["Reportes", "Historial", "Avisos", "Expediente Digital"]
+
+elif rol == "GENERAL":
+    opciones = ["Reportes", "Avisos", "Servicios y Técnica", "Expediente Digital"]
+
+elif rol == "ADMIN":
+    opciones = ["Puerta de Entrada", "Reportes", "Historial", "Avisos", 
+                "Bitácora Maestros", "Dashboard", "Servicios y Técnica", "Expediente Digital"]
+
 else:
-    # Si no es kiosko, puede ver todo, incluyendo la gestión de avisos
-    pass
+    opciones = ["Puerta de Entrada"]
+    st.sidebar.error(f"⚠️ Rol '{rol}' no configurado.")
 
-menu = st.sidebar.radio("📋 MENÚ", opciones)
+# 4. Renderizar menú
+menu = st.sidebar.radio("📋 MENÚ PRINCIPAL", opciones)
 
+st.sidebar.markdown("---")
+
+# --- BOTÓN DE CIERRE DE SESIÓN ---
 if st.sidebar.button("Cerrar Sesión"):
     st.session_state.user = None
     st.rerun()
@@ -781,6 +811,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error: {e}")
+
 
 
 
