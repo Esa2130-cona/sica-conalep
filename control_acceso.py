@@ -91,11 +91,6 @@ if st.sidebar.button("Cerrar Sesión"):
     st.session_state.user = None
     st.rerun()
 
-# ================= 3. NAVEGACIÓN DE MÓDULOS (UNIFICADA) =================
-# AQUÍ USAMOS IF / ELIF PARA QUE SOLO SE ABRA UN PANEL A LA VEZ
-
-
-
 # ================= MÓDULO: PUERTA DE ENTRADA =================
 if menu == "Puerta de Entrada":
     st.markdown("<div class='kiosko-wrapper'>", unsafe_allow_html=True)
@@ -733,6 +728,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error: {e}")
+
 
 
 
