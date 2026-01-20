@@ -236,28 +236,40 @@ elif menu == "Reportes":
                     if st.button("💾 Guardar Registro"):
                         url_foto = ""
                         
-                        # Si el prefecto tomó una foto, la subimos a Supabase
+                        # Subida de foto
                         if foto is not None:
-                            nombre_archivo = f"evidencia_{mat_rep}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
-                            # Subir al bucket 'evidencias' (debes crearlo en Supabase)
-                            res_storage = supabase.storage.from_("evidencias").upload(nombre_archivo, foto.getvalue())
-                            url_foto = supabase.storage.from_("evidencias").get_public_url(nombre_archivo)
+                            try:
+                                nombre_archivo = f"evidencia_{mat_rep}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
+                                supabase.storage.from_("evidencias").upload(nombre_archivo, foto.getvalue())
+                                url_foto = supabase.storage.from_("evidencias").get_public_url(nombre_archivo)
+                            except Exception as e:
+                                st.error(f"Error al subir foto: {e}")
 
-                        enviar("reportes", {
-                            "fecha": datetime.now(zona).strftime("%Y-%m-%d"),
-                            "matricula": mat_rep,
-                            "nombre": nombre_alumno,
-                            "nivel": nivel_sugerido,
-                            "tipo": tipo,
-                            "descripcion": desc,
-                            "foto_url": url_foto, # Guardamos el link de la foto
-                            "registrado_por": user.get("usuario", "Prefecto")
-                        })
-                        
-                        st.success(f"✅ Registro y evidencia guardados.")
-                        time.sleep(1)
-                        limpiar_formulario()
-                        st.rerun()
+                        # Envío a la base de datos
+                        try:
+                            enviar("reportes", {
+                                "fecha": datetime.now(zona).strftime("%Y-%m-%d"),
+                                "matricula": mat_rep,
+                                "nombre": nombre_alumno,
+                                "nivel": nivel_sugerido,
+                                "tipo": tipo,
+                                "descripcion": desc,
+                                "foto_url": url_foto,
+                                "registrado_por": user.get("usuario", "Prefecto")
+                            })
+                            
+                            st.success("✅ Registro y evidencia guardados.")
+                            time.sleep(1.5)
+                            
+                            # LA SOLUCIÓN AL ERROR:
+                            # Limpiamos el estado y reiniciamos la app por completo
+                            for key in ["mat_input", "desc_input"]:
+                                if key in st.session_state:
+                                    st.session_state[key] = ""
+                            
+                            st.rerun() # Esto refresca la página y limpia los cuadros de texto
+                        except Exception as e:
+                            st.error(f"Error al guardar: {e}")
 
                 with col2:
                     if st.button("❌ Cancelar"):
@@ -313,6 +325,7 @@ elif menu == "Historial":
                 
         except Exception as e:
             st.error(f"Error al consultar el historial: {e}")
+
 
 
 
