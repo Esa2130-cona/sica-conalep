@@ -491,37 +491,40 @@ elif menu == "Dashboard":
         res_ent = supabase.table("entradas").select("*").execute()
         res_al = supabase.table("alumnos").select("matricula, grupo").execute()
 
-        if res_rep.data and res_ent.data:
+        if res_rep.data and res_ent.data and res_al.data:
             df_rep = pd.DataFrame(res_rep.data)
             df_ent = pd.DataFrame(res_ent.data)
             df_al = pd.DataFrame(res_al.data)
 
-            # 2. NORMALIZACIÓN (Pasar todo a minúsculas)
-            df_rep.columns = [c.lower() for c in df_rep.columns]
-            df_al.columns = [c.lower() for c in df_al.columns]
-            df_ent.columns = [c.lower() for c in df_ent.columns]
+            # 2. NORMALIZACIÓN TOTAL (Limpieza de nombres de columnas)
+            # Esto evita el error 'grupo' si en la DB está como 'GRUPO'
+            df_rep.columns = [c.lower().strip() for c in df_rep.columns]
+            df_al.columns = [c.lower().strip() for c in df_al.columns]
+            df_ent.columns = [c.lower().strip() for c in df_ent.columns]
 
-            # 3. UNIÓN Y LIMPIEZA (El bloque que buscabas)
-            df_rep = df_rep.merge(df_al[['matricula', 'grupo']], on="matricula", how="left")
-            df_rep['grupo'] = df_rep['grupo'].fillna("SIN GRUPO")
+            # 3. UNIÓN ESTRATÉGICA
+            # Solo traemos 'grupo' de la tabla alumnos usando 'matricula' como puente
+            if 'matricula' in df_rep.columns and 'matricula' in df_al.columns:
+                # Eliminamos la columna 'grupo' si ya existía en reportes para evitar duplicados
+                if 'grupo' in df_rep.columns:
+                    df_rep = df_rep.drop(columns=['grupo'])
+                
+                df_rep = df_rep.merge(df_al[['matricula', 'grupo']], on="matricula", how="left")
+                df_rep['grupo'] = df_rep['grupo'].fillna("SIN GRUPO")
+            else:
+                st.error("Falta la columna 'matricula' en una de las tablas.")
+                st.stop()
 
-            # 4. FILTROS LATERALES
-            st.sidebar.subheader("⚙️ Filtros")
-            lista_grupos = sorted(df_rep['grupo'].unique())
-            grupos_sel = st.sidebar.multiselect("Filtrar Grupos", options=lista_grupos, default=lista_grupos)
-            
-            # Aplicar filtro a los datos
-            df_rep = df_rep[df_rep['grupo'].isin(grupos_sel)]
-
-            # 5. MÉTRICAS (KPIs)
+            # --- MÉTRICAS ---
             c1, c2, c3, c4 = st.columns(4)
             with c1:
                 st.metric("Asistencias", len(df_ent))
             with c2:
                 st.metric("Incidencias", len(df_rep), delta="Alerta", delta_color="inverse")
             with c3:
-                # Contamos cuántos alumnos llegaron a nivel 'REPORTE'
-                graves = len(df_rep[df_rep['nivel'].astype(str).str.upper() == 'REPORTE']) if 'nivel' in df_rep.columns else 0
+                # Buscamos 'nivel' sin importar si es 'nivel' o 'NIVEL'
+                col_nivel = 'nivel' if 'nivel' in df_rep.columns else None
+                graves = len(df_rep[df_rep[col_nivel].astype(str).str.upper() == 'REPORTE']) if col_nivel else 0
                 st.metric("Casos Graves", graves)
             with c4:
                 top_f = df_rep['tipo'].mode()[0] if not df_rep.empty and 'tipo' in df_rep.columns else "N/A"
@@ -529,27 +532,32 @@ elif menu == "Dashboard":
 
             st.markdown("### 📈 Análisis de Conducta")
             
-            # 6. GRÁFICA DE BARRAS
-            fig_grupos = px.bar(df_rep['grupo'].value_counts().reset_index(), 
-                               x='count', y='grupo', orientation='h',
+            # --- GRÁFICA DE BARRAS POR GRUPO ---
+            # Ahora 'grupo' siempre existirá por la normalización del paso 2
+            conteo_grupos = df_rep['grupo'].value_counts().reset_index()
+            conteo_grupos.columns = ['grupo', 'cantidad']
+            
+            fig_grupos = px.bar(conteo_grupos, 
+                               x='cantidad', y='grupo', orientation='h',
                                title="Reportes acumulados por Grupo",
-                               color='count', color_continuous_scale='Reds')
+                               color='cantidad', color_continuous_scale='Reds')
+            
             fig_grupos.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
             st.plotly_chart(fig_grupos, use_container_width=True)
 
-            # 7. TABLA DE CONTROL
+            # --- TABLA DE ALUMNOS CRÍTICOS ---
             st.subheader("🚩 Alumnos con más reportes")
-            if 'nombre' in df_rep.columns:
-                top_al = df_rep['nombre'].value_counts().reset_index().head(10)
+            col_nom = 'nombre' if 'nombre' in df_rep.columns else None
+            if col_nom:
+                top_al = df_rep[col_nom].value_counts().reset_index().head(10)
                 top_al.columns = ["Estudiante", "Cantidad"]
                 st.table(top_al)
 
         else:
-            st.info("No hay datos suficientes para mostrar estadísticas.")
+            st.info("No hay datos suficientes para mostrar estadísticas. Verifique que las tablas tengan registros.")
 
     except Exception as e:
         st.error(f"Error al generar Dashboard: {e}")
-
 
 
 
