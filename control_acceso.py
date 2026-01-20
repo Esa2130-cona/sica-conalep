@@ -32,52 +32,106 @@ def enviar(tabla, datos):
     datos_db = {k.lower(): v for k, v in datos.items()}
     return supabase.table(tabla).insert(datos_db).execute()
 
-# ================= ESTILOS CSS =================
+# ================= ESTILOS CSS REFINADOS =================
 st.markdown("""
 <style>
-    /* Fondo General de la App */
-    .stApp { background: #050a10; }
+    /* 1. Fondo general y tipografía */
+    .stApp { 
+        background-color: #050a10; 
+        color: #f0f6fc;
+    }
 
-    /* FORZAR ESTILO DE CAJAS DE TEXTO (Inputs y Textareas) */
-    div[data-baseweb="input"], div[data-baseweb="textarea"] {
-        background-color: #161b22 !important; /* Gris muy oscuro para contraste */
+    /* 2. FORZAR VISIBILIDAD EN CAJAS DE TEXTO (Inputs y Textareas) */
+    /* Atacamos el contenedor de BaseWeb que usa Streamlit */
+    div[data-baseweb="input"], div[data-baseweb="textarea"], div[data-baseweb="select"] {
+        background-color: #161b22 !important; 
         border: 1px solid #30363d !important;
-        border-radius: 10px !important;
+        border-radius: 8px !important;
+        transition: border-color 0.2s;
+    }
+    
+    div[data-baseweb="input"]:focus-within {
+        border-color: #1e8449 !important; /* Verde Conalep al seleccionar */
     }
 
-    /* COLOR DEL TEXTO AL ESCRIBIR (Lo más importante) */
+    /* 3. COLOR DEL TEXTO (Blanco puro para que no se pierda) */
     input, textarea {
-        color: #ffffff !important; /* Texto blanco brillante */
-        -webkit-text-fill-color: #ffffff !important;
+        color: #ffffff !important; 
+        -webkit-text-fill-color: #ffffff !important; /* Forzar en móviles */
         background-color: transparent !important;
-        font-size: 18px !important;
-    }
-
-    /* COLOR DE LAS ETIQUETAS (Labels arriba de las cajas) */
-    .stWidgetLabel p {
-        color: #f0f6fc !important;
-        font-weight: 500 !important;
         font-size: 16px !important;
     }
 
-    /* ESTILO DE LOS BOTONES */
+    /* 4. ETIQUETAS (Labels) */
+    .stWidgetLabel p {
+        color: #f0f6fc !important;
+        font-weight: 600 !important;
+        margin-bottom: 8px !important;
+    }
+
+    /* 5. BOTONES INSTITUCIONALES */
     .stButton>button {
-        background-color: #1e8449 !important; /* Verde Institucional */
+        background-color: #1e8449 !important;
         color: white !important;
         border-radius: 8px !important;
         border: none !important;
-        height: 3em !important;
+        padding: 0.6rem 1rem !important;
+        font-weight: 700 !important;
         width: 100% !important;
+        transition: all 0.3s ease;
+    }
+    
+    .stButton>button:hover {
+        background-color: #145a32 !important;
+        box-shadow: 0 4px 12px rgba(30, 132, 73, 0.3) !important;
+        transform: translateY(-1px);
     }
 
-    /* DISEÑO DEL KIOSKO (SCANNER) */
+    /* 6. DISEÑO DEL KIOSKO (SCANNER) */
     .scan-card {
-        background: rgba(255, 255, 255, 0.05);
+        background: rgba(255, 255, 255, 0.03);
         border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 20px;
-        padding: 25px;
+        padding: 30px;
         text-align: center;
-        border-top: 5px solid #1e8449;
+        border-top: 6px solid #1e8449;
+        margin-bottom: 25px;
+    }
+    
+    .scan-text {
+        color: #1e8449;
+        font-size: 26px;
+        font-weight: 800;
+        letter-spacing: 1px;
+    }
+
+    /* 7. TARJETAS DE RESULTADO ACCESO */
+    .res-card {
+        padding: 40px;
+        border-radius: 25px;
+        text-align: center;
+        margin-top: 20px;
+    }
+    .res-ok { 
+        background: linear-gradient(145deg, #0a2d1a, #1e8449); 
+        border: 2px solid #2ecc71;
+    }
+    .res-error { 
+        background: linear-gradient(145deg, #441111, #991111); 
+        border: 2px solid #ff4b4b;
+    }
+    
+    .student-name {
+        font-size: 42px !important;
+        font-weight: 900 !important;
+        color: white !important;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    }
+
+    /* 8. TABLAS DE HISTORIAL */
+    .stTable {
+        background-color: #0d1117;
+        border-radius: 10px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -246,6 +300,7 @@ elif menu == "Historial":
                 st.table(pd.DataFrame(ent.data)[["fecha", "hora", "nombre"]])
             else: st.info("Sin registros")
         except: st.error("Error en consulta")
+
 
 
 
