@@ -94,43 +94,7 @@ if st.sidebar.button("Cerrar Sesión"):
 # ================= 3. NAVEGACIÓN DE MÓDULOS (UNIFICADA) =================
 # AQUÍ USAMOS IF / ELIF PARA QUE SOLO SE ABRA UN PANEL A LA VEZ
 
-if menu == "Dashboard":
-    st.title("🏛️ Panel de Control Directivo - CONALEP")
-    try:
-        # Carga de datos
-        res_rep = supabase.table("reportes").select("*").execute()
-        res_ent = supabase.table("entradas").select("*").execute()
-        res_al = supabase.table("alumnos").select("matricula, grupo").execute()
 
-        if res_rep.data and res_ent.data and res_al.data:
-            df_rep, df_ent, df_al = pd.DataFrame(res_rep.data), pd.DataFrame(res_ent.data), pd.DataFrame(res_al.data)
-            
-            # Normalizar columnas para evitar errores de 'grupo'
-            df_rep.columns = [c.lower().strip() for c in df_rep.columns]
-            df_al.columns = [c.lower().strip() for c in df_al.columns]
-            
-            # UNIÓN CRÍTICA: Pegamos el grupo de la tabla alumnos a los reportes
-            df_final = df_rep.merge(df_al[['matricula', 'grupo']], on="matricula", how="left")
-            df_final['grupo'] = df_final['grupo'].fillna("SIN GRUPO")
-
-            # Métricas
-            c1, c2, c3 = st.columns(3)
-            c1.metric("Asistencias", len(df_ent))
-            c2.metric("Incidencias", len(df_rep))
-            c3.metric("Casos Graves", len(df_final[df_final['nivel'].astype(str).str.upper() == 'REPORTE']) if 'nivel' in df_final.columns else 0)
-
-            # Gráficas
-            st.markdown("### 📊 Análisis Visual")
-            col_a, col_b = st.columns(2)
-            with col_a:
-                fig_grupos = px.bar(df_final['grupo'].value_counts().reset_index(), x='count', y='grupo', orientation='h', title="Reportes por Grupo", color_discrete_sequence=['#ff4b4b'])
-                st.plotly_chart(fig_grupos, use_container_width=True)
-            with col_b:
-                df_ent['fecha'] = pd.to_datetime(df_ent['fecha'])
-                asist_diaria = df_ent.groupby('fecha').size().reset_index(name='total')
-                fig_asist = px.line(asist_diaria, x='fecha', y='total', title="Tendencia de Asistencia", markers=True)
-                st.plotly_chart(fig_asist, use_container_width=True)
-    except Exception as e: st.error(f"Error en Dashboard: {e}")
 
 # ================= MÓDULO: PUERTA DE ENTRADA =================
 if menu == "Puerta de Entrada":
@@ -769,6 +733,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error: {e}")
+
 
 
 
