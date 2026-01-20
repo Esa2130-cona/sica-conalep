@@ -625,6 +625,7 @@ elif menu == "Servicios y Técnica":
         st.error(f"Error en Panel de Servicios: {e}")
 # ================= EXPEDIENTE DIGITAL (CON BOTÓN DE BLOQUEO) =================
 # ================= EXPEDIENTE DIGITAL ACTUALIZADO =================
+# ================= EXPEDIENTE DIGITAL FINAL Y CORREGIDO =================
 elif menu == "Expediente Digital":
     st.title("🗂️ Expediente Digital Integral")
     
@@ -632,102 +633,40 @@ elif menu == "Expediente Digital":
 
     if mat_exp:
         try:
-            # 1. CARGA DE DATOS COMPLETA
+            # 1. CARGA DE DATOS (Aseguramos que todas las variables existan desde aquí)
             al_res = supabase.table("alumnos").select("*").eq("matricula", mat_exp).execute()
             
             if al_res.data:
                 al = al_res.data[0]
                 estatus_actual = al.get("estatus", True)
                 
-                # Consultas adicionales para reportes, entradas y avisos
+                # Consultas a las tablas relacionadas
                 res_rep = supabase.table("reportes").select("*").eq("matricula", mat_exp).execute()
                 res_ent = supabase.table("entradas").select("*").eq("matricula", mat_exp).execute()
                 res_av = supabase.table("avisos").select("*").eq("matricula", mat_exp).eq("activo", True).execute()
                 
-                # Definición de variables para evitar el error 'is not defined'
+                # Definición de variables para evitar errores de "not defined"
                 df_rep = pd.DataFrame(res_rep.data) if res_rep.data else pd.DataFrame()
                 df_ent = pd.DataFrame(res_ent.data) if res_ent.data else pd.DataFrame()
-                list_av = res_av.data if res_av.data else [] # AQUÍ SE DEFINE LA VARIABLE DEL ERROR
-
-                # --- 2. FUNCIÓN DE BLOQUEO CON AVISO AUTOMÁTICO ---
-                def gestionar_acceso(bloquear=True):
-                    nuevo_estatus = not bloquear
-                    # Actualizar estatus
-                    supabase.table("alumnos").update({"estatus": nuevo_estatus}).eq("matricula", mat_exp).execute()
-                    
-                    if bloquear:
-                        # Crear aviso automático al bloquear
-                        nuevo_aviso = {
-                            "matricula": mat_exp,
-                            "mensaje": "⚠️ ACCESO RESTRINGIDO: PASAR A DIRECCIÓN / PREFECTURA",
-                            "prioridad": "ALTA",
-                            "activo": True
-                        }
-                        supabase.table("avisos").insert(nuevo_aviso).execute()
-                        st.warning("Alumno bloqueado y aviso de dirección generado.")
-                    else:
-                        # Desactivar avisos de bloqueo al activar
-                        supabase.table("avisos").update({"activo": False}).eq("matricula", mat_exp).execute()
-                        st.success("Acceso restaurado y avisos archivados.")
-                    
-                    time.sleep(1)
-                    st.rerun()
-
-                # --- 3. DISEÑO DE INTERFAZ ---
-                col_perfil, col_riesgo, col_accion = st.columns([2, 1, 1])
+                list_av = res_av.data if res_av.data else [] 
                 
-                with col_perfil:
-                    st.markdown(f"""
-                    <div style='background:#161b22; padding:20px; border-radius:15px; border-left:8px solid #1e8449;'>
-                        <h2 style='margin:0; color:white;'>{al.get('nombre', 'Estudiante')}</h2>
-                        <p style='margin:0; color:#8b949e;'>Grupo: {al.get('grupo', 'N/A')} | Matrícula: {mat_exp}</p>
-                    </div>
-                    """, unsafe_allow_html=True)
+                # Lógica de Semáforo de Riesgo
+                puntos = len(df_rep)
+                if puntos == 0: color_r, txt_r = "#00e676", "BAJO"
+                elif puntos <= 2: color_r, txt_r = "#ffeb3b", "MEDIO"
+                else: color_r, txt_r = "#ff5252", "ALTO"
 
-                with col_riesgo:
-                    puntos = len(df_rep)
-                    color_r = "#00e676" if puntos < 3 else "#ff5252"
-                    st.markdown(f"""
-                    <div style='background:#161b22; padding:20px; border-radius:15px; text-align:center; border: 2px solid {color_r};'>
-                        <p style='margin:0; color:#8b949e; font-size:12px;'>REPORTES</p>
-                        <h2 style='margin:0; color:{color_r};'>{puntos}</h2>
-                    </div>
-                    """, unsafe_allow_html=True)
-
-                with col_accion:
-                    if estatus_actual:
-                        if st.button("🚫 BLOQUEAR ACCESO", use_container_width=True):
-                            gestionar_acceso(bloquear=True)
-                    else:
-                        if st.button("✅ ACTIVAR ACCESO", use_container_width=True, type="primary"):
-                            gestionar_acceso(bloquear=False)
-
-                # --- 4. SECCIÓN DE AVISOS Y PDF (Tu código original) ---
-                if list_av:
-                    st.subheader("🔔 Avisos Activos")
-                    for av in list_av:
-                        st.warning(f"**{av.get('prioridad', 'AVISO')}:** {av['mensaje']}")
-
-                # Aquí continuaría tu función de generar_pdf_completo usando list_av
-                # ...
-                
-            else:
-                st.error("Matrícula no encontrada.")
-        except Exception as e:
-            st.error(f"Error en sistema: {e}")
-
-                # --- 5. FUNCIÓN PDF ACTUALIZADA ---
+                # --- 2. FUNCIÓN PARA GENERAR EL PDF (Indentación corregida) ---
                 def generar_pdf_completo(datos_al, reporte_df, avisos, riesgo_txt):
                     pdf = FPDF()
                     pdf.add_page()
                     pdf.set_font("Arial", 'B', 16)
                     pdf.cell(200, 10, "CONALEP CUAUTLA - EXPEDIENTE DIGITAL", ln=True, align='C')
-                    
                     pdf.ln(5)
                     pdf.set_font("Arial", 'B', 12)
-                    pdf.cell(200, 10, f"ESTATUS DE RIESGO: {riesgo_txt}", ln=True, align='R')
+                    pdf.cell(0, 10, f"ESTATUS DE RIESGO: {riesgo_txt}", ln=True, align='R')
                     
-                    # Datos Alumno
+                    # Datos del Alumno
                     pdf.set_fill_color(240, 240, 240)
                     pdf.cell(0, 10, "INFORMACIÓN DEL ESTUDIANTE", ln=True, fill=True)
                     pdf.set_font("Arial", '', 11)
@@ -735,54 +674,73 @@ elif menu == "Expediente Digital":
                     pdf.cell(0, 8, f"Matrícula: {datos_al.get('matricula')}", ln=True)
                     pdf.cell(0, 8, f"Grupo: {datos_al.get('grupo')}", ln=True)
                     
-                    # Avisos
+                    # Sección de Avisos en el PDF
                     if avisos:
                         pdf.ln(5)
-                        pdf.set_font("Arial", 'B', 12)
                         pdf.cell(0, 10, "AVISOS VIGENTES", ln=True, fill=True)
-                        pdf.set_font("Arial", '', 10)
                         for av in avisos:
                             pdf.cell(0, 8, f"- {av['mensaje']}", ln=True)
 
-                    # Reportes
+                    # Sección de Reportes en el PDF
                     pdf.ln(5)
-                    pdf.set_font("Arial", 'B', 12)
-                    pdf.cell(0, 10, "HISTORIAL CONDUCTUAL", ln=True, fill=True)
-                    pdf.set_font("Arial", '', 10)
+                    pdf.cell(0, 10, "HISTORIAL DE REPORTES", ln=True, fill=True)
                     if not reporte_df.empty:
                         for _, row in reporte_df.iterrows():
-                            pdf.multi_cell(0, 8, f"[{row['fecha']}] {row['tipo']} ({row['nivel']}): {row['descripcion']}", border=1)
-                    else:
-                        pdf.cell(0, 10, "Sin incidencias registradas.", ln=True)
-
+                            pdf.multi_cell(0, 8, f"[{row['fecha']}] {row.get('tipo', 'Reporte')}: {row.get('descripcion', 'Sin detalle')}", border=1)
                     return pdf.output(dest='S').encode('latin-1', 'ignore')
 
-                # Botón de descarga
+                # --- 3. FUNCIÓN DE GESTIÓN DE ACCESO (Bloqueo/Activación) ---
+                def gestionar_acceso(bloquear=True):
+                    nuevo_estatus = not bloquear
+                    supabase.table("alumnos").update({"estatus": nuevo_estatus}).eq("matricula", mat_exp).execute()
+                    if bloquear:
+                        # Aviso automático al bloquear
+                        supabase.table("avisos").insert({
+                            "matricula": mat_exp, 
+                            "mensaje": "⚠️ ACCESO RESTRINGIDO: FAVOR DE PASAR A DIRECCIÓN", 
+                            "prioridad": "ALTA", "activo": True
+                        }).execute()
+                    else:
+                        # Limpiar avisos de bloqueo al activar
+                        supabase.table("avisos").update({"activo": False}).eq("matricula", mat_exp).execute()
+                    time.sleep(1)
+                    st.rerun()
+
+                # --- 4. INTERFAZ VISUAL ---
+                col_perfil, col_riesgo, col_accion = st.columns([2, 1, 1])
+                with col_perfil:
+                    st.markdown(f"<div style='background:#161b22; padding:20px; border-radius:15px; border-left:8px solid #1e8449;'><h2 style='margin:0; color:white;'>{al.get('nombre')}</h2><p style='margin:0; color:#8b949e;'>Grupo: {al.get('grupo')} | Matrícula: {mat_exp}</p></div>", unsafe_allow_html=True)
+                
+                with col_riesgo:
+                    st.markdown(f"<div style='background:#161b22; padding:20px; border-radius:15px; text-align:center; border: 2px solid {color_r};'><p style='margin:0; color:#8b949e; font-size:12px;'>RIESGO</p><h2 style='margin:0; color:{color_r};'>{txt_r}</h2></div>", unsafe_allow_html=True)
+
+                with col_accion:
+                    if estatus_actual:
+                        if st.button("🚫 BLOQUEAR", use_container_width=True): gestionar_acceso(True)
+                    else:
+                        if st.button("✅ ACTIVAR", use_container_width=True, type="primary"): gestionar_acceso(False)
+
+                # --- 5. EXPORTACIÓN Y TABS ---
                 st.download_button(
-                    label="📥 Exportar Expediente y Riesgo (PDF)",
+                    label="📥 Exportar Expediente Digital (PDF)",
                     data=generar_pdf_completo(al, df_rep, list_av, txt_r),
                     file_name=f"Expediente_{mat_exp}.pdf",
                     mime="application/pdf",
                     use_container_width=True
                 )
 
-                # Pestañas de detalle
-                t1, t2 = st.tabs(["📊 Historial y Asistencia", "📸 Galería de Evidencias"])
-                with t1:
-                    st.dataframe(df_rep, use_container_width=True)
-                with t2:
-                    if 'foto_url' in df_rep.columns:
-                        fotos = df_rep[df_rep['foto_url'].notna() & (df_rep['foto_url'] != "")]
-                        if not fotos.empty:
-                            cols = st.columns(3)
-                            for i, (_, r) in enumerate(fotos.iterrows()):
-                                with cols[i%3]: st.image(r['foto_url'], caption=r['fecha'])
+                t1, t2, t3 = st.tabs(["🕒 Asistencias", "🚨 Reportes", "📢 Avisos"])
+                with t1: st.dataframe(df_ent, use_container_width=True)
+                with t2: st.dataframe(df_rep, use_container_width=True)
+                with t3:
+                    if list_av:
+                        for av in list_av: st.warning(f"**{av['prioridad']}**: {av['mensaje']}")
+                    else: st.info("Sin avisos activos.")
 
             else:
                 st.error("Matrícula no encontrada.")
         except Exception as e:
-            st.error(f"Error: {e}")
-
+            st.error(f"Error en el sistema: {e}")
 
 
 
