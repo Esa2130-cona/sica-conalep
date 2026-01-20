@@ -6,6 +6,7 @@ import pytz
 import time
 import plotly.express as px
 import plotly.graph_objects as go
+from fpdf import FPDF
 
 # ================= CONFIGURACIÓN INICIAL =================
 st.set_page_config(page_title="SICA CONALEP CUAUTLA", layout="wide")
@@ -656,85 +657,99 @@ elif menu == "Servicios y Técnica":
 # ================= EXPEDIENTE DIGITAL =================
 elif menu == "Expediente Digital":
     st.title("🗂️ Expediente Digital del Estudiante")
-    st.markdown("Consulta centralizada de asistencia, conducta y evidencias fotográficas.")
-
-    # Buscador de alumno
-    mat_exp = st.text_input("Ingrese Matrícula para abrir expediente", help="Presione Enter para buscar").strip().upper()
+    
+    mat_exp = st.text_input("Ingrese Matrícula para abrir expediente").strip().upper()
 
     if mat_exp:
         try:
-            # 1. OBTENER INFORMACIÓN GENERAL
+            # 1. OBTENER DATOS
             al_res = supabase.table("alumnos").select("*").eq("matricula", mat_exp).execute()
             
             if al_res.data:
                 al = al_res.data[0]
-                
-                # Encabezado Institucional (Tarjeta de perfil)
-                st.markdown(f"""
-                <div style='background:#161b22; padding:20px; border-radius:15px; border-left:8px solid #1e8449; margin-bottom:25px;'>
-                    <h2 style='margin:0; color:white;'>{al.get('nombre', 'Estudiante')}</h2>
-                    <p style='margin:0; color:#8b949e; font-size:18px;'>Matrícula: {mat_exp} | Grupo: {al.get('grupo', 'N/A')} | Turno: {al.get('turno', 'N/A')}</p>
-                </div>
-                """, unsafe_allow_html=True)
-
-                # 2. MÉTRICAS INDIVIDUALES
                 res_rep = supabase.table("reportes").select("*").eq("matricula", mat_exp).execute()
                 res_ent = supabase.table("entradas").select("*").eq("matricula", mat_exp).execute()
                 
                 df_rep = pd.DataFrame(res_rep.data) if res_rep.data else pd.DataFrame()
                 df_ent = pd.DataFrame(res_ent.data) if res_ent.data else pd.DataFrame()
 
-                m1, m2, m3 = st.columns(3)
-                m1.metric("Asistencias Totales", len(df_ent))
-                m2.metric("Reportes Acumulados", len(df_rep), delta_color="inverse")
-                
-                # Determinar estatus de riesgo
-                estatus = "🟢 Regular"
-                if len(df_rep) >= 2: estatus = "🟡 En Observación"
-                if len(df_rep) >= 3: estatus = "🔴 Riesgo de Sanción"
-                m3.metric("Estatus Conductual", estatus)
+                # --- DISEÑO DE PANTALLA ---
+                st.markdown(f"""
+                <div style='background:#161b22; padding:20px; border-radius:15px; border-left:8px solid #1e8449;'>
+                    <h2 style='margin:0; color:white;'>{al.get('nombre', 'Estudiante')}</h2>
+                    <p style='margin:0; color:#8b949e;'>Grupo: {al.get('grupo', 'N/A')} | Turno: {al.get('turno', 'N/A')}</p>
+                </div>
+                """, unsafe_allow_html=True)
 
-                # 3. PESTAÑAS DE DETALLE
-                tab_hist, tab_fotos, tab_avisos = st.tabs(["📝 Historial Conductual", "📸 Evidencias", "🔔 Avisos del Alumno"])
+                # --- FUNCIÓN PARA GENERAR PDF ---
+                def generar_pdf(datos_al, reporte_df, entradas_df):
+                    pdf = FPDF()
+                    pdf.add_page()
+                    
+                    # Encabezado Institucional
+                    pdf.set_font("Arial", 'B', 16)
+                    pdf.cell(200, 10, "CONALEP PLANTEL CUAUTLA", ln=True, align='C')
+                    pdf.set_font("Arial", 'B', 12)
+                    pdf.cell(200, 10, "EXPEDIENTE INTEGRAL DEL ALUMNO", ln=True, align='C')
+                    pdf.ln(10)
+                    
+                    # Datos Generales
+                    pdf.set_fill_color(230, 230, 230)
+                    pdf.cell(200, 10, f"DATOS DEL ESTUDIANTE", ln=True, fill=True)
+                    pdf.set_font("Arial", '', 11)
+                    pdf.cell(100, 10, f"Nombre: {datos_al.get('nombre')}", ln=True)
+                    pdf.cell(100, 10, f"Matricula: {datos_al.get('matricula')}", ln=True)
+                    pdf.cell(100, 10, f"Grupo: {datos_al.get('grupo')}", ln=True)
+                    pdf.ln(5)
 
-                with tab_hist:
-                    if not df_rep.empty:
-                        # Limpiamos nombres de columnas
-                        df_rep.columns = [c.lower() for c in df_rep.columns]
-                        st.table(df_rep[['fecha', 'tipo', 'nivel', 'descripcion']])
+                    # Sección de Incidencias
+                    pdf.set_font("Arial", 'B', 12)
+                    pdf.cell(200, 10, f"HISTORIAL DE INCIDENCIAS ({len(reporte_df)})", ln=True, fill=True)
+                    pdf.set_font("Arial", '', 10)
+                    if not reporte_df.empty:
+                        for _, row in reporte_df.iterrows():
+                            pdf.multi_cell(0, 8, f"Fecha: {row['fecha']} | Tipo: {row['tipo']} | Nivel: {row['nivel']}\nDetalle: {row['descripcion']}\n", border=1)
+                            pdf.ln(2)
                     else:
-                        st.info("El alumno no tiene reportes registrados.")
+                        pdf.cell(200, 10, "Sin reportes registrados.", ln=True)
 
-                with tab_fotos:
-                    st.subheader("Galería de Evidencias")
+                    return pdf.output(dest='S').encode('latin-1')
+
+                # --- BOTÓN DE DESCARGA ---
+                st.markdown("---")
+                pdf_bytes = generar_pdf(al, df_rep, df_ent)
+                st.download_button(
+                    label="📥 Descargar Expediente en PDF",
+                    data=pdf_bytes,
+                    file_name=f"Expediente_{mat_exp}.pdf",
+                    mime="application/pdf",
+                    use_container_width=True
+                )
+
+                # Pestañas visuales (lo que ya tenías)
+                tab1, tab2 = st.tabs(["📊 Vista Rápida", "📸 Evidencias Fotográficas"])
+                with tab1:
+                    col1, col2 = st.columns(2)
+                    col1.metric("Asistencias", len(df_ent))
+                    col2.metric("Reportes", len(df_rep))
+                    if not df_rep.empty:
+                        st.dataframe(df_rep[['fecha', 'tipo', 'nivel', 'descripcion']], use_container_width=True)
+                
+                with tab2:
                     if not df_rep.empty and 'foto_url' in df_rep.columns:
-                        # Solo filas que tengan foto
                         fotos = df_rep[df_rep['foto_url'].notna() & (df_rep['foto_url'] != "")]
                         if not fotos.empty:
-                            # Mostrar fotos en cuadrícula
                             cols = st.columns(3)
                             for i, (_, row) in enumerate(fotos.iterrows()):
                                 with cols[i % 3]:
-                                    st.image(row['foto_url'], caption=f"{row['fecha']} - {row['tipo']}")
-                        else:
-                            st.write("No hay fotos de evidencia para este alumno.")
-                    else:
-                        st.write("No se encontraron registros fotográficos.")
-
-                with tab_avisos:
-                    st.subheader("Avisos Activos en Puerta")
-                    res_av = supabase.table("avisos").select("*").eq("matricula", mat_exp).eq("activo", True).execute()
-                    if res_av.data:
-                        for av in res_av.data:
-                            st.warning(f"**Mensaje:** {av['mensaje']} (Prioridad: {av['prioridad']})")
-                    else:
-                        st.success("El alumno no tiene avisos pendientes.")
+                                    st.image(row['foto_url'], caption=row['fecha'])
+                        else: st.info("No hay fotos.")
 
             else:
-                st.error("Matrícula no encontrada en la base de datos de alumnos.")
-        
+                st.error("Alumno no encontrado.")
         except Exception as e:
-            st.error(f"Error al abrir expediente: {e}")
+            st.error(f"Error: {e}")
+
 
 
 
