@@ -304,7 +304,7 @@ elif menu == "Historial":
                 </div>
                 """, unsafe_allow_html=True)
                 
-                tab1, tab2 = st.tabs(["🕒 Registro de Entradas", "🚨 Reportes e Incidencias"])
+                tab1, tab2 = st.tabs(["🕒 Registro de Entradas", "🚨 Reportes"])
                 
                 with tab1:
                     res_ent = supabase.table("entradas").select("fecha, hora").eq("matricula", mat_h).order("fecha", desc=True).execute()
@@ -351,6 +351,7 @@ elif menu == "Historial":
                 
         except Exception as e:
             st.error(f"Error de conexión: {e}")
+
 
 
 
