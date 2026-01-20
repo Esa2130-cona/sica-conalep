@@ -656,97 +656,129 @@ elif menu == "Servicios y Técnica":
         st.error(f"Error en Dashboard Operativo: {e}")
 # ================= EXPEDIENTE DIGITAL =================
 elif menu == "Expediente Digital":
-    st.title("🗂️ Expediente Digital del Estudiante")
+    st.title("🗂️ Expediente Digital Integral")
     
-    mat_exp = st.text_input("Ingrese Matrícula para abrir expediente").strip().upper()
+    mat_exp = st.text_input("Ingrese Matrícula").strip().upper()
 
     if mat_exp:
         try:
-            # 1. OBTENER DATOS
+            # 1. CARGA DE DATOS COMPLETA
             al_res = supabase.table("alumnos").select("*").eq("matricula", mat_exp).execute()
             
             if al_res.data:
                 al = al_res.data[0]
                 res_rep = supabase.table("reportes").select("*").eq("matricula", mat_exp).execute()
                 res_ent = supabase.table("entradas").select("*").eq("matricula", mat_exp).execute()
+                res_av = supabase.table("avisos").select("*").eq("matricula", mat_exp).eq("activo", True).execute()
                 
                 df_rep = pd.DataFrame(res_rep.data) if res_rep.data else pd.DataFrame()
                 df_ent = pd.DataFrame(res_ent.data) if res_ent.data else pd.DataFrame()
+                list_av = res_av.data if res_av.data else []
 
-                # --- DISEÑO DE PANTALLA ---
-                st.markdown(f"""
-                <div style='background:#161b22; padding:20px; border-radius:15px; border-left:8px solid #1e8449;'>
-                    <h2 style='margin:0; color:white;'>{al.get('nombre', 'Estudiante')}</h2>
-                    <p style='margin:0; color:#8b949e;'>Grupo: {al.get('grupo', 'N/A')} | Turno: {al.get('turno', 'N/A')}</p>
-                </div>
-                """, unsafe_allow_html=True)
+                # --- 2. ALGORITMO DE PERFIL DE RIESGO ---
+                puntos_riesgo = len(df_rep)
+                if not df_rep.empty and 'nivel' in df_rep.columns:
+                    # Los reportes nivel "REPORTE" o "GRAVE" pesan más
+                    graves = len(df_rep[df_rep['nivel'].astype(str).str.upper() == 'REPORTE'])
+                    puntos_riesgo += (graves * 2)
 
-                # --- FUNCIÓN PARA GENERAR PDF ---
-                def generar_pdf(datos_al, reporte_df, entradas_df):
+                if puntos_riesgo == 0:
+                    color_r, txt_r, desc_r = "#00e676", "BAJO", "Alumno Regular"
+                elif puntos_riesgo <= 2:
+                    color_r, txt_r, desc_r = "#ffeb3b", "MEDIO", "En observación / Llamada de atención"
+                else:
+                    color_r, txt_r, desc_r = "#ff5252", "ALTO", "Riesgo de deserción o sanción grave"
+
+                # --- 3. DISEÑO DE PANTALLA (ENCABEZADO Y RIESGO) ---
+                col_perfil, col_riesgo = st.columns([2, 1])
+                
+                with col_perfil:
+                    st.markdown(f"""
+                    <div style='background:#161b22; padding:20px; border-radius:15px; border-left:8px solid #1e8449;'>
+                        <h2 style='margin:0; color:white;'>{al.get('nombre', 'Estudiante')}</h2>
+                        <p style='margin:0; color:#8b949e;'>Grupo: {al.get('grupo', 'N/A')} | Turno: {al.get('turno', 'N/A')}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                with col_riesgo:
+                    st.markdown(f"""
+                    <div style='background:#161b22; padding:20px; border-radius:15px; text-align:center; border: 2px solid {color_r};'>
+                        <p style='margin:0; color:#8b949e; font-size:12px;'>PERFIL DE RIESGO</p>
+                        <h2 style='margin:0; color:{color_r};'>{txt_r}</h2>
+                        <p style='margin:0; color:white; font-size:10px;'>{desc_r}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                # --- 4. SECCIÓN DE AVISOS ACTIVOS ---
+                if list_av:
+                    st.subheader("🔔 Avisos Activos en Puerta")
+                    for av in list_av:
+                        st.warning(f"**Aviso:** {av['mensaje']} | **Prioridad:** {av.get('prioridad', 'Normal')}")
+
+                # --- 5. FUNCIÓN PDF ACTUALIZADA ---
+                def generar_pdf_completo(datos_al, reporte_df, avisos, riesgo_txt):
                     pdf = FPDF()
                     pdf.add_page()
-                    
-                    # Encabezado Institucional
                     pdf.set_font("Arial", 'B', 16)
-                    pdf.cell(200, 10, "CONALEP PLANTEL CUAUTLA", ln=True, align='C')
-                    pdf.set_font("Arial", 'B', 12)
-                    pdf.cell(200, 10, "EXPEDIENTE INTEGRAL DEL ALUMNO", ln=True, align='C')
-                    pdf.ln(10)
+                    pdf.cell(200, 10, "CONALEP CUAUTLA - EXPEDIENTE DIGITAL", ln=True, align='C')
                     
-                    # Datos Generales
-                    pdf.set_fill_color(230, 230, 230)
-                    pdf.cell(200, 10, f"DATOS DEL ESTUDIANTE", ln=True, fill=True)
-                    pdf.set_font("Arial", '', 11)
-                    pdf.cell(100, 10, f"Nombre: {datos_al.get('nombre')}", ln=True)
-                    pdf.cell(100, 10, f"Matricula: {datos_al.get('matricula')}", ln=True)
-                    pdf.cell(100, 10, f"Grupo: {datos_al.get('grupo')}", ln=True)
                     pdf.ln(5)
-
-                    # Sección de Incidencias
                     pdf.set_font("Arial", 'B', 12)
-                    pdf.cell(200, 10, f"HISTORIAL DE INCIDENCIAS ({len(reporte_df)})", ln=True, fill=True)
+                    pdf.cell(200, 10, f"ESTATUS DE RIESGO: {riesgo_txt}", ln=True, align='R')
+                    
+                    # Datos Alumno
+                    pdf.set_fill_color(240, 240, 240)
+                    pdf.cell(0, 10, "INFORMACIÓN DEL ESTUDIANTE", ln=True, fill=True)
+                    pdf.set_font("Arial", '', 11)
+                    pdf.cell(0, 8, f"Nombre: {datos_al.get('nombre')}", ln=True)
+                    pdf.cell(0, 8, f"Matrícula: {datos_al.get('matricula')}", ln=True)
+                    pdf.cell(0, 8, f"Grupo: {datos_al.get('grupo')}", ln=True)
+                    
+                    # Avisos
+                    if avisos:
+                        pdf.ln(5)
+                        pdf.set_font("Arial", 'B', 12)
+                        pdf.cell(0, 10, "AVISOS VIGENTES", ln=True, fill=True)
+                        pdf.set_font("Arial", '', 10)
+                        for av in avisos:
+                            pdf.cell(0, 8, f"- {av['mensaje']}", ln=True)
+
+                    # Reportes
+                    pdf.ln(5)
+                    pdf.set_font("Arial", 'B', 12)
+                    pdf.cell(0, 10, "HISTORIAL CONDUCTUAL", ln=True, fill=True)
                     pdf.set_font("Arial", '', 10)
                     if not reporte_df.empty:
                         for _, row in reporte_df.iterrows():
-                            pdf.multi_cell(0, 8, f"Fecha: {row['fecha']} | Tipo: {row['tipo']} | Nivel: {row['nivel']}\nDetalle: {row['descripcion']}\n", border=1)
-                            pdf.ln(2)
+                            pdf.multi_cell(0, 8, f"[{row['fecha']}] {row['tipo']} ({row['nivel']}): {row['descripcion']}", border=1)
                     else:
-                        pdf.cell(200, 10, "Sin reportes registrados.", ln=True)
+                        pdf.cell(0, 10, "Sin incidencias registradas.", ln=True)
 
-                    return pdf.output(dest='S').encode('latin-1')
+                    return pdf.output(dest='S').encode('latin-1', 'ignore')
 
-                # --- BOTÓN DE DESCARGA ---
-                st.markdown("---")
-                pdf_bytes = generar_pdf(al, df_rep, df_ent)
+                # Botón de descarga
                 st.download_button(
-                    label="📥 Descargar Expediente en PDF",
-                    data=pdf_bytes,
+                    label="📥 Exportar Expediente y Riesgo (PDF)",
+                    data=generar_pdf_completo(al, df_rep, list_av, txt_r),
                     file_name=f"Expediente_{mat_exp}.pdf",
                     mime="application/pdf",
                     use_container_width=True
                 )
 
-                # Pestañas visuales (lo que ya tenías)
-                tab1, tab2 = st.tabs(["📊 Vista Rápida", "📸 Evidencias Fotográficas"])
-                with tab1:
-                    col1, col2 = st.columns(2)
-                    col1.metric("Asistencias", len(df_ent))
-                    col2.metric("Reportes", len(df_rep))
-                    if not df_rep.empty:
-                        st.dataframe(df_rep[['fecha', 'tipo', 'nivel', 'descripcion']], use_container_width=True)
-                
-                with tab2:
-                    if not df_rep.empty and 'foto_url' in df_rep.columns:
+                # Pestañas de detalle
+                t1, t2 = st.tabs(["📊 Historial y Asistencia", "📸 Galería de Evidencias"])
+                with t1:
+                    st.dataframe(df_rep, use_container_width=True)
+                with t2:
+                    if 'foto_url' in df_rep.columns:
                         fotos = df_rep[df_rep['foto_url'].notna() & (df_rep['foto_url'] != "")]
                         if not fotos.empty:
                             cols = st.columns(3)
-                            for i, (_, row) in enumerate(fotos.iterrows()):
-                                with cols[i % 3]:
-                                    st.image(row['foto_url'], caption=row['fecha'])
-                        else: st.info("No hay fotos.")
+                            for i, (_, r) in enumerate(fotos.iterrows()):
+                                with cols[i%3]: st.image(r['foto_url'], caption=r['fecha'])
 
             else:
-                st.error("Alumno no encontrado.")
+                st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error: {e}")
 
