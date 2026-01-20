@@ -124,52 +124,38 @@ if not st.session_state.user:
                 st.error(f"Error de base de datos: {e}")
                 st.info("Verifica que las columnas se llamen 'usuario' y 'pin' en minúsculas y el RLS esté desactivado.")
     st.stop()
+
 # ================= CONFIGURACIÓN DE ROLES Y MENÚ =================
-# 1. Obtener datos del usuario logueado
 rol = str(user.get("rol", user.get("ROL", ""))).upper().strip()
 nombre_usuario = user.get("usuario", "Usuario")
 
-# 2. Mensaje de Bienvenida Institucional en el Sidebar
+# Mensaje de Bienvenida Institucional
 st.sidebar.markdown(f"""
 <div style='background-color: #161b22; padding: 15px; border-radius: 10px; border: 1px solid #30363d; margin-bottom: 20px;'>
-    <p style='margin: 0; color: #8b949e; font-size: 12px;'>BIENVENIDO(A)</p>
-    <h3 style='margin: 0; color: #ffffff;'>{nombre_usuario}</h3>
+    <p style='margin: 0; color: #8b949e; font-size: 11px;'>BIENVENIDO(A)</p>
+    <h3 style='margin: 0; color: #ffffff; font-size: 18px;'>{nombre_usuario}</h3>
     <span style='background-color: #1e8449; color: white; padding: 2px 8px; border-radius: 5px; font-size: 10px; font-weight: bold;'>
         ROL: {rol}
     </span>
 </div>
 """, unsafe_allow_html=True)
 
-# 3. Definición de opciones según el perfil
+# Lógica de Opciones por Rol
 if rol == "KIOSKO":
     opciones = ["Puerta de Entrada"]
-
 elif rol == "DIRECTOR":
     opciones = ["Dashboard", "Expediente Digital"]
-
 elif rol == "PREFECTO":
     opciones = ["Reportes", "Historial", "Avisos", "Expediente Digital"]
-
 elif rol == "GENERAL":
     opciones = ["Reportes", "Avisos", "Servicios y Técnica", "Expediente Digital"]
-
 elif rol == "ADMIN":
     opciones = ["Puerta de Entrada", "Reportes", "Historial", "Avisos", 
                 "Bitácora Maestros", "Dashboard", "Servicios y Técnica", "Expediente Digital"]
-
 else:
     opciones = ["Puerta de Entrada"]
-    st.sidebar.error(f"⚠️ Rol '{rol}' no configurado.")
 
-# 4. Renderizar menú
 menu = st.sidebar.radio("📋 MENÚ PRINCIPAL", opciones)
-
-st.sidebar.markdown("---")
-
-# --- BOTÓN DE CIERRE DE SESIÓN ---
-if st.sidebar.button("Cerrar Sesión"):
-    st.session_state.user = None
-    st.rerun()
 
 # ================= MÓDULO: PUERTA DE ENTRADA =================
 if menu == "Puerta de Entrada":
@@ -808,6 +794,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error: {e}")
+
 
 
 
