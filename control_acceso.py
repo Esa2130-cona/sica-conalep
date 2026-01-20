@@ -128,7 +128,7 @@ user = st.session_state.user
 rol = str(user.get("rol", user.get("ROL", ""))).upper()
 # ================= MENÚ PRINCIPAL =================
 # 1. Agregamos "Avisos" a la lista base
-opciones = ["Puerta de Entrada", "Reportes", "Historial", "Avisos", "Bitácora Maestros","Dashboard","Servicios y Técnica"]
+opciones = ["Puerta de Entrada", "Reportes", "Historial", "Avisos", "Bitácora Maestros","Dashboard","Servicios y Técnica","Expediente Digital"]
 
 # 2. Filtramos según el rol
 if rol == "KIOSKO": 
@@ -653,6 +653,89 @@ elif menu == "Servicios y Técnica":
 
     except Exception as e:
         st.error(f"Error en Dashboard Operativo: {e}")
+# ================= EXPEDIENTE DIGITAL =================
+elif menu == "Expediente Digital":
+    st.title("🗂️ Expediente Digital del Estudiante")
+    st.markdown("Consulta centralizada de asistencia, conducta y evidencias fotográficas.")
+
+    # Buscador de alumno
+    mat_exp = st.text_input("Ingrese Matrícula para abrir expediente", help="Presione Enter para buscar").strip().upper()
+
+    if mat_exp:
+        try:
+            # 1. OBTENER INFORMACIÓN GENERAL
+            al_res = supabase.table("alumnos").select("*").eq("matricula", mat_exp).execute()
+            
+            if al_res.data:
+                al = al_res.data[0]
+                
+                # Encabezado Institucional (Tarjeta de perfil)
+                st.markdown(f"""
+                <div style='background:#161b22; padding:20px; border-radius:15px; border-left:8px solid #1e8449; margin-bottom:25px;'>
+                    <h2 style='margin:0; color:white;'>{al.get('nombre', 'Estudiante')}</h2>
+                    <p style='margin:0; color:#8b949e; font-size:18px;'>Matrícula: {mat_exp} | Grupo: {al.get('grupo', 'N/A')} | Turno: {al.get('turno', 'N/A')}</p>
+                </div>
+                """, unsafe_allow_html=True)
+
+                # 2. MÉTRICAS INDIVIDUALES
+                res_rep = supabase.table("reportes").select("*").eq("matricula", mat_exp).execute()
+                res_ent = supabase.table("entradas").select("*").eq("matricula", mat_exp).execute()
+                
+                df_rep = pd.DataFrame(res_rep.data) if res_rep.data else pd.DataFrame()
+                df_ent = pd.DataFrame(res_ent.data) if res_ent.data else pd.DataFrame()
+
+                m1, m2, m3 = st.columns(3)
+                m1.metric("Asistencias Totales", len(df_ent))
+                m2.metric("Reportes Acumulados", len(df_rep), delta_color="inverse")
+                
+                # Determinar estatus de riesgo
+                estatus = "🟢 Regular"
+                if len(df_rep) >= 2: estatus = "🟡 En Observación"
+                if len(df_rep) >= 3: estatus = "🔴 Riesgo de Sanción"
+                m3.metric("Estatus Conductual", estatus)
+
+                # 3. PESTAÑAS DE DETALLE
+                tab_hist, tab_fotos, tab_avisos = st.tabs(["📝 Historial Conductual", "📸 Evidencias", "🔔 Avisos del Alumno"])
+
+                with tab_hist:
+                    if not df_rep.empty:
+                        # Limpiamos nombres de columnas
+                        df_rep.columns = [c.lower() for c in df_rep.columns]
+                        st.table(df_rep[['fecha', 'tipo', 'nivel', 'descripcion']])
+                    else:
+                        st.info("El alumno no tiene reportes registrados.")
+
+                with tab_fotos:
+                    st.subheader("Galería de Evidencias")
+                    if not df_rep.empty and 'foto_url' in df_rep.columns:
+                        # Solo filas que tengan foto
+                        fotos = df_rep[df_rep['foto_url'].notna() & (df_rep['foto_url'] != "")]
+                        if not fotos.empty:
+                            # Mostrar fotos en cuadrícula
+                            cols = st.columns(3)
+                            for i, (_, row) in enumerate(fotos.iterrows()):
+                                with cols[i % 3]:
+                                    st.image(row['foto_url'], caption=f"{row['fecha']} - {row['tipo']}")
+                        else:
+                            st.write("No hay fotos de evidencia para este alumno.")
+                    else:
+                        st.write("No se encontraron registros fotográficos.")
+
+                with tab_avisos:
+                    st.subheader("Avisos Activos en Puerta")
+                    res_av = supabase.table("avisos").select("*").eq("matricula", mat_exp).eq("activo", True).execute()
+                    if res_av.data:
+                        for av in res_av.data:
+                            st.warning(f"**Mensaje:** {av['mensaje']} (Prioridad: {av['prioridad']})")
+                    else:
+                        st.success("El alumno no tiene avisos pendientes.")
+
+            else:
+                st.error("Matrícula no encontrada en la base de datos de alumnos.")
+        
+        except Exception as e:
+            st.error(f"Error al abrir expediente: {e}")
+
 
 
 
