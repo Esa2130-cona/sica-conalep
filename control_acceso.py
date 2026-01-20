@@ -381,6 +381,97 @@ elif menu == "Historial":
                 
         except Exception as e:
             st.error(f"Error de conexión: {e}")
+# ================= AVISOS=================
+
+elif menu == "Avisos":
+    st.title("📢 Gestión de Avisos Escolares")
+    st.markdown("Use este módulo para mostrar mensajes importantes al alumno al momento de escanear su credencial.")
+
+    # Usamos la misma lógica de reset para limpiar el formulario al terminar
+    if "aviso_reset_count" not in st.session_state:
+        st.session_state.aviso_reset_count = 0
+    
+    def reset_avisos():
+        st.session_state.aviso_reset_count += 1
+        st.rerun()
+
+    suffix_av = f"_av{st.session_state.aviso_reset_count}"
+
+    # 1. Búsqueda del Alumno
+    mat_av = st.text_input("Ingrese Matrícula del Alumno", key=f"mat_av{suffix_av}").strip().upper()
+
+    if mat_av:
+        try:
+            # Validar existencia del alumno
+            al_res = supabase.table("alumnos").select("nombre, grupo").eq("matricula", mat_av).execute()
+            
+            if al_res.data:
+                al = al_res.data[0]
+                st.success(f"Alumno: {al['nombre']} | Grupo: {al['grupo']}")
+
+                # 2. Formulario de Aviso
+                with st.form("form_nuevo_aviso"):
+                    st.markdown("### Configuración del Mensaje")
+                    
+                    mensaje = st.text_area("Mensaje para el alumno", 
+                                         placeholder="Ej: Pasar a prefectura inmediatamente",
+                                         help="Este mensaje aparecerá en la pantalla de acceso.")
+                    
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        prioridad = st.selectbox("Prioridad", ["BAJA", "MEDIA", "ALTA"])
+                    with col2:
+                        st.info("El aviso estará activo automáticamente al guardar.")
+
+                    submit = st.form_submit_button("🔔 Publicar Aviso en Puerta")
+
+                    if submit:
+                        if mensaje.strip() == "":
+                            st.error("El mensaje no puede estar vacío.")
+                        else:
+                            # 3. Guardar en la tabla 'avisos'
+                            try:
+                                # Primero desactivamos avisos anteriores del mismo alumno (opcional, para que solo tenga uno)
+                                supabase.table("avisos").update({"activo": False}).eq("matricula", mat_av).execute()
+                                
+                                # Insertar nuevo aviso
+                                datos_aviso = {
+                                    "matricula": mat_av,
+                                    "mensaje": mensaje,
+                                    "prioridad": prioridad,
+                                    "activo": True
+                                }
+                                
+                                # Usamos tu función enviar o insert directo
+                                supabase.table("avisos").insert(datos_aviso).execute()
+                                
+                                st.balloons()
+                                st.success(f"✅ Aviso publicado para {al['nombre']}.")
+                                time.sleep(2)
+                                reset_avisos()
+                            except Exception as e:
+                                st.error(f"Error al guardar: {e}")
+                
+                # 4. Mostrar Avisos Actuales del Alumno (Para poder borrarlos)
+                st.markdown("---")
+                st.subheader("Aviso actual")
+                hist_av = supabase.table("avisos").select("*").eq("matricula", mat_av).eq("activo", True).execute()
+                
+                if hist_av.data:
+                    for av in hist_av.data:
+                        c1, c2 = st.columns([4, 1])
+                        c1.warning(f"**{av['prioridad']}**: {av['mensaje']}")
+                        if c2.button("Eliminar", key=f"del_{av['id']}"):
+                            supabase.table("avisos").update({"activo": False}).eq("id", av['id']).execute()
+                            st.rerun()
+                else:
+                    st.write("No hay avisos activos para este alumno.")
+
+            else:
+                st.error("Matrícula no encontrada.")
+        except Exception as e:
+            st.error(f"Error: {e}")
+
 
 
 
