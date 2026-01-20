@@ -142,32 +142,65 @@ if menu == "Puerta de Entrada":
         st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
 
-# ================= MÓDULO: REPORTES =================
+# ================= MÓDULO: REPORTES (LÓGICA 3 LLAMADAS + 1 REPORTE) =================
 elif menu == "Reportes":
-    st.title("🚨 Gestión de Reportes")
-    mat_rep = st.text_input("Matrícula para reporte").strip().upper()
+    st.title("🚨 Gestión de Incidencias")
+    
+    # Input de matrícula
+    mat_rep = st.text_input("Ingrese Matrícula del Alumno").strip().upper()
+    
     if mat_rep:
         try:
-            al_res = supabase.table("alumnos").select("*").filter("matricula", "eq", mat_rep).execute()
+            # 1. Buscamos al alumno (usando minúsculas como corregiste)
+            al_res = supabase.table("alumnos").select("*").eq("matricula", mat_rep).execute()
+            
             if al_res.data:
                 al = al_res.data[0]
-                st.subheader(f"Alumno: {al.get('nombre', al.get('NOMBRE'))}")
-                tipo = st.selectbox("Incidencia", ["Uniforme", "Conducta", "Retardo", "Falta"])
-                desc = st.text_area("Detalles")
-                if st.button("Guardar Reporte"):
+                # Soporta si el nombre está en min o MAY en la base de datos
+                nombre_alumno = al.get("nombre", al.get("NOMBRE", "Estudiante"))
+                st.subheader(f"Alumno: {nombre_alumno}")
+                
+                # 2. CONTAR REPORTES PREVIOS
+                # El sistema cuenta cuántas filas existen con esa matrícula en la tabla 'reportes'
+                historial_rep = supabase.table("reportes").select("id", count="exact").eq("matricula", mat_rep).execute()
+                total_previo = historial_rep.count if historial_rep.count is not None else 0
+                
+                # 3. DETERMINAR NIVEL SEGÚN TU REGLA (3 llamadas, luego reporte)
+                if total_previo == 0:
+                    nivel_sugerido = "LLAMADA 1"
+                    st.info(f"📌 Primera incidencia: {nivel_sugerido}")
+                elif total_previo == 1:
+                    nivel_sugerido = "LLAMADA 2"
+                    st.info(f"📌 Segunda incidencia: {nivel_sugerido}")
+                elif total_previo == 2:
+                    nivel_sugerido = "LLAMADA 3"
+                    st.warning(f"⚠️ ÚLTIMA LLAMADA: {nivel_sugerido}")
+                else:
+                    nivel_sugerido = "REPORTE"
+                    st.error(f"🚫 NIVEL CRÍTICO: {nivel_sugerido}")
+
+                # 4. FORMULARIO
+                tipo = st.selectbox("Tipo de falta", ["Uniforme", "Conducta", "Retardo", "Celular", "Otro"])
+                desc = st.text_area("Descripción de lo sucedido")
+                
+                # Botón para guardar
+                if st.button("Guardar Registro"):
                     enviar("reportes", {
                         "fecha": datetime.now(zona).strftime("%Y-%m-%d"),
                         "matricula": mat_rep,
-                        "nombre": al.get('nombre', al.get('NOMBRE')),
+                        "nombre": nombre_alumno,
+                        "nivel": nivel_sugerido,
                         "tipo": tipo,
                         "descripcion": desc,
-                        "registrado_por": user.get("usuario")
+                        "registrado_por": user.get("usuario", "Prefecto")
                     })
-                    st.success("Reporte guardado")
+                    st.success(f"✅ Se registró la {nivel_sugerido} correctamente.")
+                    time.sleep(2)
+                    st.rerun()
             else:
-                st.error("No se encontró el alumno")
-        except: st.error("Error al buscar alumno")
-
+                st.error("Matrícula no encontrada.")
+        except Exception as e:
+            st.error(f"Error en la consulta: {e}")
 # ================= MÓDULO: HISTORIAL =================
 elif menu == "Historial":
     st.title("📊 Consulta de Historial")
@@ -179,6 +212,7 @@ elif menu == "Historial":
                 st.table(pd.DataFrame(ent.data)[["fecha", "hora", "nombre"]])
             else: st.info("Sin registros")
         except: st.error("Error en consulta")
+
 
 
 
