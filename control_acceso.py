@@ -580,9 +580,9 @@ elif menu == "Servicios y Técnica":
     st.markdown("---")
 
     try:
-        # 1. CARGA DE DATOS
+        # 1. CARGA DE DATOS SEGURA
         res_rep = supabase.table("reportes").select("*").execute()
-        res_al = supabase.table("alumnos").select("*").execute() # Traemos todo para validar
+        res_al = supabase.table("alumnos").select("*").execute()
         res_av = supabase.table("avisos").select("*").eq("activo", True).execute()
 
         if res_rep.data and res_al.data:
@@ -590,55 +590,70 @@ elif menu == "Servicios y Técnica":
             df_al = pd.DataFrame(res_al.data)
             df_av = pd.DataFrame(res_av.data) if res_av.data else pd.DataFrame()
 
-            # Normalización de columnas a minúsculas
+            # Normalización a minúsculas para evitar errores de escritura (GRUPO vs grupo)
             df_rep.columns = [c.lower().strip() for c in df_rep.columns]
             df_al.columns = [c.lower().strip() for c in df_al.columns]
 
-            # Unión de datos
-            df_master = df_rep.merge(df_al[['matricula', 'nombre', 'grupo'] + (['turno'] if 'turno' in df_al.columns else [])], on="matricula", how="left")
-            df_master['grupo'] = df_master['grupo'].fillna("N/A")
-
-            # --- FILTROS SEGUROS ---
-            st.sidebar.subheader("🔍 Filtros Operativos")
+            # 2. IDENTIFICAR COLUMNAS DISPONIBLES
+            # Verificamos si existen las columnas críticas para no tronar
+            cols_al = df_al.columns.tolist()
             
-            # Solo muestra el filtro de Turno si la columna existe en la base de datos
-            if 'turno' in df_master.columns:
-                opciones_turno = df_master['turno'].unique()
-                turno_sel = st.sidebar.multiselect("Turno", options=opciones_turno, default=opciones_turno)
-                df_filtrado = df_master[df_master['turno'].isin(turno_sel)]
-            else:
-                st.sidebar.info("Columna 'turno' no detectada en la DB.")
-                df_filtrado = df_master
+            # Definimos qué columnas de alumnos queremos traer al reporte
+            columnas_interes = ['matricula']
+            if 'nombre' in cols_al: columnas_interes.append('nombre')
+            if 'grupo' in cols_al: columnas_interes.append('grupo')
+            if 'turno' in cols_al: columnas_interes.append('turno')
+
+            # 3. UNIÓN DE TABLAS (Merge)
+            df_master = df_rep.merge(df_al[columnas_interes], on="matricula", how="left")
+            
+            # Si 'grupo' existe, llenamos los vacíos para que no falle la visualización
+            if 'grupo' in df_master.columns:
+                df_master['grupo'] = df_master['grupo'].fillna("N/A")
 
             # --- MÉTRICAS OPERATIVAS ---
             m1, m2, m3 = st.columns(3)
             with m1:
-                conteo_alumno = df_filtrado['matricula'].value_counts()
-                alumnos_riesgo = len(conteo_alumno[conteo_alumno >= 2]) # Alerta desde 2 reportes
-                st.metric("Alumnos en Seguimiento", alumnos_riesgo)
+                # Alumnos con 2 o más reportes (Seguimiento preventivo)
+                conteo = df_master['matricula'].value_counts()
+                riesgo = len(conteo[conteo >= 2])
+                st.metric("Alumnos en Seguimiento", riesgo)
             with m2:
-                total_avisos = len(df_av) if not df_av.empty else 0
-                st.metric("Avisos Vigentes", total_avisos)
+                st.metric("Avisos Activos", len(df_av))
             with m3:
-                st.metric("Total Reportes", len(df_filtrado))
+                st.metric("Total de Incidencias", len(df_master))
 
             # --- DETECCIÓN DE INCIDENCIAS TÉCNICAS ---
-            st.subheader("🛠️ Alerta de Áreas Técnicas / Talleres")
-            palabras_clave = ['taller', 'maquina', 'herramienta', 'practica', 'laboratorio', 'seguridad']
-            # Filtramos descripciones que mencionen temas técnicos
-            df_tec = df_filtrado[df_filtrado['descripcion'].str.contains('|'.join(palabras_clave), case=False, na=False)]
+            st.subheader("🛠️ Alertas en Talleres y Laboratorios")
+            palabras_clave = ['taller', 'laboratorio', 'maquina', 'herramienta', 'practica', 'seguridad']
             
-            if not df_tec.empty:
-                st.warning(f"Se han detectado {len(df_tec)} reportes en áreas de talleres.")
-                st.dataframe(df_tec[['fecha', 'nombre', 'grupo', 'descripcion']], use_container_width=True)
-            else:
-                st.success("No hay reportes técnicos recientes.")
+            # Buscamos en la descripción (si existe la columna)
+            if 'descripcion' in df_master.columns:
+                df_tec = df_master[df_master['descripcion'].str.contains('|'.join(palabras_clave), case=False, na=False)]
+                
+                if not df_tec.empty:
+                    st.warning(f"Se detectaron {len(df_tec)} incidencias técnicas.")
+                    # Mostramos solo las columnas que sabemos que existen
+                    columnas_ver = [c for c in ['fecha', 'nombre', 'grupo', 'descripcion'] if c in df_tec.columns]
+                    st.dataframe(df_tec[columnas_ver], use_container_width=True)
+                else:
+                    st.success("No hay reportes técnicos pendientes.")
+            
+            # --- LISTA DE SEGUIMIENTO ---
+            st.subheader("📋 Estudiantes con Reportes Recurrentes")
+            if 'nombre' in df_master.columns:
+                # Agrupamos por los datos disponibles
+                cols_agrupar = [c for c in ['matricula', 'nombre', 'grupo'] if c in df_master.columns]
+                seguimiento = df_master.groupby(cols_agrupar).size().reset_index(name='Total')
+                seguimiento = seguimiento[seguimiento['Total'] >= 2].sort_values(by='Total', ascending=False)
+                st.table(seguimiento.head(10))
 
         else:
-            st.info("No hay datos suficientes para generar este panel.")
+            st.info("Aún no hay datos suficientes en las tablas de alumnos o reportes.")
 
     except Exception as e:
         st.error(f"Error en Dashboard Operativo: {e}")
+
 
 
 
