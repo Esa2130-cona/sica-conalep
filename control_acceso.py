@@ -626,6 +626,7 @@ elif menu == "Servicios y Técnica":
 # ================= EXPEDIENTE DIGITAL (CON BOTÓN DE BLOQUEO) =================
 # ================= EXPEDIENTE DIGITAL ACTUALIZADO =================
 # ================= EXPEDIENTE DIGITAL FINAL Y CORREGIDO =================
+# ================= EXPEDIENTE DIGITAL FINAL (CORRECCIÓN DE ERRORES) =================
 elif menu == "Expediente Digital":
     st.title("🗂️ Expediente Digital Integral")
     
@@ -633,80 +634,83 @@ elif menu == "Expediente Digital":
 
     if mat_exp:
         try:
-            # 1. CARGA DE DATOS (Aseguramos que todas las variables existan desde aquí)
+            # 1. CARGA DE DATOS (Primero traemos todo de la base de datos)
             al_res = supabase.table("alumnos").select("*").eq("matricula", mat_exp).execute()
             
             if al_res.data:
                 al = al_res.data[0]
                 estatus_actual = al.get("estatus", True)
                 
-                # Consultas a las tablas relacionadas
+                # Consultas a tablas relacionadas
                 res_rep = supabase.table("reportes").select("*").eq("matricula", mat_exp).execute()
                 res_ent = supabase.table("entradas").select("*").eq("matricula", mat_exp).execute()
                 res_av = supabase.table("avisos").select("*").eq("matricula", mat_exp).eq("activo", True).execute()
                 
-                # Definición de variables para evitar errores de "not defined"
+                # DEFINICIÓN DE VARIABLES (Aseguramos que existan antes de que el PDF las pida)
                 df_rep = pd.DataFrame(res_rep.data) if res_rep.data else pd.DataFrame()
                 df_ent = pd.DataFrame(res_ent.data) if res_ent.data else pd.DataFrame()
                 list_av = res_av.data if res_av.data else [] 
                 
-                # Lógica de Semáforo de Riesgo
+                # Lógica de Riesgo
                 puntos = len(df_rep)
                 if puntos == 0: color_r, txt_r = "#00e676", "BAJO"
                 elif puntos <= 2: color_r, txt_r = "#ffeb3b", "MEDIO"
                 else: color_r, txt_r = "#ff5252", "ALTO"
 
-                # --- 2. FUNCIÓN PARA GENERAR EL PDF (Indentación corregida) ---
-                def generar_pdf_completo(datos_al, reporte_df, avisos, riesgo_txt):
+                # --- 2. FUNCIÓN PDF CON SOPORTE PARA ACENTOS Y EMOJIS ---
+                def generar_pdf_seguro(datos_al, reporte_df, avisos, riesgo_txt):
                     pdf = FPDF()
                     pdf.add_page()
+                    # Usamos 'Helvetica' o 'Arial' y reemplazamos caracteres problemáticos
                     pdf.set_font("Arial", 'B', 16)
                     pdf.cell(200, 10, "CONALEP CUAUTLA - EXPEDIENTE DIGITAL", ln=True, align='C')
+                    
                     pdf.ln(5)
                     pdf.set_font("Arial", 'B', 12)
-                    pdf.cell(0, 10, f"ESTATUS DE RIESGO: {riesgo_txt}", ln=True, align='R')
+                    pdf.cell(0, 10, f"RIESGO: {riesgo_txt}", ln=True, align='R')
                     
-                    # Datos del Alumno
                     pdf.set_fill_color(240, 240, 240)
-                    pdf.cell(0, 10, "INFORMACIÓN DEL ESTUDIANTE", ln=True, fill=True)
+                    pdf.cell(0, 10, "DATOS DEL ALUMNO", ln=True, fill=True)
                     pdf.set_font("Arial", '', 11)
-                    pdf.cell(0, 8, f"Nombre: {datos_al.get('nombre')}", ln=True)
-                    pdf.cell(0, 8, f"Matrícula: {datos_al.get('matricula')}", ln=True)
-                    pdf.cell(0, 8, f"Grupo: {datos_al.get('grupo')}", ln=True)
+                    # El .encode('latin-1', 'replace').decode('latin-1') evita el error de la imagen 3
+                    nombre_limpio = datos_al.get('nombre', '').encode('latin-1', 'replace').decode('latin-1')
+                    pdf.cell(0, 8, f"Nombre: {nombre_limpio}", ln=True)
+                    pdf.cell(0, 8, f"Matricula: {datos_al.get('matricula')}", ln=True)
                     
-                    # Sección de Avisos en el PDF
                     if avisos:
                         pdf.ln(5)
                         pdf.cell(0, 10, "AVISOS VIGENTES", ln=True, fill=True)
                         for av in avisos:
-                            pdf.cell(0, 8, f"- {av['mensaje']}", ln=True)
+                            msg = av['mensaje'].encode('latin-1', 'replace').decode('latin-1')
+                            pdf.cell(0, 8, f"- {msg}", ln=True)
 
-                    # Sección de Reportes en el PDF
                     pdf.ln(5)
-                    pdf.cell(0, 10, "HISTORIAL DE REPORTES", ln=True, fill=True)
+                    pdf.cell(0, 10, "HISTORIAL", ln=True, fill=True)
                     if not reporte_df.empty:
                         for _, row in reporte_df.iterrows():
-                            pdf.multi_cell(0, 8, f"[{row['fecha']}] {row.get('tipo', 'Reporte')}: {row.get('descripcion', 'Sin detalle')}", border=1)
+                            tipo = str(row.get('tipo', '')).encode('latin-1', 'replace').decode('latin-1')
+                            desc = str(row.get('descripcion', '')).encode('latin-1', 'replace').decode('latin-1')
+                            pdf.multi_cell(0, 8, f"[{row['fecha']}] {tipo}: {desc}", border=1)
+                    
                     return pdf.output(dest='S').encode('latin-1', 'ignore')
 
-                # --- 3. FUNCIÓN DE GESTIÓN DE ACCESO (Bloqueo/Activación) ---
+                # --- 3. FUNCIÓN DE BLOQUEO ---
                 def gestionar_acceso(bloquear=True):
                     nuevo_estatus = not bloquear
                     supabase.table("alumnos").update({"estatus": nuevo_estatus}).eq("matricula", mat_exp).execute()
                     if bloquear:
-                        # Aviso automático al bloquear
+                        # Quitamos el emoji del mensaje para evitar errores de PDF
                         supabase.table("avisos").insert({
                             "matricula": mat_exp, 
-                            "mensaje": "⚠️ ACCESO RESTRINGIDO: FAVOR DE PASAR A DIRECCIÓN", 
+                            "mensaje": "ACCESO RESTRINGIDO: PASAR A DIRECCION", 
                             "prioridad": "ALTA", "activo": True
                         }).execute()
                     else:
-                        # Limpiar avisos de bloqueo al activar
                         supabase.table("avisos").update({"activo": False}).eq("matricula", mat_exp).execute()
                     time.sleep(1)
                     st.rerun()
 
-                # --- 4. INTERFAZ VISUAL ---
+                # --- 4. INTERFAZ ---
                 col_perfil, col_riesgo, col_accion = st.columns([2, 1, 1])
                 with col_perfil:
                     st.markdown(f"<div style='background:#161b22; padding:20px; border-radius:15px; border-left:8px solid #1e8449;'><h2 style='margin:0; color:white;'>{al.get('nombre')}</h2><p style='margin:0; color:#8b949e;'>Grupo: {al.get('grupo')} | Matrícula: {mat_exp}</p></div>", unsafe_allow_html=True)
@@ -720,22 +724,19 @@ elif menu == "Expediente Digital":
                     else:
                         if st.button("✅ ACTIVAR", use_container_width=True, type="primary"): gestionar_acceso(False)
 
-                # --- 5. EXPORTACIÓN Y TABS ---
+                # --- 5. BOTÓN PDF Y TABS ---
+                pdf_data = generar_pdf_seguro(al, df_rep, list_av, txt_r)
                 st.download_button(
-                    label="📥 Exportar Expediente Digital (PDF)",
-                    data=generar_pdf_completo(al, df_rep, list_av, txt_r),
+                    label="📥 Descargar Expediente (PDF)",
+                    data=pdf_data,
                     file_name=f"Expediente_{mat_exp}.pdf",
                     mime="application/pdf",
                     use_container_width=True
                 )
 
-                t1, t2, t3 = st.tabs(["🕒 Asistencias", "🚨 Reportes", "📢 Avisos"])
+                t1, t2 = st.tabs(["🕒 Asistencias", "🚨 Reportes"])
                 with t1: st.dataframe(df_ent, use_container_width=True)
                 with t2: st.dataframe(df_rep, use_container_width=True)
-                with t3:
-                    if list_av:
-                        for av in list_av: st.warning(f"**{av['prioridad']}**: {av['mensaje']}")
-                    else: st.info("Sin avisos activos.")
 
             else:
                 st.error("Matrícula no encontrada.")
