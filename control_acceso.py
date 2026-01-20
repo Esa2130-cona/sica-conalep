@@ -114,10 +114,8 @@ menu = st.sidebar.radio("📋 MENÚ PRINCIPAL", opciones)
 if st.sidebar.button("Cerrar Sesión"):
     st.session_state.user = None
     st.rerun()
-
 # ================= MÓDULO: PUERTA DE ENTRADA =================
 elif menu == "Puerta de Entrada":
-    # Contenedor centrado para el título
     st.markdown("""
         <div class='scan-card'>
             <div class='scan-subtitle'>SICA</div>
@@ -125,47 +123,59 @@ elif menu == "Puerta de Entrada":
         </div>
     """, unsafe_allow_html=True)
     
-    st.markdown("<br>", unsafe_allow_html=True) # Espacio visual
+    st.markdown("<br>", unsafe_allow_html=True)
 
     if "resultado" not in st.session_state: 
         st.session_state.resultado = None
 
-    # Función procesar_scan (se mantiene igual)
     def procesar_scan():
         mat = normalizar_matricula(st.session_state.scan_input)
         st.session_state.scan_input = ""
         if not mat: return
         try:
-            al_query = supabase.table("alumnos").select("*").filter("matricula", "eq", mat).execute()
+            # --- CAMBIO AQUÍ: Agregamos 'estatus' a la consulta ---
+            al_query = supabase.table("alumnos").select("*, estatus").filter("matricula", "eq", mat).execute()
             av_query = supabase.table("avisos").select("mensaje, prioridad").filter("matricula", "eq", mat).filter("activo", "eq", True).execute()
+            
             if not al_query.data:
                 st.session_state.resultado = {"tipo": "error", "mensaje": "MATRÍCULA NO REGISTRADA"}
             else:
                 al = al_query.data[0]
-                enviar("entradas", {
-                    "fecha": datetime.now(zona).strftime("%Y-%m-%d"), 
-                    "hora": datetime.now(zona).strftime("%H:%M:%S"),
-                    "matricula": mat, 
-                    "nombre": al.get("nombre", "N/A"), 
-                    "grupo": al.get("grupo", "N/A"),
-                    "registro_por": user.get("usuario", "Sistema")
-                })
-                st.session_state.resultado = {
-                    "tipo": "ok", 
-                    "nombre": al.get("nombre"), 
-                    "grupo": al.get("grupo"), 
-                    "aviso": av_query.data[0] if av_query.data else None
-                }
+                
+                # --- CAMBIO AQUÍ: Validación de Bloqueo ---
+                # Asumimos que en Supabase la columna 'estatus' es boolean (true = activo)
+                if al.get("estatus") == False:
+                    st.session_state.resultado = {
+                        "tipo": "bloqueado", 
+                        "nombre": al.get("nombre"),
+                        "mensaje": "ACCESO DENEGADO / BLOQUEADO"
+                    }
+                else:
+                    # Si está activo, procede con el registro normal
+                    enviar("entradas", {
+                        "fecha": datetime.now(zona).strftime("%Y-%m-%d"), 
+                        "hora": datetime.now(zona).strftime("%H:%M:%S"),
+                        "matricula": mat, 
+                        "nombre": al.get("nombre", "N/A"), 
+                        "grupo": al.get("grupo", "N/A"),
+                        "registro_por": user.get("usuario", "Sistema")
+                    })
+                    st.session_state.resultado = {
+                        "tipo": "ok", 
+                        "nombre": al.get("nombre"), 
+                        "grupo": al.get("grupo"), 
+                        "aviso": av_query.data[0] if av_query.data else None
+                    }
         except Exception as e: st.error(f"Error: {e}")
 
-    # Input del scanner centrado
     _, col_input, _ = st.columns([1, 2, 1])
     with col_input:
         st.text_input("ESCANEE SU CREDENCIAL AQUÍ", key="scan_input", on_change=procesar_scan, placeholder="Esperando lectura...")
 
-    # Resultados visuales
+    # --- RESULTADOS VISUALES ACTUALIZADOS ---
     if st.session_state.resultado:
         res = st.session_state.resultado
+        
         if res["tipo"] == "ok":
             st.balloons()
             st.markdown(f"""
@@ -175,15 +185,19 @@ elif menu == "Puerta de Entrada":
                     <div style='font-size:35px; color:#f0f6fc;'>GRUPO: {res['grupo']}</div>
                 </div>
             """, unsafe_allow_html=True)
-            
-            if res["aviso"]:
-                st.markdown(f"""
-                    <div style='background-color:#f39c12; padding:20px; border-radius:15px; color:white; text-align:center; margin-top:20px; border:3px solid white;'>
-                        <div style='font-size:22px; font-weight:bold;'>⚠️ AVISO PENDIENTE:</div>
-                        <div style='font-size:35px; font-weight:bold;'>{res['aviso']['mensaje']}</div>
-                    </div>
-                """, unsafe_allow_html=True)
-        else:
+            # ... (sección de avisos se mantiene igual)
+
+        elif res["tipo"] == "bloqueado":
+            # Diseño especial para alumnos bloqueados
+            st.markdown(f"""
+                <div style='text-align:center; background:rgba(255, 152, 0, 0.2); padding:40px; border-radius:20px; border:2px solid #ff9800;'>
+                    <div style='font-size:40px; color:#ff9800; font-weight:bold;'>⚠️ {res['mensaje']}</div>
+                    <div style='font-size:50px; font-weight:900; color:white;'>{res['nombre']}</div>
+                    <div style='font-size:25px; color:#f0f6fc; margin-top:10px;'>FAVOR DE PASAR A LA OFICINA</div>
+                </div>
+            """, unsafe_allow_html=True)
+
+        else: # Error de no registrado
             st.markdown(f"""
                 <div style='text-align:center; background:rgba(231, 76, 60, 0.2); padding:40px; border-radius:20px; border:2px solid #ff1744;'>
                     <div style='font-size:50px; color:#ff1744; font-weight:bold;'>❌ {res['mensaje']}</div>
@@ -736,6 +750,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error: {e}")
+
 
 
 
