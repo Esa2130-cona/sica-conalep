@@ -35,28 +35,57 @@ def enviar(tabla, datos):
 # ================= ESTILOS CSS =================
 st.markdown("""
 <style>
-    .stApp { background: #0d1117; }
+    /* Fondo General (Azul muy oscuro/negro institucional) */
+    .stApp { background: #050a10; }
     
-    /* Etiquetas de los campos (ej. "Usuario", "PIN") */
+    /* Etiquetas de los campos (Usuario, PIN, etc.) */
     .stWidgetLabel p {
+        color: #e0e0e0 !important;
+        font-weight: 500;
+        letter-spacing: 0.5px;
+        font-size: 16px !important;
+    }
+
+    /* Cajas de Texto (Inputs y Textareas) */
+    input, textarea, [data-baseweb="select"] > div {
+        color: #ffffff !important; /* Texto Blanco Puro */
+        -webkit-text-fill-color: #ffffff !important;
+        background-color: rgba(255, 255, 255, 0.07) !important; /* Fondo sutil */
+        border: 1px solid rgba(30, 132, 73, 0.3) !important; /* Borde verde institucional sutil */
+        border-radius: 12px !important;
+        padding: 10px !important;
+    }
+
+    /* Efecto al hacer clic en una caja (Focus) */
+    input:focus, textarea:focus {
+        border: 1px solid #1E8449 !important; /* Verde Conalep brillante al seleccionar */
+        box-shadow: 0 0 10px rgba(30, 132, 73, 0.2) !important;
+        outline: none !important;
+    }
+
+    /* Estilo para los botones (Moderno Institucional) */
+    .stButton>button {
+        background-color: #1E8449 !important;
         color: white !important;
-        font-weight: 600;
-    }
-
-    /* Color del texto que se escribe en inputs y textareas */
-    input, textarea {
-        color: #00e676 !important; /* Verde neón */
-        background-color: rgba(255, 255, 255, 0.05) !important;
         border-radius: 10px !important;
+        border: none !important;
+        font-weight: 600 !important;
+        width: 100%;
+        transition: 0.3s;
+    }
+    .stButton>button:hover {
+        background-color: #145A32 !important;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.4) !important;
     }
 
-    /* Estilo para el Kiosko */
-    .kiosko-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: center; margin-top: -20px; }
-    .scan-card { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); padding: 30px; border-radius: 24px; text-align: center; width: 100%; max-width: 500px; margin-bottom: 20px; }
-    .scan-text { color: #00e676; font-size: 24px; font-weight: 800; text-transform: uppercase; }
-    
-    /* Resultados */
-    .student-name { font-size: 50px; font-weight: 900; color: white; margin: 15px 0; text-transform: uppercase; }
+    /* Ajustes para el Kiosko */
+    .scan-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-top: 4px solid #1E8449; /* Detalle institucional arriba */
+        padding: 30px;
+        border-radius: 20px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -224,6 +253,7 @@ elif menu == "Historial":
                 st.table(pd.DataFrame(ent.data)[["fecha", "hora", "nombre"]])
             else: st.info("Sin registros")
         except: st.error("Error en consulta")
+
 
 
 
