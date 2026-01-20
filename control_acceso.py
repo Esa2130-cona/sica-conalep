@@ -192,20 +192,24 @@ if menu == "Puerta de Entrada":
         st.session_state.resultado = None
         st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
-# ================= MÓDULO: REPORTES (CON EVIDENCIA FOTOGRÁFICA) =================
+# ================= MÓDULO: REPORTES =================
 elif menu == "Reportes":
     st.title("🚨 Gestión de Reportes")
     
-    def limpiar_formulario():
-        st.session_state["mat_input"] = ""
-        st.session_state["tipo_input"] = "Uniforme"
-        st.session_state["desc_input"] = ""
-        # La cámara no se puede resetear manualmente, pero al rerun se limpia
+    # TRUCO PARA LIMPIAR TODO: Usamos un contador en el session_state
+    if "form_reset_count" not in st.session_state:
+        st.session_state.form_reset_count = 0
+    
+    # Función para reiniciar el formulario incrementando el contador
+    def reiniciar_formulario():
+        st.session_state.form_reset_count += 1
+        st.rerun()
 
-    if "mat_input" not in st.session_state:
-        st.session_state["mat_input"] = ""
+    # Cada widget tendrá una key única basada en el contador
+    suffix = f"_{st.session_state.form_reset_count}"
 
-    mat_rep = st.text_input("Ingrese Matrícula del Alumno", key="mat_input").strip().upper()
+    # 1. Entrada de Matrícula (con key dinámica)
+    mat_rep = st.text_input("Ingrese Matrícula del Alumno", key=f"mat{suffix}").strip().upper()
     
     if mat_rep:
         try:
@@ -213,8 +217,14 @@ elif menu == "Reportes":
             
             if al_res.data:
                 al = al_res.data[0]
-                nombre_alumno = al.get("nombre", "Estudiante")
-                st.subheader(f"Alumno: {nombre_alumno}")
+                nombre_alumno = al.get("nombre", al.get("NOMBRE", "Estudiante"))
+                
+                # Diseño Moderno: Tarjeta de Alumno
+                st.markdown(f"""
+                <div style='background:#161b22; padding:15px; border-radius:10px; border-left:5px solid #1e8449; margin-bottom:20px;'>
+                    <h3 style='margin:0; color:white;'>Alumno: {nombre_alumno}</h3>
+                </div>
+                """, unsafe_allow_html=True)
                 
                 # Lógica 3+1
                 historial_rep = supabase.table("reportes").select("id", count="exact").eq("matricula", mat_rep).execute()
@@ -222,18 +232,17 @@ elif menu == "Reportes":
                 niveles = ["LLAMADA 1", "LLAMADA 2", "LLAMADA 3"]
                 nivel_sugerido = niveles[total_previo] if total_previo < 3 else "REPORTE"
 
-                st.info(f"Registro actual: {nivel_sugerido}")
+                st.info(f"Registro actual detectado: {nivel_sugerido}")
 
-                tipo = st.selectbox("Tipo de falta", ["Uniforme", "Conducta", "Retardo", "Celular", "Otro"], key="tipo_input")
-                desc = st.text_area("Descripción de lo sucedido", key="desc_input")
-                
-                # --- NUEVO: CAPTURA DE EVIDENCIA ---
-                foto = st.camera_input("📸 Tomar Evidencia (Opcional)")
+                # Widgets con key dinámica para evitar errores al limpiar
+                tipo = st.selectbox("Tipo de falta", ["Uniforme", "Conducta", "Retardo", "Celular", "Otro"], key=f"tipo{suffix}")
+                desc = st.text_area("Descripción de lo sucedido", key=f"desc{suffix}")
+                foto = st.camera_input("📸 Tomar Evidencia (Opcional)", key=f"foto{suffix}")
                 
                 col1, col2 = st.columns(2)
                 
                 with col1:
-                    if st.button("💾 Guardar Registro"):
+                    if st.button("💾 Guardar Registro", use_container_width=True):
                         url_foto = ""
                         
                         # Subida de foto
@@ -247,6 +256,7 @@ elif menu == "Reportes":
 
                         # Envío a la base de datos
                         try:
+                            # Reutilizamos tu función enviar (asegúrate que esté definida arriba)
                             enviar("reportes", {
                                 "fecha": datetime.now(zona).strftime("%Y-%m-%d"),
                                 "matricula": mat_rep,
@@ -258,27 +268,22 @@ elif menu == "Reportes":
                                 "registrado_por": user.get("usuario", "Prefecto")
                             })
                             
-                            st.success("✅ Registro y evidencia guardados.")
-                            time.sleep(1.5)
+                            st.success("✅ Registro y evidencia guardados correctamente.")
+                            time.sleep(1.2)
                             
-                            # LA SOLUCIÓN AL ERROR:
-                            # Limpiamos el estado y reiniciamos la app por completo
-                            for key in ["mat_input", "desc_input"]:
-                                if key in st.session_state:
-                                    st.session_state[key] = ""
+                            # LA SOLUCIÓN DEFINITIVA:
+                            reiniciar_formulario() # Esto limpia TODO sin errores
                             
-                            st.rerun() # Esto refresca la página y limpia los cuadros de texto
                         except Exception as e:
                             st.error(f"Error al guardar: {e}")
 
                 with col2:
-                    if st.button("❌ Cancelar"):
-                        limpiar_formulario()
-                        st.rerun()
+                    if st.button("❌ Cancelar", use_container_width=True):
+                        reiniciar_formulario()
             else:
                 st.error("Matrícula no encontrada.")
         except Exception as e:
-            st.error(f"Error: {e}")
+            st.error(f"Error en consulta: {e}")
 # ================= MÓDULO: HISTORIAL (ENTRADAS Y REPORTES) =================
 elif menu == "Historial":
     st.title("📊 Consulta Integral de Historial")
@@ -325,6 +330,7 @@ elif menu == "Historial":
                 
         except Exception as e:
             st.error(f"Error al consultar el historial: {e}")
+
 
 
 
