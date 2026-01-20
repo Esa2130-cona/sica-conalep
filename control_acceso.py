@@ -284,40 +284,6 @@ elif menu == "Reportes":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en consulta: {e}")
-            with tab2:
-    # 1. Asegúrate de incluir 'foto_url' en la consulta
-    res_rep = supabase.table("reportes").select("fecha, nivel, tipo, descripcion, registrado_por, foto_url").eq("matricula", mat_h).order("fecha", desc=True).execute()
-    
-    if res_rep.data:
-        for rep in res_rep.data:
-            with st.container():
-                col_texto, col_foto = st.columns([3, 1.2]) # Ajustamos el ancho para la miniatura
-                
-                with col_texto:
-                    st.markdown(f"**📅 {rep['fecha']} - {rep['nivel']}**")
-                    st.markdown(f"**Motivo:** {rep['tipo']}")
-                    st.write(f"_{rep['descripcion']}_")
-                    st.caption(f"Registrado por: {rep.get('registrado_por', 'Admin')}")
-                
-                with col_foto:
-                    # VALIDACIÓN MEJORADA:
-                    # Verificamos que la URL exista, no sea nula y no esté vacía
-                    foto_url = rep.get("foto_url")
-                    
-                    if foto_url and str(foto_url).strip() != "":
-                        # Agregamos borde y redondeado con HTML para que se vea moderno
-                        st.markdown(f"""
-                            <a href="{foto_url}" target="_blank">
-                                <img src="{foto_url}" style="width:100%; border-radius:10px; border: 1px solid #30363d;">
-                            </a>
-                        """, unsafe_allow_html=True)
-                        st.caption("Ver tamaño completo 🔍")
-                    else:
-                        st.info("No hay evidencia")
-                
-                st.markdown("---")
-    else:
-        st.write("El alumno no cuenta con reportes.")
 # ================= MÓDULO: HISTORIAL (ENTRADAS Y REPORTES) =================
 elif menu == "Historial":
     st.title("📊 Consulta Integral de Historial")
@@ -330,49 +296,62 @@ elif menu == "Historial":
             
             if al_res.data:
                 al = al_res.data[0]
-                st.subheader(f"Expediente de: {al['nombre']}")
-                st.markdown(f"**Grupo:** {al['grupo']}")
+                # Tarjeta de encabezado con estilo institucional
+                st.markdown(f"""
+                <div style='background:#161b22; padding:15px; border-radius:10px; border-left:5px solid #1e8449; margin-bottom:20px;'>
+                    <h3 style='margin:0; color:white;'>Expediente: {al['nombre']}</h3>
+                    <p style='margin:0; color:#8b949e;'>Grupo: {al['grupo']}</p>
+                </div>
+                """, unsafe_allow_html=True)
                 
-                tab1, tab2 = st.tabs(["🕒 Entradas", "🚨 Reportes e Incidencias"])
+                tab1, tab2 = st.tabs(["🕒 Registro de Entradas", "🚨 Reportes e Incidencias"])
                 
                 with tab1:
                     res_ent = supabase.table("entradas").select("fecha, hora").eq("matricula", mat_h).order("fecha", desc=True).execute()
                     if res_ent.data:
-                        st.dataframe(pd.DataFrame(res_ent.data), use_container_width=True)
+                        df_ent = pd.DataFrame(res_ent.data)
+                        df_ent.columns = ["FECHA", "HORA"]
+                        st.dataframe(df_ent, use_container_width=True)
                     else:
-                        st.info("Sin registros de entrada.")
+                        st.info("Sin registros de asistencia.")
 
                 with tab2:
-                    # Traemos también la columna 'foto_url'
                     res_rep = supabase.table("reportes").select("fecha, nivel, tipo, descripcion, registrado_por, foto_url").eq("matricula", mat_h).order("fecha", desc=True).execute()
                     
                     if res_rep.data:
                         for rep in res_rep.data:
-                            # Diseño de "Card" para cada reporte
                             with st.container():
-                                col_texto, col_foto = st.columns([3, 1])
+                                # Ajustamos columnas para mejor visibilidad en móviles
+                                col_texto, col_foto = st.columns([3, 1.2])
                                 
                                 with col_texto:
-                                    st.markdown(f"**📅 {rep['fecha']} - {rep['nivel']}**")
+                                    st.markdown(f"**📅 {rep['fecha']} — {rep['nivel']}**")
                                     st.markdown(f"**Motivo:** {rep['tipo']}")
-                                    st.write(f"_{rep['descripcion']}_")
-                                    st.caption(f"Registrado por: {rep['registrado_por']}")
+                                    st.write(f"{rep['descripcion']}")
+                                    st.caption(f"Registrado por: {rep.get('registrado_por', 'Personal autorizado')}")
                                 
                                 with col_foto:
                                     url = rep.get("foto_url")
-                                    if url: # Si existe la URL, mostramos la miniatura
-                                        st.image(url, caption="Evidencia", width=120)
+                                    if url and str(url).strip() != "":
+                                        # Imagen interactiva con HTML
+                                        st.markdown(f"""
+                                            <a href="{url}" target="_blank">
+                                                <img src="{url}" style="width:100%; border-radius:10px; border: 1px solid #30363d; margin-bottom: 5px;">
+                                            </a>
+                                        """, unsafe_allow_html=True)
+                                        st.caption("🔍 Ampliar foto")
                                     else:
-                                        st.caption("Sin foto")
+                                        st.info("Sin evidencia")
                                 
-                                st.divider() # Línea divisoria entre reportes
+                                st.divider()
                     else:
-                        st.write("El alumno no cuenta con reportes.")
+                        st.write("El alumno no cuenta con reportes registrados.")
             else:
-                st.error("Matrícula no encontrada.")
+                st.error("La matrícula no existe en la base de datos.")
                 
         except Exception as e:
-            st.error(f"Error al consultar: {e}")
+            st.error(f"Error de conexión: {e}")
+
 
 
 
