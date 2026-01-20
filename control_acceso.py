@@ -252,17 +252,53 @@ elif menu == "Reportes":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en la consulta: {e}")
-# ================= MÓDULO: HISTORIAL =================
+# ================= MÓDULO: HISTORIAL (ENTRADAS Y REPORTES) =================
 elif menu == "Historial":
-    st.title("📊 Consulta de Historial")
-    mat_h = st.text_input("Matrícula a consultar").strip().upper()
+    st.title("📊 Consulta Integral de Historial")
+    
+    # Caja de búsqueda con el estilo que definimos (Fondo claro, texto negro)
+    mat_h = st.text_input("Ingrese Matrícula para consultar").strip().upper()
+    
     if mat_h:
         try:
-            ent = supabase.table("entradas").select("*").filter("matricula", "eq", mat_h).execute()
-            if ent.data:
-                st.table(pd.DataFrame(ent.data)[["fecha", "hora", "nombre"]])
-            else: st.info("Sin registros")
-        except: st.error("Error en consulta")
+            # 1. Buscamos datos del alumno para el encabezado
+            al_res = supabase.table("alumnos").select("nombre, grupo").eq("matricula", mat_h).execute()
+            
+            if al_res.data:
+                al = al_res.data[0]
+                st.subheader(f"Expediente de: {al['nombre']}")
+                st.info(f"Grupo actual: {al['grupo']}")
+                
+                # Creamos dos pestañas para organizar la información
+                tab1, tab2 = st.tabs(["🕒 Historial de Entradas", "🚨 Historial de Incidencias"])
+                
+                with tab1:
+                    # Consultamos la tabla 'entradas'
+                    res_ent = supabase.table("entradas").select("fecha, hora").eq("matricula", mat_h).order("fecha", desc=True).execute()
+                    if res_ent.data:
+                        df_ent = pd.DataFrame(res_ent.data)
+                        # Renombrar columnas para que se vean bien en la tabla
+                        df_ent.columns = ["FECHA", "HORA"]
+                        st.dataframe(df_ent, use_container_width=True)
+                    else:
+                        st.write("No hay registros de entrada para esta matrícula.")
+
+                with tab2:
+                    # Consultamos la tabla 'reportes'
+                    res_rep = supabase.table("reportes").select("fecha, nivel, tipo, descripcion, registrado_por").eq("matricula", mat_h).order("fecha", desc=True).execute()
+                    if res_rep.data:
+                        df_rep = pd.DataFrame(res_rep.data)
+                        # Renombrar columnas para el usuario
+                        df_rep.columns = ["FECHA", "NIVEL", "MOTIVO", "DETALLES", "CAPTURÓ"]
+                        st.table(df_rep) # Usamos st.table para que sea más fácil leer las descripciones largas
+                    else:
+                        st.write("El alumno no cuenta con reportes o llamadas de atención.")
+            else:
+                st.error("La matrícula no existe en la base de datos de alumnos.")
+                
+        except Exception as e:
+            st.error(f"Error al consultar el historial: {e}")
+
 
 
 
