@@ -12,8 +12,8 @@ zona = pytz.timezone("America/Mexico_City")
 # --- CONEXIÓN A SUPABASE ---
 @st.cache_resource
 def init_connection():
-    url = st.secrets["https://bxfrwmxashuxxwrbobcl.supabase.co"]
-    key = st.secrets["sb_publishable_FIgI4_WZUW0Jro-JFuEXtw_PJYPtptf"]
+    url = st.secrets["SUPABASE_URL"]
+    key = st.secrets["SUPABASE_KEY"]
     return create_client(url, key)
 
 supabase = init_connection()
@@ -183,6 +183,7 @@ elif menu == "Bitácora Maestros":
                 "INCIDENCIAS": obs
             })
             st.success("Registro completado.")
+
 
 
 
