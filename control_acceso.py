@@ -31,42 +31,39 @@ def enviar(tabla, datos):
     # Forzamos nombres de columnas en minúsculas para coincidir con Supabase
     datos_db = {k.lower(): v for k, v in datos.items()}
     return supabase.table(tabla).insert(datos_db).execute()
-
-# ================= ESTILOS CSS REFINADOS =================
+# ================= ESTILOS CSS REFINADOS (TEXTO NEGRO) =================
 st.markdown("""
 <style>
-    /* 1. Fondo general y tipografía */
+    /* 1. Fondo general de la App */
     .stApp { 
         background-color: #050a10; 
         color: #f0f6fc;
     }
 
-    /* 2. FORZAR VISIBILIDAD EN CAJAS DE TEXTO (Inputs y Textareas) */
-    /* Atacamos el contenedor de BaseWeb que usa Streamlit */
+    /* 2. CAJAS DE TEXTO CON FONDO CLARO Y TEXTO NEGRO */
     div[data-baseweb="input"], div[data-baseweb="textarea"], div[data-baseweb="select"] {
-        background-color: #161b22 !important; 
-        border: 1px solid #30363d !important;
+        background-color: #e0e6ed !important; /* Fondo gris claro/blanco */
+        border: 2px solid #30363d !important;
         border-radius: 8px !important;
-        transition: border-color 0.2s;
     }
     
     div[data-baseweb="input"]:focus-within {
         border-color: #1e8449 !important; /* Verde Conalep al seleccionar */
+        background-color: #ffffff !important; /* Se vuelve blanco puro al escribir */
     }
 
-    /* 3. COLOR DEL TEXTO (Blanco puro para que no se pierda) */
+    /* 3. COLOR DEL TEXTO EN NEGRO (Lo que tú pediste) */
     input, textarea {
-        color: #ffffff !important; 
-        -webkit-text-fill-color: #ffffff !important; /* Forzar en móviles */
-        background-color: transparent !important;
-        font-size: 16px !important;
+        color: #000000 !important; /* Negro puro */
+        -webkit-text-fill-color: #000000 !important; /* Forzar en móviles */
+        font-weight: 500 !important;
     }
 
-    /* 4. ETIQUETAS (Labels) */
+    /* 4. ETIQUETAS (Labels) - Se mantienen blancas para el fondo oscuro de la app */
     .stWidgetLabel p {
-        color: #f0f6fc !important;
+        color: #ffffff !important;
         font-weight: 600 !important;
-        margin-bottom: 8px !important;
+        font-size: 16px !important;
     }
 
     /* 5. BOTONES INSTITUCIONALES */
@@ -74,17 +71,14 @@ st.markdown("""
         background-color: #1e8449 !important;
         color: white !important;
         border-radius: 8px !important;
-        border: none !important;
-        padding: 0.6rem 1rem !important;
         font-weight: 700 !important;
         width: 100% !important;
-        transition: all 0.3s ease;
+        border: none !important;
     }
     
     .stButton>button:hover {
         background-color: #145a32 !important;
-        box-shadow: 0 4px 12px rgba(30, 132, 73, 0.3) !important;
-        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(30, 132, 73, 0.4) !important;
     }
 
     /* 6. DISEÑO DEL KIOSKO (SCANNER) */
@@ -95,43 +89,12 @@ st.markdown("""
         padding: 30px;
         text-align: center;
         border-top: 6px solid #1e8449;
-        margin-bottom: 25px;
-    }
-    
-    .scan-text {
-        color: #1e8449;
-        font-size: 26px;
-        font-weight: 800;
-        letter-spacing: 1px;
-    }
-
-    /* 7. TARJETAS DE RESULTADO ACCESO */
-    .res-card {
-        padding: 40px;
-        border-radius: 25px;
-        text-align: center;
-        margin-top: 20px;
-    }
-    .res-ok { 
-        background: linear-gradient(145deg, #0a2d1a, #1e8449); 
-        border: 2px solid #2ecc71;
-    }
-    .res-error { 
-        background: linear-gradient(145deg, #441111, #991111); 
-        border: 2px solid #ff4b4b;
     }
     
     .student-name {
         font-size: 42px !important;
         font-weight: 900 !important;
         color: white !important;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-    }
-
-    /* 8. TABLAS DE HISTORIAL */
-    .stTable {
-        background-color: #0d1117;
-        border-radius: 10px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -300,6 +263,7 @@ elif menu == "Historial":
                 st.table(pd.DataFrame(ent.data)[["fecha", "hora", "nombre"]])
             else: st.info("Sin registros")
         except: st.error("Error en consulta")
+
 
 
 
