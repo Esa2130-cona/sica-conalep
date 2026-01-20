@@ -193,61 +193,73 @@ if menu == "Puerta de Entrada":
         st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
 
-# ================= MÓDULO: REPORTES (LÓGICA 3 LLAMADAS + 1 REPORTE) =================
+# ================= MÓDULO: REPORTES (CON GUARDAR, CANCELAR Y LIMPIEZA) =================
 elif menu == "Reportes":
     st.title("🚨 Gestión de Reportes")
     
-    # Input de matrícula
-    mat_rep = st.text_input("Ingrese Matrícula del Alumno").strip().upper()
+    # Función para limpiar los campos del formulario
+    def limpiar_formulario_reportes():
+        st.session_state.mat_input = ""
+        st.session_state.tipo_input = "Uniforme"
+        st.session_state.desc_input = ""
+
+    # Inicializamos las variables en el session_state si no existen
+    if "mat_input" not in st.session_state: st.session_state.mat_input = ""
+    if "tipo_input" not in st.session_state: st.session_state.tipo_input = "Uniforme"
+    if "desc_input" not in st.session_state: st.session_state.desc_input = ""
+
+    # Input de matrícula con KEY
+    mat_rep = st.text_input("Ingrese Matrícula del Alumno", key="mat_input").strip().upper()
     
     if mat_rep:
         try:
-            # 1. Buscamos al alumno (usando minúsculas como corregiste)
             al_res = supabase.table("alumnos").select("*").eq("matricula", mat_rep).execute()
             
             if al_res.data:
                 al = al_res.data[0]
-                # Soporta si el nombre está en min o MAY en la base de datos
                 nombre_alumno = al.get("nombre", al.get("NOMBRE", "Estudiante"))
                 st.subheader(f"Alumno: {nombre_alumno}")
                 
-                # 2. CONTAR REPORTES PREVIOS
-                # El sistema cuenta cuántas filas existen con esa matrícula en la tabla 'reportes'
+                # Lógica de niveles (3 llamadas + 1 reporte)
                 historial_rep = supabase.table("reportes").select("id", count="exact").eq("matricula", mat_rep).execute()
                 total_previo = historial_rep.count if historial_rep.count is not None else 0
                 
-                # 3. DETERMINAR NIVEL SEGÚN TU REGLA (3 llamadas, luego reporte)
-                if total_previo == 0:
-                    nivel_sugerido = "LLAMADA 1"
-                    st.info(f"📌 Primera incidencia: {nivel_sugerido}")
-                elif total_previo == 1:
-                    nivel_sugerido = "LLAMADA 2"
-                    st.info(f"📌 Segunda incidencia: {nivel_sugerido}")
-                elif total_previo == 2:
-                    nivel_sugerido = "LLAMADA 3"
-                    st.warning(f"⚠️ ÚLTIMA LLAMADA: {nivel_sugerido}")
-                else:
-                    nivel_sugerido = "REPORTE"
-                    st.error(f"🚫 NIVEL CRÍTICO: {nivel_sugerido}")
+                if total_previo == 0: nivel_sugerido = "LLAMADA 1"
+                elif total_previo == 1: nivel_sugerido = "LLAMADA 2"
+                elif total_previo == 2: nivel_sugerido = "LLAMADA 3"
+                else: nivel_sugerido = "REPORTE"
 
-                # 4. FORMULARIO
-                tipo = st.selectbox("Tipo de falta", ["Uniforme", "Conducta", "Retardo", "Celular", "Otro"])
-                desc = st.text_area("Descripción de lo sucedido")
+                st.info(f"Nivel actual a registrar: {nivel_sugerido}")
+
+                # Campos del formulario
+                tipo = st.selectbox("Tipo de falta", ["Uniforme", "Conducta", "Retardo", "Celular", "Otro"], key="tipo_input")
+                desc = st.text_area("Descripción de lo sucedido", key="desc_input")
                 
-                # Botón para guardar
-                if st.button("Guardar Registro"):
-                    enviar("reportes", {
-                        "fecha": datetime.now(zona).strftime("%Y-%m-%d"),
-                        "matricula": mat_rep,
-                        "nombre": nombre_alumno,
-                        "nivel": nivel_sugerido,
-                        "tipo": tipo,
-                        "descripcion": desc,
-                        "registrado_por": user.get("usuario", "Prefecto")
-                    })
-                    st.success(f"✅ Se registró la {nivel_sugerido} correctamente.")
-                    time.sleep(2)
-                    st.rerun()
+                # Columnas para los botones
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    if st.button("💾 Guardar Registro"):
+                        enviar("reportes", {
+                            "fecha": datetime.now(zona).strftime("%Y-%m-%d"),
+                            "matricula": mat_rep,
+                            "nombre": nombre_alumno,
+                            "nivel": nivel_sugerido,
+                            "tipo": tipo,
+                            "descripcion": desc,
+                            "registrado_por": user.get("usuario", "Prefecto")
+                        })
+                        st.success(f"✅ Se registró la {nivel_sugerido} correctamente.")
+                        limpiar_formulario_reportes()
+                        time.sleep(1.2)
+                        st.rerun()
+
+                with col2:
+                    if st.button("❌ Cancelar"):
+                        limpiar_formulario_reportes()
+                        st.info("Formulario limpiado.")
+                        time.sleep(0.8)
+                        st.rerun()
             else:
                 st.error("Matrícula no encontrada.")
         except Exception as e:
@@ -298,6 +310,7 @@ elif menu == "Historial":
                 
         except Exception as e:
             st.error(f"Error al consultar el historial: {e}")
+
 
 
 
