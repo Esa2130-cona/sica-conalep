@@ -50,6 +50,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ================= SISTEMA DE LOGIN =================
+# ================= 1. SISTEMA DE LOGIN (ORDENADO) =================
 if "user" not in st.session_state:
     st.session_state.user = None
 
@@ -70,51 +71,100 @@ if not st.session_state.user:
                 st.error(f"Error de base de datos: {e}")
     st.stop()
 
-# ================= TODO LO SIGUIENTE OCURRE SI HAY USUARIO =================
-if st.session_state.user:
-    user = st.session_state.user
-    rol = str(user.get("rol", user.get("ROL", ""))).upper().strip()
-    nombre_usuario = user.get("usuario", "Usuario")
+# ================= 2. CONFIGURACIÓN DESPUÉS DEL LOGIN =================
+# Todo lo siguiente solo se ejecuta si ya hay un usuario logueado
+user = st.session_state.user
+rol = str(user.get("rol", user.get("ROL", ""))).upper().strip()
+nombre_usuario = user.get("usuario", "Usuario")
 
-    # Sidebar
-    st.sidebar.markdown(f"""
-    <div style='background-color: #161b22; padding: 15px; border-radius: 10px; border: 1px solid #30363d; margin-bottom: 20px;'>
-        <p style='margin: 0; color: #8b949e; font-size: 11px;'>BIENVENIDO(A)</p>
-        <h3 style='margin: 0; color: #ffffff; font-size: 18px;'>{nombre_usuario}</h3>
-        <span style='background-color: #1e8449; color: white; padding: 2px 8px; border-radius: 5px; font-size: 10px; font-weight: bold;'>ROL: {rol}</span>
-    </div>
-    """, unsafe_allow_html=True)
+# Mensaje de Bienvenida en Sidebar
+st.sidebar.markdown(f"""
+<div style='background-color: #161b22; padding: 15px; border-radius: 10px; border: 1px solid #30363d; margin-bottom: 20px;'>
+    <p style='margin: 0; color: #8b949e; font-size: 11px;'>BIENVENIDO(A)</p>
+    <h3 style='margin: 0; color: #ffffff; font-size: 18px;'>{nombre_usuario}</h3>
+    <span style='background-color: #1e8449; color: white; padding: 2px 8px; border-radius: 5px; font-size: 10px; font-weight: bold;'>ROL: {rol}</span>
+</div>
+""", unsafe_allow_html=True)
 
-    if rol == "KIOSKO": opciones = ["Puerta de Entrada"]
-    elif rol == "DIRECTOR": opciones = ["Dashboard", "Expediente Digital"]
-    elif rol == "PREFECTO": opciones = ["Reportes", "Historial", "Avisos", "Expediente Digital"]
-    elif rol == "GENERAL": opciones = ["Reportes", "Avisos", "Servicios y Técnica", "Expediente Digital"]
-    elif rol == "ADMIN": opciones = ["Puerta de Entrada", "Reportes", "Historial", "Avisos", "Bitácora Maestros", "Dashboard", "Servicios y Técnica", "Expediente Digital"]
-    else: opciones = ["Puerta de Entrada"]
+# Lógica de Opciones por Rol
+if rol == "KIOSKO": opciones = ["Puerta de Entrada"]
+elif rol == "DIRECTOR": opciones = ["Dashboard", "Expediente Digital"]
+elif rol == "PREFECTO": opciones = ["Reportes", "Historial", "Avisos", "Expediente Digital"]
+elif rol == "GENERAL": opciones = ["Reportes", "Avisos", "Servicios y Técnica", "Expediente Digital"]
+elif rol == "ADMIN": opciones = ["Puerta de Entrada", "Reportes", "Historial", "Avisos", "Dashboard", "Servicios y Técnica", "Expediente Digital"]
+else: opciones = ["Puerta de Entrada"]
 
-    menu = st.sidebar.radio("📋 MENÚ PRINCIPAL", opciones)
+menu = st.sidebar.radio("📋 MENÚ PRINCIPAL", opciones)
 
-    if st.sidebar.button("Cerrar Sesión"):
-        st.session_state.user = None
-        st.rerun()
+if st.sidebar.button("Cerrar Sesión"):
+    st.session_state.user = None
+    st.rerun()
 
-    # --- NAVEGACIÓN DE MÓDULOS ---
-    if menu == "Dashboard":
-        st.title("🏛️ Panel de Control Directivo")
-        try:
-            res_rep = supabase.table("reportes").select("*").execute()
-            res_ent = supabase.table("entradas").select("*").execute()
-            res_al = supabase.table("alumnos").select("matricula, grupo").execute()
-            if res_rep.data and res_al.data:
-                df_rep, df_al, df_ent = pd.DataFrame(res_rep.data), pd.DataFrame(res_al.data), pd.DataFrame(res_ent.data)
-                df_rep.columns = [c.lower().strip() for c in df_rep.columns]
-                df_al.columns = [c.lower().strip() for c in df_al.columns]
-                df_final = df_rep.merge(df_al[['matricula', 'grupo']], on="matricula", how="left")
-                df_final['grupo'] = df_final['grupo'].fillna("SIN GRUPO")
-                fig = px.bar(df_final['grupo'].value_counts().reset_index(), x='count', y='grupo', orientation='h', title="Reportes por Grupo")
-                st.plotly_chart(fig, use_container_width=True)
-            else: st.info("Sin datos para el Dashboard.")
-        except Exception as e: st.error(f"Error: {e}")
+# ================= 3. NAVEGACIÓN ÚNICA DE MÓDULOS =================
+# Usamos if/elif para que SOLO se ejecute un módulo a la vez
+
+if menu == "Dashboard":
+    st.title("🏛️ Panel de Control Directivo - CONALEP")
+    try:
+        # Carga de datos única
+        res_rep = supabase.table("reportes").select("*").execute()
+        res_ent = supabase.table("entradas").select("*").execute()
+        res_al = supabase.table("alumnos").select("matricula, grupo").execute()
+
+        if res_rep.data and res_ent.data:
+            df_rep = pd.DataFrame(res_rep.data)
+            df_ent = pd.DataFrame(res_ent.data)
+            df_al = pd.DataFrame(res_al.data)
+
+            # Limpieza y Unión (Merge) - Esto quita el error 'grupo'
+            df_rep.columns = [c.lower().strip() for c in df_rep.columns]
+            df_al.columns = [c.lower().strip() for c in df_al.columns]
+            df_rep = df_rep.merge(df_al[['matricula', 'grupo']], on="matricula", how="left")
+            df_rep['grupo'] = df_rep['grupo'].fillna("SIN GRUPO")
+
+            # Métricas
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Asistencias", len(df_ent))
+            c2.metric("Incidencias", len(df_rep))
+            c3.metric("Casos Graves", len(df_rep[df_rep['nivel'].astype(str).str.upper() == 'REPORTE']) if 'nivel' in df_rep.columns else 0)
+
+            # Gráficas
+            st.markdown("### 📈 Análisis Visual")
+            col_a, col_b = st.columns(2)
+            with col_a:
+                fig_grupos = px.bar(df_rep['grupo'].value_counts().reset_index(), x='count', y='grupo', orientation='h', title="Reportes por Grupo")
+                st.plotly_chart(fig_grupos, use_container_width=True)
+            with col_b:
+                df_ent['fecha'] = pd.to_datetime(df_ent['fecha'])
+                asistencia_diaria = df_ent.groupby('fecha').size().reset_index(name='asistencias')
+                fig_asistencia = px.line(asistencia_diaria, x='fecha', y='asistencias', title="Tendencia de Asistencia")
+                st.plotly_chart(fig_asistencia, use_container_width=True)
+    except Exception as e:
+        st.error(f"Error en Dashboard: {e}")
+
+elif menu == "Puerta de Entrada":
+    # Tu código de scanner aquí...
+    pass
+
+elif menu == "Reportes":
+    # Tu código de reportes aquí...
+    pass
+
+elif menu == "Expediente Digital":
+    # Tu código de expediente aquí...
+    pass
+
+elif menu == "Servicios y Técnica":
+    st.title("⚙️ Panel de Servicios Escolares")
+    try:
+        # Validación de columna 'turno' para evitar el error de la imagen
+        res_al = supabase.table("alumnos").select("*").execute()
+        df_al = pd.DataFrame(res_al.data)
+        if 'turno' not in df_al.columns:
+            st.warning("⚠️ La columna 'turno' no existe en Supabase. Mostrando datos generales.")
+        st.dataframe(df_al)
+    except Exception as e:
+        st.error(f"Error operativo: {e}")
 
 # ================= MÓDULO: PUERTA DE ENTRADA =================
 if menu == "Puerta de Entrada":
@@ -753,6 +803,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error: {e}")
+
 
 
 
