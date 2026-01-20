@@ -194,7 +194,7 @@ if menu == "Puerta de Entrada":
     st.markdown("</div>", unsafe_allow_html=True)
 # ================= MÓDULO: REPORTES (CORREGIDO SIN ERROR DE SESSION_STATE) =================
 elif menu == "Reportes":
-    st.title("🚨 Gestión de Incidencias")
+    st.title("🚨 Gestión de Reportes")
     
     # 1. Definimos la función de limpieza antes de usar los widgets
     def limpiar_formulario():
@@ -309,6 +309,7 @@ elif menu == "Historial":
                 
         except Exception as e:
             st.error(f"Error al consultar el historial: {e}")
+
 
 
 
