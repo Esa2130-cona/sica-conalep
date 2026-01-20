@@ -6,4 +6,5 @@ openpyxl
 pytz
 plotly
 fpdf
+qrcode[pil]
 
