@@ -1,800 +1,283 @@
+# ================= IMPORTS =================
 import streamlit as st
 import pandas as pd
-from supabase import create_client, Client
+from supabase import create_client
 from datetime import datetime
 import pytz
 import time
 import plotly.express as px
 from fpdf import FPDF
 
-# ================= CONFIGURACIÓN INICIAL =================
+# ================= CONFIGURACIÓN =================
 st.set_page_config(page_title="SICA CONALEP CUAUTLA", layout="wide")
 zona = pytz.timezone("America/Mexico_City")
 
 @st.cache_resource
 def init_connection():
-    try:
-        url = st.secrets["SUPABASE_URL"]
-        key = st.secrets["SUPABASE_KEY"]
-        return create_client(url, key)
-    except Exception as e:
-        st.error("Error en Secrets: Verifica URL y KEY")
-        st.stop()
+    url = st.secrets["SUPABASE_URL"]
+    key = st.secrets["SUPABASE_KEY"]
+    return create_client(url, key)
 
 supabase = init_connection()
 
+# ================= FUNCIONES BASE =================
 def normalizar_matricula(mat):
-    if not mat: return ""
+    if not mat:
+        return ""
     return mat.strip().upper().replace('"', '-').replace("'", '-')
 
 def enviar(tabla, datos):
     datos_db = {k.lower(): v for k, v in datos.items()}
     return supabase.table(tabla).insert(datos_db).execute()
 
-# ================= ESTILOS CSS (FONDO OSCURO / TEXTO NEGRO EN INPUTS) =================
+# ================= ESTILOS =================
 st.markdown("""
 <style>
-    .stApp { background-color: #050a10; color: #f0f6fc; }
-    div[data-baseweb="input"], div[data-baseweb="textarea"] {
-        background-color: #e0e6ed !important;
-        border-radius: 8px !important;
-    }
-    input, textarea { color: #000000 !important; font-weight: 500 !important; }
-    .stWidgetLabel p { color: #ffffff !important; font-weight: 600 !important; }
-    .stButton>button { background-color: #1e8449 !important; color: white !important; font-weight: 700 !important; }
+.stApp { background-color: #050a10; color: #f0f6fc; }
+div[data-baseweb="input"], div[data-baseweb="textarea"] {
+    background-color: #e0e6ed !important;
+    border-radius: 8px !important;
+}
+input, textarea { color: #000000 !important; font-weight: 500 !important; }
+.stWidgetLabel p { color: #ffffff !important; font-weight: 600 !important; }
+.stButton>button { background-color: #1e8449 !important; color: white !important; font-weight: 700 !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# ================= 1. SISTEMA DE LOGIN =================
+# ================= LOGIN =================
 if "user" not in st.session_state:
     st.session_state.user = None
 
 if not st.session_state.user:
-    st.markdown("<h1 style='color:white; text-align:center;'>🔐 SICA CONALEP CUAUTLA</h1>", unsafe_allow_html=True)
-    with st.container():
-        u = st.text_input("Usuario").strip()
-        p = st.text_input("PIN", type="password").strip()
-        if st.button("Ingresar"):
-            try:
-                query = supabase.table("usuarios").select("*").filter("usuario", "eq", u).filter("pin", "eq", p).execute()
-                if query.data:
-                    st.session_state.user = query.data[0]
-                    st.rerun()
-                else: st.error("Credenciales incorrectas")
-            except Exception as e: st.error(f"Error de base de datos: {e}")
+    st.markdown("<h1 style='text-align:center;'>🔐 SICA CONALEP CUAUTLA</h1>", unsafe_allow_html=True)
+    u = st.text_input("Usuario").strip()
+    p = st.text_input("PIN", type="password").strip()
+    if st.button("Ingresar"):
+        q = supabase.table("usuarios").select("*").eq("usuario", u).eq("pin", p).execute()
+        if q.data:
+            st.session_state.user = q.data[0]
+            st.rerun()
+        else:
+            st.error("Credenciales incorrectas")
     st.stop()
 
-# ================= 2. CONFIGURACIÓN DE USUARIO LOGUEADO =================
 user = st.session_state.user
-rol = str(user.get("rol", user.get("ROL", ""))).upper().strip()
+rol = str(user.get("rol", "")).upper()
 nombre_usuario = user.get("usuario", "Usuario")
 
-# Sidebar con Bienvenida
+# ================= SIDEBAR =================
 st.sidebar.markdown(f"""
-<div style='background-color: #161b22; padding: 15px; border-radius: 10px; border: 1px solid #30363d; margin-bottom: 20px;'>
-    <p style='margin: 0; color: #8b949e; font-size: 11px;'>BIENVENIDO(A)</p>
-    <h3 style='margin: 0; color: #ffffff; font-size: 18px;'>{nombre_usuario}</h3>
-    <span style='background-color: #1e8449; color: white; padding: 2px 8px; border-radius: 5px; font-size: 10px; font-weight: bold;'>ROL: {rol}</span>
+<div style='background:#161b22;padding:15px;border-radius:10px;margin-bottom:20px;'>
+<p style='font-size:11px;'>BIENVENIDO(A)</p>
+<h3>{nombre_usuario}</h3>
+<span style='background:#1e8449;padding:4px;border-radius:5px;font-size:11px;'>ROL: {rol}</span>
 </div>
 """, unsafe_allow_html=True)
 
-# Lógica de Menú por Roles
-if rol == "KIOSKO": opciones = ["Puerta de Entrada"]
-elif rol == "DIRECTOR": opciones = ["Dashboard", "Expediente Digital"]
-elif rol == "PREFECTO": opciones = ["Reportes", "Historial", "Avisos", "Expediente Digital"]
-elif rol == "GENERAL": opciones = ["Reportes", "Avisos", "Servicios y Técnica", "Expediente Digital"]
-elif rol == "ADMIN": opciones = ["Puerta de Entrada", "Reportes", "Historial", "Avisos", "Dashboard", "Servicios y Técnica", "Expediente Digital"]
-else: opciones = ["Puerta de Entrada"]
+if rol == "KIOSKO":
+    opciones = ["Puerta de Entrada"]
+elif rol == "DIRECTOR":
+    opciones = ["Dashboard", "Expediente Digital"]
+elif rol == "PREFECTO":
+    opciones = ["Reportes", "Historial", "Avisos", "Expediente Digital"]
+elif rol == "GENERAL":
+    opciones = ["Reportes", "Avisos", "Servicios y Técnica", "Expediente Digital"]
+elif rol == "ADMIN":
+    opciones = ["Puerta de Entrada", "Dashboard", "Reportes", "Historial", "Avisos", "Servicios y Técnica", "Expediente Digital"]
+else:
+    opciones = ["Puerta de Entrada"]
 
 menu = st.sidebar.radio("📋 MENÚ PRINCIPAL", opciones)
+
 if st.sidebar.button("Cerrar Sesión"):
     st.session_state.user = None
     st.rerun()
 
-# ================= 3. NAVEGACIÓN DE MÓDULOS (UNIFICADA) =================
-# AQUÍ USAMOS IF / ELIF PARA QUE SOLO SE ABRA UN PANEL A LA VEZ
+# ======================================================
+# ===================== MÓDULOS ========================
+# ======================================================
 
-if menu == "Dashboard":
-    st.title("🏛️ Panel de Control Directivo - CONALEP")
-    try:
-        # Carga de datos
-        res_rep = supabase.table("reportes").select("*").execute()
-        res_ent = supabase.table("entradas").select("*").execute()
-        res_al = supabase.table("alumnos").select("matricula, grupo").execute()
+def puerta_entrada():
+    st.markdown("<h2 style='text-align:center;'>📡 SISTEMA DE ACCESO CONALEP</h2>", unsafe_allow_html=True)
 
-        if res_rep.data and res_ent.data and res_al.data:
-            df_rep, df_ent, df_al = pd.DataFrame(res_rep.data), pd.DataFrame(res_ent.data), pd.DataFrame(res_al.data)
-            
-            # Normalizar columnas para evitar errores de 'grupo'
-            df_rep.columns = [c.lower().strip() for c in df_rep.columns]
-            df_al.columns = [c.lower().strip() for c in df_al.columns]
-            
-            # UNIÓN CRÍTICA: Pegamos el grupo de la tabla alumnos a los reportes
-            df_final = df_rep.merge(df_al[['matricula', 'grupo']], on="matricula", how="left")
-            df_final['grupo'] = df_final['grupo'].fillna("SIN GRUPO")
-
-            # Métricas
-            c1, c2, c3 = st.columns(3)
-            c1.metric("Asistencias", len(df_ent))
-            c2.metric("Incidencias", len(df_rep))
-            c3.metric("Casos Graves", len(df_final[df_final['nivel'].astype(str).str.upper() == 'REPORTE']) if 'nivel' in df_final.columns else 0)
-
-            # Gráficas
-            st.markdown("### 📊 Análisis Visual")
-            col_a, col_b = st.columns(2)
-            with col_a:
-                fig_grupos = px.bar(df_final['grupo'].value_counts().reset_index(), x='count', y='grupo', orientation='h', title="Reportes por Grupo", color_discrete_sequence=['#ff4b4b'])
-                st.plotly_chart(fig_grupos, use_container_width=True)
-            with col_b:
-                df_ent['fecha'] = pd.to_datetime(df_ent['fecha'])
-                asist_diaria = df_ent.groupby('fecha').size().reset_index(name='total')
-                fig_asist = px.line(asist_diaria, x='fecha', y='total', title="Tendencia de Asistencia", markers=True)
-                st.plotly_chart(fig_asist, use_container_width=True)
-    except Exception as e: st.error(f"Error en Dashboard: {e}")
-
-elif menu == "Puerta de Entrada":
-    st.markdown("<h2 style='text-align:center;'>📡 ACCESO CONALEP</h2>", unsafe_allow_html=True)
-    # Aquí iría tu lógica de scanner...
-
-elif menu == "Servicios y Técnica":
-    st.title("⚙️ Panel de Servicios Escolares")
-    try:
-        res_al = supabase.table("alumnos").select("*").execute()
-        df_al = pd.DataFrame(res_al.data)
-        st.dataframe(df_al, use_container_width=True)
-    except Exception as e: st.error(f"Error operativo: {e}")
-
-elif menu == "Expediente Digital":
-    st.title("🗂️ Expediente Digital Integral")
-    # Aquí iría tu lógica de búsqueda de alumnos y PDF...
-
-elif menu == "Reportes":
-    st.title("🚨 Gestión de Reportes")
-    # Tu código de reportes...
-
-# ================= MÓDULO: PUERTA DE ENTRADA =================
-if menu == "Puerta de Entrada":
-    st.markdown("<div class='kiosko-wrapper'>", unsafe_allow_html=True)
-    st.markdown("<div class='scan-card'><div class='scan-text'>📡 SISTEMA DE ACCESO CONALEP PLANTEL CUAUTLA</div></div>", unsafe_allow_html=True)
-
-    if "resultado" not in st.session_state: st.session_state.resultado = None
+    if "resultado" not in st.session_state:
+        st.session_state.resultado = None
 
     def procesar_scan():
         mat = normalizar_matricula(st.session_state.scan_input)
         st.session_state.scan_input = ""
-        if not mat: return
-        
-        try:
-            # 1. Buscamos al alumno
-            al_query = supabase.table("alumnos").select("*").filter("matricula", "eq", mat).execute()
-            
-            # 2. Buscamos avisos incluyendo la PRIORIDAD
-            av_query = supabase.table("avisos").select("mensaje, prioridad").filter("matricula", "eq", mat).filter("activo", "eq", True).execute()
+        if not mat:
+            return
 
-            if not al_query.data:
-                st.session_state.resultado = {"tipo": "error", "mensaje": "NO REGISTRADO"}
-            else:
-                al = al_query.data[0]
-                nombre = al.get("nombre", al.get("NOMBRE", "Estudiante"))
-                grupo = al.get("grupo", al.get("GRUPO", "N/A"))
-                
-                # Extraemos mensaje y prioridad si existen
-                aviso_data = av_query.data[0] if av_query.data else None
-                
-                enviar("entradas", {
-                    "fecha": datetime.now(zona).strftime("%Y-%m-%d"),
-                    "hora": datetime.now(zona).strftime("%H:%M:%S"),
-                    "matricula": mat,
-                    "nombre": nombre,
-                    "grupo": grupo,
-                    "registro_por": user.get("usuario", "Sistema")
-                })
-                
-                st.session_state.resultado = {
-                    "tipo": "ok", 
-                    "nombre": nombre, 
-                    "grupo": grupo, 
-                    "aviso": aviso_data  # Guardamos el objeto completo del aviso
-                }
-        except Exception as e:
-            st.session_state.resultado = {"tipo": "error", "mensaje": f"Error DB: {str(e)[:40]}"}
+        al = supabase.table("alumnos").select("*").eq("matricula", mat).execute()
+        av = supabase.table("avisos").select("mensaje, prioridad").eq("matricula", mat).eq("activo", True).execute()
 
-    st.text_input("", key="scan_input", on_change=procesar_scan, placeholder="ESCANEE AQUÍ", autocomplete="off")
+        if not al.data:
+            st.session_state.resultado = {"tipo": "error", "mensaje": "NO REGISTRADO"}
+            return
+
+        alumno = al.data[0]
+        aviso = av.data[0] if av.data else None
+
+        enviar("entradas", {
+            "fecha": datetime.now(zona).strftime("%Y-%m-%d"),
+            "hora": datetime.now(zona).strftime("%H:%M:%S"),
+            "matricula": mat,
+            "nombre": alumno["nombre"],
+            "grupo": alumno["grupo"],
+            "registro_por": nombre_usuario
+        })
+
+        st.session_state.resultado = {
+            "tipo": "ok",
+            "nombre": alumno["nombre"],
+            "grupo": alumno["grupo"],
+            "aviso": aviso
+        }
+
+    st.text_input("ESCANEE AQUÍ", key="scan_input", on_change=procesar_scan)
 
     if st.session_state.resultado:
-        res = st.session_state.resultado
-        if res["tipo"] == "ok":
-            # Card principal de acceso
-            st.markdown(f"""
-                <div class='res-card res-ok'>
-                    <div style='font-size:30px; color:#00e676;'>✅ ACCESO PERMITIDO</div>
-                    <div class='student-name'>{res['nombre']}</div>
-                    <div style='font-size:25px; color:white;'>GRUPO: {res['grupo']}</div>
-                </div>
-            """, unsafe_allow_html=True)
-            
-            # Lógica de Avisos por Prioridad
-            if res["aviso"]:
-                msg = res["aviso"]["mensaje"]
-                prio = str(res["aviso"].get("prioridad", "BAJA")).upper()
-                
-                # Definimos color según prioridad para que sea visualmente moderno
-                # Rojo para ALTA, Naranja para MEDIA, Azul para BAJA
-                colores = {"ALTA": "#e74c3c", "MEDIA": "#f39c12", "BAJA": "#3498db"}
-                color_fondo = colores.get(prio, "#3498db")
-
-                st.markdown(f"""
-                    <div style='background-color: {color_fondo}; padding: 20px; border-radius: 15px; 
-                                color: white; text-align: center; margin-top: 15px; border: 2px solid white;'>
-                        <div style='font-size: 18px; font-weight: bold; opacity: 0.9;'>⚠️ AVISO PRIORIDAD {prio}</div>
-                        <div style='font-size: 24px; font-weight: bold;'>{msg}</div>
-                    </div>
-                """, unsafe_allow_html=True)
-                
+        r = st.session_state.resultado
+        if r["tipo"] == "ok":
+            st.success(f"✅ ACCESO PERMITIDO: {r['nombre']} ({r['grupo']})")
+            if r["aviso"]:
+                st.warning(f"⚠️ {r['aviso']['prioridad']}: {r['aviso']['mensaje']}")
         else:
-            st.markdown(f"<div class='res-card res-error'><h1>❌ {res['mensaje']}</h1></div>", unsafe_allow_html=True)
-        
-        # Aumentamos un poco el tiempo si hay aviso para que alcancen a leer
-        tiempo = 4.0 if res.get("aviso") else 2.0
-        time.sleep(tiempo)
+            st.error(r["mensaje"])
+
+        time.sleep(3)
         st.session_state.resultado = None
         st.rerun()
-    st.markdown("</div>", unsafe_allow_html=True)
-# ================= MÓDULO: REPORTES =================
-elif menu == "Reportes":
-    st.title("🚨 Gestión de Reportes")
-    
-    # TRUCO PARA LIMPIAR TODO: Usamos un contador en el session_state
-    if "form_reset_count" not in st.session_state:
-        st.session_state.form_reset_count = 0
-    
-    # Función para reiniciar el formulario incrementando el contador
-    def reiniciar_formulario():
-        st.session_state.form_reset_count += 1
-        st.rerun()
 
-    # Cada widget tendrá una key única basada en el contador
-    suffix = f"_{st.session_state.form_reset_count}"
-
-    # 1. Entrada de Matrícula (con key dinámica)
-    mat_rep = st.text_input("Ingrese Matrícula del Alumno", key=f"mat{suffix}").strip().upper()
-    
-    if mat_rep:
-        try:
-            al_res = supabase.table("alumnos").select("*").eq("matricula", mat_rep).execute()
-            
-            if al_res.data:
-                al = al_res.data[0]
-                nombre_alumno = al.get("nombre", al.get("NOMBRE", "Estudiante"))
-                
-                # Diseño Moderno: Tarjeta de Alumno
-                st.markdown(f"""
-                <div style='background:#161b22; padding:15px; border-radius:10px; border-left:5px solid #1e8449; margin-bottom:20px;'>
-                    <h3 style='margin:0; color:white;'>Alumno: {nombre_alumno}</h3>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                # Lógica 3+1
-                historial_rep = supabase.table("reportes").select("id", count="exact").eq("matricula", mat_rep).execute()
-                total_previo = historial_rep.count if historial_rep.count is not None else 0
-                niveles = ["LLAMADA 1", "LLAMADA 2", "LLAMADA 3"]
-                nivel_sugerido = niveles[total_previo] if total_previo < 3 else "REPORTE"
-
-                st.info(f"Registro actual detectado: {nivel_sugerido}")
-
-                # Widgets con key dinámica para evitar errores al limpiar
-                tipo = st.selectbox("Tipo de falta", ["Uniforme", "Conducta", "Retardo", "Celular", "Otro"], key=f"tipo{suffix}")
-                desc = st.text_area("Descripción de lo sucedido", key=f"desc{suffix}")
-                foto = st.camera_input("📸 Tomar Evidencia (Opcional)", key=f"foto{suffix}")
-                
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    if st.button("💾 Guardar Registro", use_container_width=True):
-                        url_foto = ""
-                        
-                        # Subida de foto
-                        if foto is not None:
-                            try:
-                                nombre_archivo = f"evidencia_{mat_rep}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
-                                supabase.storage.from_("evidencias").upload(nombre_archivo, foto.getvalue())
-                                url_foto = supabase.storage.from_("evidencias").get_public_url(nombre_archivo)
-                            except Exception as e:
-                                st.error(f"Error al subir foto: {e}")
-
-                        # Envío a la base de datos
-                        try:
-                            # Reutilizamos tu función enviar (asegúrate que esté definida arriba)
-                            enviar("reportes", {
-                                "fecha": datetime.now(zona).strftime("%Y-%m-%d"),
-                                "matricula": mat_rep,
-                                "nombre": nombre_alumno,
-                                "nivel": nivel_sugerido,
-                                "tipo": tipo,
-                                "descripcion": desc,
-                                "foto_url": url_foto,
-                                "registrado_por": user.get("usuario", "Prefecto")
-                            })
-                            
-                            st.success("✅ Registro y evidencia guardados correctamente.")
-                            time.sleep(1.2)
-                            
-                            # LA SOLUCIÓN DEFINITIVA:
-                            reiniciar_formulario() # Esto limpia TODO sin errores
-                            
-                        except Exception as e:
-                            st.error(f"Error al guardar: {e}")
-
-                with col2:
-                    if st.button("❌ Cancelar", use_container_width=True):
-                        reiniciar_formulario()
-            else:
-                st.error("Matrícula no encontrada.")
-        except Exception as e:
-            st.error(f"Error en consulta: {e}")
-# ================= MÓDULO: HISTORIAL (ENTRADAS Y REPORTES) =================
-elif menu == "Historial":
-    st.title("📊 Consulta Integral de Historial")
-    
-    mat_h = st.text_input("Ingrese Matrícula para consultar").strip().upper()
-    
-    if mat_h:
-        try:
-            al_res = supabase.table("alumnos").select("nombre, grupo").eq("matricula", mat_h).execute()
-            
-            if al_res.data:
-                al = al_res.data[0]
-                # Tarjeta de encabezado con estilo institucional
-                st.markdown(f"""
-                <div style='background:#161b22; padding:15px; border-radius:10px; border-left:5px solid #1e8449; margin-bottom:20px;'>
-                    <h3 style='margin:0; color:white;'>Expediente: {al['nombre']}</h3>
-                    <p style='margin:0; color:#8b949e;'>Grupo: {al['grupo']}</p>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                tab1, tab2 = st.tabs(["🕒 Registro de Entradas", "🚨 Reportes"])
-                
-                with tab1:
-                    res_ent = supabase.table("entradas").select("fecha, hora").eq("matricula", mat_h).order("fecha", desc=True).execute()
-                    if res_ent.data:
-                        df_ent = pd.DataFrame(res_ent.data)
-                        df_ent.columns = ["FECHA", "HORA"]
-                        st.dataframe(df_ent, use_container_width=True)
-                    else:
-                        st.info("Sin registros de asistencia.")
-
-                with tab2:
-                    res_rep = supabase.table("reportes").select("fecha, nivel, tipo, descripcion, registrado_por, foto_url").eq("matricula", mat_h).order("fecha", desc=True).execute()
-                    
-                    if res_rep.data:
-                        for rep in res_rep.data:
-                            with st.container():
-                                # Ajustamos columnas para mejor visibilidad en móviles
-                                col_texto, col_foto = st.columns([3, 1.2])
-                                
-                                with col_texto:
-                                    st.markdown(f"**📅 {rep['fecha']} — {rep['nivel']}**")
-                                    st.markdown(f"**Motivo:** {rep['tipo']}")
-                                    st.write(f"{rep['descripcion']}")
-                                    st.caption(f"Registrado por: {rep.get('registrado_por', 'Personal autorizado')}")
-                                
-                                with col_foto:
-                                    url = rep.get("foto_url")
-                                    if url and str(url).strip() != "":
-                                        # Imagen interactiva con HTML
-                                        st.markdown(f"""
-                                            <a href="{url}" target="_blank">
-                                                <img src="{url}" style="width:100%; border-radius:10px; border: 1px solid #30363d; margin-bottom: 5px;">
-                                            </a>
-                                        """, unsafe_allow_html=True)
-                                        st.caption("🔍 Ampliar foto")
-                                    else:
-                                        st.info("Sin evidencia")
-                                
-                                st.divider()
-                    else:
-                        st.write("El alumno no cuenta con reportes registrados.")
-            else:
-                st.error("La matrícula no existe en la base de datos.")
-                
-        except Exception as e:
-            st.error(f"Error de conexión: {e}")
-# ================= AVISOS=================
-
-elif menu == "Avisos":
-    st.title("📢 Gestión de Avisos Escolares")
-    st.markdown("Use este módulo para mostrar mensajes importantes al alumno al momento de escanear su credencial.")
-
-    # Usamos la misma lógica de reset para limpiar el formulario al terminar
-    if "aviso_reset_count" not in st.session_state:
-        st.session_state.aviso_reset_count = 0
-    
-    def reset_avisos():
-        st.session_state.aviso_reset_count += 1
-        st.rerun()
-
-    suffix_av = f"_av{st.session_state.aviso_reset_count}"
-
-    # 1. Búsqueda del Alumno
-    mat_av = st.text_input("Ingrese Matrícula del Alumno", key=f"mat_av{suffix_av}").strip().upper()
-
-    if mat_av:
-        try:
-            # Validar existencia del alumno
-            al_res = supabase.table("alumnos").select("nombre, grupo").eq("matricula", mat_av).execute()
-            
-            if al_res.data:
-                al = al_res.data[0]
-                st.success(f"Alumno: {al['nombre']} | Grupo: {al['grupo']}")
-
-                # 2. Formulario de Aviso
-                with st.form("form_nuevo_aviso"):
-                    st.markdown("### Configuración del Mensaje")
-                    
-                    mensaje = st.text_area("Mensaje para el alumno", 
-                                         placeholder="Ej: Pasar a prefectura inmediatamente",
-                                         help="Este mensaje aparecerá en la pantalla de acceso.")
-                    
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        prioridad = st.selectbox("Prioridad", ["BAJA", "MEDIA", "ALTA"])
-                    with col2:
-                        st.info("El aviso estará activo automáticamente al guardar.")
-
-                    submit = st.form_submit_button("🔔 Publicar Aviso en Puerta")
-
-                    if submit:
-                        if mensaje.strip() == "":
-                            st.error("El mensaje no puede estar vacío.")
-                        else:
-                            # 3. Guardar en la tabla 'avisos'
-                            try:
-                                # Primero desactivamos avisos anteriores del mismo alumno (opcional, para que solo tenga uno)
-                                supabase.table("avisos").update({"activo": False}).eq("matricula", mat_av).execute()
-                                
-                                # Insertar nuevo aviso
-                                datos_aviso = {
-                                    "matricula": mat_av,
-                                    "mensaje": mensaje,
-                                    "prioridad": prioridad,
-                                    "activo": True
-                                }
-                                
-                                # Usamos tu función enviar o insert directo
-                                supabase.table("avisos").insert(datos_aviso).execute()
-                                
-                                st.balloons()
-                                st.success(f"✅ Aviso publicado para {al['nombre']}.")
-                                time.sleep(2)
-                                reset_avisos()
-                            except Exception as e:
-                                st.error(f"Error al guardar: {e}")
-                
-                # 4. Mostrar Avisos Actuales del Alumno (Para poder borrarlos)
-                st.markdown("---")
-                st.subheader("Aviso actual")
-                hist_av = supabase.table("avisos").select("*").eq("matricula", mat_av).eq("activo", True).execute()
-                
-                if hist_av.data:
-                    for av in hist_av.data:
-                        c1, c2 = st.columns([4, 1])
-                        c1.warning(f"**{av['prioridad']}**: {av['mensaje']}")
-                        if c2.button("Eliminar", key=f"del_{av['id']}"):
-                            supabase.table("avisos").update({"activo": False}).eq("id", av['id']).execute()
-                            st.rerun()
-                else:
-                    st.write("No hay avisos activos para este alumno.")
-
-            else:
-                st.error("Matrícula no encontrada.")
-        except Exception as e:
-            st.error(f"Error: {e}")
-# =================DASHBOARD DIRECTOR=================
-elif menu == "Dashboard":
+def dashboard():
     st.title("🏛️ Panel de Control Directivo - CONALEP")
-    st.markdown("---")
 
-    try:
-        # 1. CARGA DE DATOS
-        res_rep = supabase.table("reportes").select("*").execute()
-        res_ent = supabase.table("entradas").select("*").execute()
-        res_al = supabase.table("alumnos").select("matricula, grupo").execute()
+    rep = supabase.table("reportes").select("*").execute()
+    ent = supabase.table("entradas").select("*").execute()
+    al = supabase.table("alumnos").select("matricula,grupo").execute()
 
-        if res_rep.data and res_ent.data and res_al.data:
-            df_rep = pd.DataFrame(res_rep.data)
-            df_ent = pd.DataFrame(res_ent.data)
-            df_al = pd.DataFrame(res_al.data)
+    if not rep.data:
+        st.info("Sin datos suficientes")
+        return
 
-            # 2. NORMALIZACIÓN DE COLUMNAS (Forzar minúsculas y quitar espacios)
-            df_rep.columns = [c.lower().strip() for c in df_rep.columns]
-            df_al.columns = [c.lower().strip() for c in df_al.columns]
-            df_ent.columns = [c.lower().strip() for c in df_ent.columns]
+    df_rep = pd.DataFrame(rep.data)
+    df_ent = pd.DataFrame(ent.data)
+    df_al = pd.DataFrame(al.data)
 
-            # 3. UNIÓN Y CREACIÓN FORZOSA DE LA COLUMNA GRUPO
-            # Si 'grupo' ya existe en reportes, la quitamos para traer la oficial de alumnos
-            if 'grupo' in df_rep.columns:
-                df_rep = df_rep.drop(columns=['grupo'])
-            
-            # Realizamos el cruce de tablas
-            df_rep = df_rep.merge(df_al[['matricula', 'grupo']], on="matricula", how="left")
-            
-            # REGLA DE ORO: Si después del merge no hay grupo, lo creamos como "SIN GRUPO"
-            if 'grupo' not in df_rep.columns:
-                df_rep['grupo'] = "SIN GRUPO"
-            else:
-                df_rep['grupo'] = df_rep['grupo'].fillna("SIN GRUPO")
+    df_rep.columns = [c.lower() for c in df_rep.columns]
+    df_al.columns = [c.lower() for c in df_al.columns]
 
-            # --- SECCIÓN DE MÉTRICAS ---
-            c1, c2, c3, c4 = st.columns(4)
-            total_ent = len(df_ent)
-            total_inc = len(df_rep)
-            # Buscamos 'nivel' de forma segura
-            col_niv = 'nivel' if 'nivel' in df_rep.columns else None
-            graves = len(df_rep[df_rep[col_niv].astype(str).str.upper() == 'REPORTE']) if col_niv else 0
-            motivo = df_rep['tipo'].mode()[0] if not df_rep.empty and 'tipo' in df_rep.columns else "N/A"
+    if "grupo" in df_rep.columns:
+        df_rep.drop(columns=["grupo"], inplace=True)
 
-            c1.metric("Asistencias", total_ent)
-            c2.metric("Incidencias", total_inc, delta="Alerta", delta_color="inverse")
-            c3.metric("Casos Graves", graves)
-            c4.metric("Motivo Común", motivo)
+    df_rep = df_rep.merge(df_al, on="matricula", how="left")
+    df_rep["grupo"] = df_rep["grupo"].fillna("SIN GRUPO")
 
-            # --- GRÁFICAS ---
-            st.markdown("### 📈 Análisis Visual")
-            col_a, col_b = st.columns(2)
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Asistencias", len(df_ent))
+    c2.metric("Incidencias", len(df_rep))
+    c3.metric("Casos Graves", len(df_rep[df_rep["nivel"].str.upper()=="REPORTE"]))
 
-            with col_a:
-                st.subheader("Reportes por Grupo")
-                # Preparamos los datos para la gráfica asegurando que existan
-                df_graf_grupos = df_rep['grupo'].value_counts().reset_index()
-                df_graf_grupos.columns = ['grupo', 'conteo']
-                
-                fig_grupos = px.bar(df_graf_grupos, 
-                                   x='conteo', y='grupo', orientation='h',
-                                   color='conteo', color_continuous_scale='Reds')
-                fig_grupos.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
-                st.plotly_chart(fig_grupos, use_container_width=True)
+    col1, col2 = st.columns(2)
+    with col1:
+        grp = df_rep["grupo"].value_counts().reset_index()
+        grp.columns = ["grupo","total"]
+        st.plotly_chart(px.bar(grp, x="total", y="grupo", orientation="h"), use_container_width=True)
 
-            with col_b:
-                st.subheader("Tendencia de Asistencia")
-                if 'fecha' in df_ent.columns:
-                    df_ent['fecha'] = pd.to_datetime(df_ent['fecha'])
-                    asistencia_diaria = df_ent.groupby('fecha').size().reset_index(name='asistencias')
-                    fig_asistencia = px.line(asistencia_diaria, x='fecha', y='asistencias', markers=True)
-                    fig_asistencia.update_traces(line_color='#1e8449')
-                    fig_asistencia.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
-                    st.plotly_chart(fig_asistencia, use_container_width=True)
+    with col2:
+        df_ent["fecha"] = pd.to_datetime(df_ent["fecha"])
+        dia = df_ent.groupby("fecha").size().reset_index(name="total")
+        st.plotly_chart(px.line(dia, x="fecha", y="total", markers=True), use_container_width=True)
 
-            # --- EXPORTACIÓN Y WHATSAPP ---
-            st.markdown("---")
-            fecha_hoy = datetime.now(zona).strftime('%d/%m/%Y')
-            texto_reporte = f"*RESUMEN DIRECTIVO SICA - {fecha_hoy}*\nTotal Asistencias: {total_ent}\nTotal Reportes: {total_inc}\nCasos Graves: {graves}"
-            
-            col_w1, col_w2 = st.columns(2)
-            with col_w1:
-                # Botón de WhatsApp (Ajusta el número)
-                numero = "527351234567"
-                url_wa = f"https://wa.me/{numero}?text={texto_reporte.replace(' ', '%20')}"
-                st.markdown(f'<a href="{url_wa}" target="_blank" style="text-decoration:none;"><div style="background-color:#25d366;color:white;padding:10px;border-radius:10px;text-align:center;font-weight:bold;">📲 Enviar a WhatsApp</div></a>', unsafe_allow_html=True)
-            with col_w2:
-                st.text_area("Reporte para copiar:", value=texto_reporte, height=100)
+def reportes():
+    st.title("🚨 Gestión de Reportes")
+    mat = st.text_input("Matrícula").upper()
+    if not mat:
+        return
 
-        else:
-            st.info("No hay suficientes datos registrados para generar el Dashboard.")
+    al = supabase.table("alumnos").select("*").eq("matricula", mat).execute()
+    if not al.data:
+        st.error("Matrícula no encontrada")
+        return
 
-    except Exception as e:
-        st.error(f"Error al generar Dashboard: {e}")
-# ================= CONFIGURACIÓN INICIAL =================
+    alumno = al.data[0]
+    st.info(alumno["nombre"])
+
+    tipo = st.selectbox("Tipo", ["Uniforme","Conducta","Retardo","Celular","Otro"])
+    desc = st.text_area("Descripción")
+
+    if st.button("Guardar"):
+        enviar("reportes", {
+            "fecha": datetime.now(zona).strftime("%Y-%m-%d"),
+            "matricula": mat,
+            "nombre": alumno["nombre"],
+            "nivel": "LLAMADA",
+            "tipo": tipo,
+            "descripcion": desc,
+            "registrado_por": nombre_usuario
+        })
+        st.success("Reporte guardado")
+
+def historial():
+    st.title("📊 Historial")
+    mat = st.text_input("Matrícula").upper()
+    if not mat:
+        return
+
+    ent = supabase.table("entradas").select("*").eq("matricula", mat).execute()
+    rep = supabase.table("reportes").select("*").eq("matricula", mat).execute()
+
+    st.subheader("Entradas")
+    st.dataframe(pd.DataFrame(ent.data))
+
+    st.subheader("Reportes")
+    st.dataframe(pd.DataFrame(rep.data))
+
+def avisos():
+    st.title("📢 Avisos")
+    mat = st.text_input("Matrícula").upper()
+    msg = st.text_area("Mensaje")
+    pr = st.selectbox("Prioridad", ["BAJA","MEDIA","ALTA"])
+
+    if st.button("Publicar"):
+        supabase.table("avisos").insert({
+            "matricula": mat,
+            "mensaje": msg,
+            "prioridad": pr,
+            "activo": True
+        }).execute()
+        st.success("Aviso publicado")
+
+def servicios():
+    st.title("⚙️ Servicios y Técnica")
+    rep = supabase.table("reportes").select("*").execute()
+    st.dataframe(pd.DataFrame(rep.data))
+
+def expediente():
+    st.title("🗂️ Expediente Digital")
+    mat = st.text_input("Matrícula").upper()
+    if not mat:
+        return
+
+    rep = supabase.table("reportes").select("*").eq("matricula", mat).execute()
+    st.dataframe(pd.DataFrame(rep.data))
+
+# ================= NAVEGACIÓN ÚNICA =================
+if menu == "Puerta de Entrada":
+    puerta_entrada()
+elif menu == "Dashboard":
+    dashboard()
+elif menu == "Reportes":
+    reportes()
+elif menu == "Historial":
+    historial()
+elif menu == "Avisos":
+    avisos()
 elif menu == "Servicios y Técnica":
-    st.title("⚙️ Panel de Servicios Escolares y Formación Técnica")
-    st.markdown("---")
-
-    try:
-        # 1. CARGA DE DATOS SEGURA
-        res_rep = supabase.table("reportes").select("*").execute()
-        res_al = supabase.table("alumnos").select("*").execute()
-        res_av = supabase.table("avisos").select("*").eq("activo", True).execute()
-
-        if res_rep.data and res_al.data:
-            df_rep = pd.DataFrame(res_rep.data)
-            df_al = pd.DataFrame(res_al.data)
-            df_av = pd.DataFrame(res_av.data) if res_av.data else pd.DataFrame()
-
-            # Normalización a minúsculas para evitar errores de escritura (GRUPO vs grupo)
-            df_rep.columns = [c.lower().strip() for c in df_rep.columns]
-            df_al.columns = [c.lower().strip() for c in df_al.columns]
-
-            # 2. IDENTIFICAR COLUMNAS DISPONIBLES
-            # Verificamos si existen las columnas críticas para no tronar
-            cols_al = df_al.columns.tolist()
-            
-            # Definimos qué columnas de alumnos queremos traer al reporte
-            columnas_interes = ['matricula']
-            if 'nombre' in cols_al: columnas_interes.append('nombre')
-            if 'grupo' in cols_al: columnas_interes.append('grupo')
-            if 'turno' in cols_al: columnas_interes.append('turno')
-
-            # 3. UNIÓN DE TABLAS (Merge)
-            df_master = df_rep.merge(df_al[columnas_interes], on="matricula", how="left")
-            
-            # Si 'grupo' existe, llenamos los vacíos para que no falle la visualización
-            if 'grupo' in df_master.columns:
-                df_master['grupo'] = df_master['grupo'].fillna("N/A")
-
-            # --- MÉTRICAS OPERATIVAS ---
-            m1, m2, m3 = st.columns(3)
-            with m1:
-                # Alumnos con 2 o más reportes (Seguimiento preventivo)
-                conteo = df_master['matricula'].value_counts()
-                riesgo = len(conteo[conteo >= 2])
-                st.metric("Alumnos en Seguimiento", riesgo)
-            with m2:
-                st.metric("Avisos Activos", len(df_av))
-            with m3:
-                st.metric("Total de Reportes", len(df_master))
-
-            # --- DETECCIÓN DE INCIDENCIAS TÉCNICAS ---
-            st.subheader("🛠️ Alertas en Talleres y Laboratorios")
-            palabras_clave = ['taller', 'laboratorio', 'maquina', 'herramienta', 'practica', 'seguridad']
-            
-            # Buscamos en la descripción (si existe la columna)
-            if 'descripcion' in df_master.columns:
-                df_tec = df_master[df_master['descripcion'].str.contains('|'.join(palabras_clave), case=False, na=False)]
-                
-                if not df_tec.empty:
-                    st.warning(f"Se detectaron {len(df_tec)} incidencias técnicas.")
-                    # Mostramos solo las columnas que sabemos que existen
-                    columnas_ver = [c for c in ['fecha', 'nombre', 'grupo', 'descripcion'] if c in df_tec.columns]
-                    st.dataframe(df_tec[columnas_ver], use_container_width=True)
-                else:
-                    st.success("No hay reportes técnicos pendientes.")
-            
-            # --- LISTA DE SEGUIMIENTO ---
-            st.subheader("📋 Estudiantes con Reportes Recurrentes")
-            if 'nombre' in df_master.columns:
-                # Agrupamos por los datos disponibles
-                cols_agrupar = [c for c in ['matricula', 'nombre', 'grupo'] if c in df_master.columns]
-                seguimiento = df_master.groupby(cols_agrupar).size().reset_index(name='Total')
-                seguimiento = seguimiento[seguimiento['Total'] >= 2].sort_values(by='Total', ascending=False)
-                st.table(seguimiento.head(10))
-
-        else:
-            st.info("Aún no hay datos suficientes en las tablas de alumnos o reportes.")
-
-    except Exception as e:
-        st.error(f"Error en Dashboard Operativo: {e}")
-# ================= EXPEDIENTE DIGITAL =================
+    servicios()
 elif menu == "Expediente Digital":
-    st.title("🗂️ Expediente Digital Integral")
-    
-    mat_exp = st.text_input("Ingrese Matrícula").strip().upper()
-
-    if mat_exp:
-        try:
-            # 1. CARGA DE DATOS COMPLETA
-            al_res = supabase.table("alumnos").select("*").eq("matricula", mat_exp).execute()
-            
-            if al_res.data:
-                al = al_res.data[0]
-                res_rep = supabase.table("reportes").select("*").eq("matricula", mat_exp).execute()
-                res_ent = supabase.table("entradas").select("*").eq("matricula", mat_exp).execute()
-                res_av = supabase.table("avisos").select("*").eq("matricula", mat_exp).eq("activo", True).execute()
-                
-                df_rep = pd.DataFrame(res_rep.data) if res_rep.data else pd.DataFrame()
-                df_ent = pd.DataFrame(res_ent.data) if res_ent.data else pd.DataFrame()
-                list_av = res_av.data if res_av.data else []
-
-                # --- 2. ALGORITMO DE PERFIL DE RIESGO ---
-                puntos_riesgo = len(df_rep)
-                if not df_rep.empty and 'nivel' in df_rep.columns:
-                    # Los reportes nivel "REPORTE" o "GRAVE" pesan más
-                    graves = len(df_rep[df_rep['nivel'].astype(str).str.upper() == 'REPORTE'])
-                    puntos_riesgo += (graves * 2)
-
-                if puntos_riesgo == 0:
-                    color_r, txt_r, desc_r = "#00e676", "BAJO", "Alumno Regular"
-                elif puntos_riesgo <= 2:
-                    color_r, txt_r, desc_r = "#ffeb3b", "MEDIO", "En observación / Llamada de atención"
-                else:
-                    color_r, txt_r, desc_r = "#ff5252", "ALTO", "Riesgo de deserción o sanción grave"
-
-                # --- 3. DISEÑO DE PANTALLA (ENCABEZADO Y RIESGO) ---
-                col_perfil, col_riesgo = st.columns([2, 1])
-                
-                with col_perfil:
-                    st.markdown(f"""
-                    <div style='background:#161b22; padding:20px; border-radius:15px; border-left:8px solid #1e8449;'>
-                        <h2 style='margin:0; color:white;'>{al.get('nombre', 'Estudiante')}</h2>
-                        <p style='margin:0; color:#8b949e;'>Grupo: {al.get('grupo', 'N/A')} | Turno: {al.get('turno', 'N/A')}</p>
-                    </div>
-                    """, unsafe_allow_html=True)
-
-                with col_riesgo:
-                    st.markdown(f"""
-                    <div style='background:#161b22; padding:20px; border-radius:15px; text-align:center; border: 2px solid {color_r};'>
-                        <p style='margin:0; color:#8b949e; font-size:12px;'>PERFIL DE RIESGO</p>
-                        <h2 style='margin:0; color:{color_r};'>{txt_r}</h2>
-                        <p style='margin:0; color:white; font-size:10px;'>{desc_r}</p>
-                    </div>
-                    """, unsafe_allow_html=True)
-
-                # --- 4. SECCIÓN DE AVISOS ACTIVOS ---
-                if list_av:
-                    st.subheader("🔔 Avisos Activos en Puerta")
-                    for av in list_av:
-                        st.warning(f"**Aviso:** {av['mensaje']} | **Prioridad:** {av.get('prioridad', 'Normal')}")
-
-                # --- 5. FUNCIÓN PDF ACTUALIZADA ---
-                def generar_pdf_completo(datos_al, reporte_df, avisos, riesgo_txt):
-                    pdf = FPDF()
-                    pdf.add_page()
-                    pdf.set_font("Arial", 'B', 16)
-                    pdf.cell(200, 10, "CONALEP CUAUTLA - EXPEDIENTE DIGITAL", ln=True, align='C')
-                    
-                    pdf.ln(5)
-                    pdf.set_font("Arial", 'B', 12)
-                    pdf.cell(200, 10, f"ESTATUS DE RIESGO: {riesgo_txt}", ln=True, align='R')
-                    
-                    # Datos Alumno
-                    pdf.set_fill_color(240, 240, 240)
-                    pdf.cell(0, 10, "INFORMACIÓN DEL ESTUDIANTE", ln=True, fill=True)
-                    pdf.set_font("Arial", '', 11)
-                    pdf.cell(0, 8, f"Nombre: {datos_al.get('nombre')}", ln=True)
-                    pdf.cell(0, 8, f"Matrícula: {datos_al.get('matricula')}", ln=True)
-                    pdf.cell(0, 8, f"Grupo: {datos_al.get('grupo')}", ln=True)
-                    
-                    # Avisos
-                    if avisos:
-                        pdf.ln(5)
-                        pdf.set_font("Arial", 'B', 12)
-                        pdf.cell(0, 10, "AVISOS VIGENTES", ln=True, fill=True)
-                        pdf.set_font("Arial", '', 10)
-                        for av in avisos:
-                            pdf.cell(0, 8, f"- {av['mensaje']}", ln=True)
-
-                    # Reportes
-                    pdf.ln(5)
-                    pdf.set_font("Arial", 'B', 12)
-                    pdf.cell(0, 10, "HISTORIAL CONDUCTUAL", ln=True, fill=True)
-                    pdf.set_font("Arial", '', 10)
-                    if not reporte_df.empty:
-                        for _, row in reporte_df.iterrows():
-                            pdf.multi_cell(0, 8, f"[{row['fecha']}] {row['tipo']} ({row['nivel']}): {row['descripcion']}", border=1)
-                    else:
-                        pdf.cell(0, 10, "Sin incidencias registradas.", ln=True)
-
-                    return pdf.output(dest='S').encode('latin-1', 'ignore')
-
-                # Botón de descarga
-                st.download_button(
-                    label="📥 Exportar Expediente y Riesgo (PDF)",
-                    data=generar_pdf_completo(al, df_rep, list_av, txt_r),
-                    file_name=f"Expediente_{mat_exp}.pdf",
-                    mime="application/pdf",
-                    use_container_width=True
-                )
-
-                # Pestañas de detalle
-                t1, t2 = st.tabs(["📊 Historial y Asistencia", "📸 Galería de Evidencias"])
-                with t1:
-                    st.dataframe(df_rep, use_container_width=True)
-                with t2:
-                    if 'foto_url' in df_rep.columns:
-                        fotos = df_rep[df_rep['foto_url'].notna() & (df_rep['foto_url'] != "")]
-                        if not fotos.empty:
-                            cols = st.columns(3)
-                            for i, (_, r) in enumerate(fotos.iterrows()):
-                                with cols[i%3]: st.image(r['foto_url'], caption=r['fecha'])
-
-            else:
-                st.error("Matrícula no encontrada.")
-        except Exception as e:
-            st.error(f"Error: {e}")
-
-
-
-
-
-
+    expediente()
 
 
 
