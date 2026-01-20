@@ -488,86 +488,32 @@ elif menu == "Dashboard":
 
     try:
         # --- CARGA DE DATOS ---
-        res_rep = supabase.table("reportes").select("*").execute()
-        res_ent = supabase.table("entradas").select("*").execute()
-        res_al = supabase.table("alumnos").select("matricula, grupo").execute()
+        # --- CARGA DE DATOS PARA EL DIRECTOR ---
+try:
+    res_rep = supabase.table("reportes").select("*").execute()
+    res_ent = supabase.table("entradas").select("*").execute()
+    res_al = supabase.table("alumnos").select("matricula, grupo").execute()
 
-        if res_rep.data and res_ent.data:
-            df_rep = pd.DataFrame(res_rep.data)
-            df_ent = pd.DataFrame(res_ent.data)
-            df_al = pd.DataFrame(res_al.data)
+    if res_rep.data and res_ent.data:
+        df_rep = pd.DataFrame(res_rep.data)
+        df_ent = pd.DataFrame(res_ent.data)
+        df_al = pd.DataFrame(res_al.data)
 
-            # Unimos reportes con alumnos para tener el GRUPO en las gráficas
+        # NORMALIZACIÓN: Forzamos que las columnas de unión se llamen igual y estén en minúsculas
+        df_rep.columns = [c.lower() for c in df_rep.columns]
+        df_al.columns = [c.lower() for c in df_al.columns]
+        df_ent.columns = [c.lower() for c in df_ent.columns]
+
+        # UNIÓN: Ahora intentamos el merge con nombres normalizados
+        if 'matricula' in df_rep.columns and 'matricula' in df_al.columns:
             df_rep = df_rep.merge(df_al, on="matricula", how="left")
-
-            # --- FILTROS EN BARRA LATERAL (Solo para Dashboard) ---
-            st.sidebar.subheader("⚙️ Filtros del Dashboard")
-            filtro_grupo = st.sidebar.multiselect("Filtrar por Grupo", options=df_al["grupo"].unique())
-            
-            if filtro_grupo:
-                df_rep = df_rep[df_rep["grupo"].isin(filtro_grupo)]
-                df_ent = df_ent[df_ent["grupo"].isin(filtro_grupo)]
-
-            # --- MÉTRICAS DE ALTO NIVEL ---
-            c1, c2, c3, c4 = st.columns(4)
-            with c1:
-                st.metric("Asistencias Totales", len(df_ent))
-            with c2:
-                # Calculamos si las incidencias subieron o bajaron (ejemplo vs total)
-                st.metric("Total Incidencias", len(df_rep), delta="Alerta", delta_color="inverse")
-            with c3:
-                # Alumnos que ya llegaron al nivel REPORTE (Paso final 3+1)
-                casos_graves = len(df_rep[df_rep['nivel'] == 'REPORTE'])
-                st.metric("Casos Graves", casos_graves)
-            with c4:
-                # Falta más recurrente
-                if not df_rep.empty:
-                    top_falta = df_rep['tipo'].mode()[0]
-                    st.metric("Principal Motivo", top_falta)
-
-            st.markdown("### 📈 Análisis de Tendencias y Conducta")
-            
-            col_a, col_b = st.columns(2)
-
-            with col_a:
-                st.subheader("Concentración de Faltas por Grupo")
-                # Gráfica de barras horizontales para ver qué grupo tiene más problemas
-                fig_grupos = px.bar(df_rep['grupo'].value_counts().reset_index(), 
-                                   x='count', y='grupo', orientation='h',
-                                   title="Reportes por Grupo",
-                                   color='count', color_continuous_scale='Reds')
-                fig_grupos.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
-                st.plotly_chart(fig_grupos, use_container_width=True)
-
-            with col_b:
-                st.subheader("Distribución de Gravedad (3+1)")
-                # Gráfica de dona para ver Llamada 1, 2, 3 y Reporte
-                fig_dona = px.pie(df_rep, names='nivel', hole=0.5,
-                                 color_discrete_sequence=px.colors.sequential.RdBu)
-                fig_dona.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
-                st.plotly_chart(fig_dona, use_container_width=True)
-
-            # --- GRÁFICA LINEAL DE ASISTENCIA ---
-            st.subheader("📅 Flujo de Asistencia Semanal")
-            df_ent['fecha'] = pd.to_datetime(df_ent['fecha'])
-            df_asistencia = df_ent.groupby('fecha').size().reset_index(name='total')
-            
-            fig_linea = px.line(df_asistencia, x='fecha', y='total', markers=True)
-            fig_linea.update_traces(line_color='#1e8449', line_width=3)
-            fig_linea.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
-            st.plotly_chart(fig_linea, use_container_width=True)
-
-            # --- TABLA DE ALUMNOS CON MÁS REPORTES ---
-            st.subheader("🚩 Alumnos con Mayor Incidencia")
-            top_alumnos = df_rep['nombre'].value_counts().reset_index().head(10)
-            top_alumnos.columns = ["Nombre del Alumno", "Cantidad de Reportes"]
-            st.table(top_alumnos)
-
+            # Si después del merge 'grupo' sigue sin existir (porque en la DB era 'GRUPO')
+            # el merge lo habrá traído correctamente gracias a la normalización anterior.
         else:
-            st.info("Esperando datos suficientes para generar el análisis directivo...")
+            st.error("Error técnico: No se encontró la columna 'matricula' para cruzar datos.")
+            st.stop()
 
-    except Exception as e:
-        st.error(f"Error al generar Dashboard: {e}")
+        # ... (aquí sigue el resto de tu código de gráficas) ...
 
 
 
