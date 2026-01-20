@@ -621,7 +621,7 @@ elif menu == "Servicios y Técnica":
             with m2:
                 st.metric("Avisos Activos", len(df_av))
             with m3:
-                st.metric("Total de Incidencias", len(df_master))
+                st.metric("Total de Reportes", len(df_master))
 
             # --- DETECCIÓN DE INCIDENCIAS TÉCNICAS ---
             st.subheader("🛠️ Alertas en Talleres y Laboratorios")
@@ -653,6 +653,7 @@ elif menu == "Servicios y Técnica":
 
     except Exception as e:
         st.error(f"Error en Dashboard Operativo: {e}")
+
 
 
 
