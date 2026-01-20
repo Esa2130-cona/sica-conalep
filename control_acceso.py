@@ -481,6 +481,7 @@ elif menu == "Avisos":
         except Exception as e:
             st.error(f"Error: {e}")
 # =================DASHBOARD DIRECTOR=================
+
 elif menu == "Dashboard":
     st.title("🏛️ Panel de Control Directivo - CONALEP")
     st.markdown("---")
@@ -567,6 +568,7 @@ elif menu == "Dashboard":
 
     except Exception as e:
         st.error(f"Error al generar Dashboard: {e}")
+
 
 
 
