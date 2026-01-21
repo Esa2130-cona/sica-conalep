@@ -386,105 +386,129 @@ def ejecutar_salida(mat_raw):
             """, unsafe_allow_html=True)
 
             # --- AVISOS ---
-            if res.get("aviso"):
-                av = res["aviso"]
-                color_aviso = "#ff1744" if av["prioridad"] == "ALTA" else "#ffeb3b"
+            if st.session_state.resultado:
+    res = st.session_state.resultado
 
-                st.markdown(f"""
-                    <div style='margin-top:20px;
-                                padding:20px;
-                                background:rgba(255,255,255,0.1);
-                                border-left:10px solid {color_aviso};
-                                border-radius:10px;'>
-                        <h3 style='color:{color_aviso};
-                                   margin:0;'>
-                            ⚠️ AVISO PRIORIDAD {av["prioridad"]}
-                        </h3>
-                        <p style='font-size:24px;
-                                  color:white;
-                                  margin:10px 0;'>
-                            {av["mensaje"]}
-                        </p>
-                    </div>
-                """, unsafe_allow_html=True)
+    if res["tipo"] == "ok":
+        st.markdown("<div class='flash-overlay flash-ok'></div>", unsafe_allow_html=True)
 
-        elif res["tipo"] == "bloqueado":
-            st.markdown("<div class='flash-overlay flash-warn'></div>", unsafe_allow_html=True)
+        st.markdown(f"""
+            <div style='text-align:center;
+                        background:rgba(30, 132, 73, 0.2);
+                        padding:40px;
+                        border-radius:20px;
+                        border:2px solid #00e676;'>
+                <div style='font-size:30px;
+                            color:#00e676;
+                            font-weight:bold;'>
+                    ✅ ACCESO PERMITIDO
+                </div>
+                <div style='font-size:60px;
+                            font-weight:900;
+                            color:white;'>
+                    {res['nombre']}
+                </div>
+                <div style='font-size:35px;
+                            color:#f0f6fc;'>
+                    GRUPO: {res['grupo']}
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+
+        if res.get("aviso"):
+            av = res["aviso"]
+            color_aviso = "#ff1744" if av["prioridad"] == "ALTA" else "#ffeb3b"
+
             st.markdown(f"""
-                <div style='text-align:center;
-                            background:rgba(255, 152, 0, 0.2);
-                            padding:40px;
-                            border-radius:20px;
-                            border:2px solid #ff9800;'>
-                    <div style='font-size:40px;
-                                color:#ff9800;
-                                font-weight:bold;'>
-                        ⚠️ {res['mensaje']}
-                    </div>
-                    <div style='font-size:50px;
-                                font-weight:900;
-                                color:white;'>
-                        {res['nombre']}
-                    </div>
-                    <div style='font-size:25px;
-                                color:#f0f6fc;
-                                margin-top:10px;'>
-                        FAVOR DE PASAR A LA OFICINA
-                    </div>
+                <div style='margin-top:20px;
+                            padding:20px;
+                            background:rgba(255,255,255,0.1);
+                            border-left:10px solid {color_aviso};
+                            border-radius:10px;'>
+                    <h3 style='color:{color_aviso};
+                               margin:0;'>
+                        ⚠️ AVISO PRIORIDAD {av["prioridad"]}
+                    </h3>
+                    <p style='font-size:24px;
+                              color:white;
+                              margin:10px 0;'>
+                        {av["mensaje"]}
+                    </p>
                 </div>
             """, unsafe_allow_html=True)
 
-        else:  # ERROR
-            st.markdown("<div class='flash-overlay flash-error'></div>", unsafe_allow_html=True)
-            st.markdown(f"""
-                <div style='text-align:center;
-                            background:rgba(231, 76, 60, 0.2);
-                            padding:40px;
-                            border-radius:20px;
-                            border:2px solid #ff1744;'>
-                    <div style='font-size:50px;
-                                color:#ff1744;
-                                font-weight:bold;'>
-                        ❌ {res['mensaje']}
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
+    elif res["tipo"] == "bloqueado":
+        st.markdown("<div class='flash-overlay flash-warn'></div>", unsafe_allow_html=True)
 
-        time.sleep(3.5)
-        st.session_state.resultado = None
-        st.rerun()
-       
-elif res["tipo"] == "salida_ok":
-    st.markdown("<div class='flash-ok'></div>", unsafe_allow_html=True)
-    st.markdown(f"""
-        <div style='text-align:center;
-                    background:rgba(52, 152, 219, 0.2);
-                    padding:40px;
-                    border-radius:20px;
-                    border:2px solid #3498db;'>
-            <div style='font-size:35px;
-                        color:#3498db;
-                        font-weight:bold;'>
-                🚪 SALIDA REGISTRADA
+        st.markdown(f"""
+            <div style='text-align:center;
+                        background:rgba(255, 152, 0, 0.2);
+                        padding:40px;
+                        border-radius:20px;
+                        border:2px solid #ff9800;'>
+                <div style='font-size:40px;
+                            color:#ff9800;
+                            font-weight:bold;'>
+                    ⚠️ {res['mensaje']}
+                </div>
+                <div style='font-size:50px;
+                            font-weight:900;
+                            color:white;'>
+                    {res['nombre']}
+                </div>
+                <div style='font-size:25px;
+                            color:#f0f6fc;
+                            margin-top:10px;'>
+                    FAVOR DE PASAR A LA OFICINA
+                </div>
             </div>
-            <div style='font-size:55px;
-                        font-weight:900;
-                        color:white;'>
-                {res['nombre']}
+        """, unsafe_allow_html=True)
+
+    elif res["tipo"] == "salida_ok":
+        st.markdown("<div class='flash-ok'></div>", unsafe_allow_html=True)
+
+        st.markdown(f"""
+            <div style='text-align:center;
+                        background:rgba(52, 152, 219, 0.2);
+                        padding:40px;
+                        border-radius:20px;
+                        border:2px solid #3498db;'>
+                <div style='font-size:35px;
+                            color:#3498db;
+                            font-weight:bold;'>
+                    🚪 SALIDA REGISTRADA
+                </div>
+                <div style='font-size:55px;
+                            font-weight:900;
+                            color:white;'>
+                    {res['nombre']}
+                </div>
+                <div style='font-size:30px;
+                            color:#f0f6fc;'>
+                    ¡Buen regreso!
+                </div>
             </div>
-            <div style='font-size:30px;
-                        color:#f0f6fc;'>
-                ¡Buen regreso!
+        """, unsafe_allow_html=True)
+
+    else:
+        st.markdown("<div class='flash-overlay flash-error'></div>", unsafe_allow_html=True)
+        st.markdown(f"""
+            <div style='text-align:center;
+                        background:rgba(231, 76, 60, 0.2);
+                        padding:40px;
+                        border-radius:20px;
+                        border:2px solid #ff1744;'>
+                <div style='font-size:50px;
+                            color:#ff1744;
+                            font-weight:bold;'>
+                    ❌ {res['mensaje']}
+                </div>
             </div>
-        </div>
-    """, unsafe_allow_html=True)
-else:
-    st.markdown("<div class='flash-overlay flash-error'></div>", unsafe_allow_html=True)
-        st.markdown(f""" ... """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
     time.sleep(3.5)
     st.session_state.resultado = None
-    st.rerun() 
+    st.rerun()
         # ================= MÓDULO: CREDENCIAL DIGITAL =================
 elif menu == "Credencial Digital":
 
@@ -1081,6 +1105,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
