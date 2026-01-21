@@ -412,7 +412,9 @@ st.image(
 
 st.warning("⚠️ Uso indebido de esta credencial será sancionado")
                 
+
 # ================= MÓDULO: REPORTES =================
+
 elif menu == "Reportes":
     st.title("🚨 Gestión de Reportes")
     
@@ -947,6 +949,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
