@@ -478,6 +478,8 @@ elif res["tipo"] == "salida_ok":
             </div>
         </div>
     """, unsafe_allow_html=True)
+else:
+    # ERROR 
         # ================= MÓDULO: CREDENCIAL DIGITAL =================
 elif menu == "Credencial Digital":
 
@@ -1074,6 +1076,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
