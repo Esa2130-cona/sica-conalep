@@ -453,7 +453,8 @@ def ejecutar_salida(mat_raw):
         time.sleep(3.5)
         st.session_state.resultado = None
         st.rerun()
-        elif res["tipo"] == "salida_ok":
+       
+elif res["tipo"] == "salida_ok":
     st.markdown("<div class='flash-ok'></div>", unsafe_allow_html=True)
     st.markdown(f"""
         <div style='text-align:center;
@@ -1073,6 +1074,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
