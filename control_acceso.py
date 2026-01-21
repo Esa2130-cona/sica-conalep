@@ -258,7 +258,7 @@ elif menu == "Puerta de Entrada":
             st.session_state.scan_input = ""
             st.session_state.procesando = False
 
-    def ejecutar_salida(mat_raw):
+def ejecutar_salida(mat_raw):
     if not mat_raw or st.session_state.procesando:
         return
 
@@ -1073,6 +1073,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
