@@ -386,34 +386,7 @@ elif menu == "Credencial Digital":
                 st.success(f"✅ {alumno['nombre']} — GRUPO {alumno['grupo']}")
 
 # ===== GENERAR QR =====
-    else:
-    st.success(f"¡Hola {alumno['nombre']}! Aquí está tu código de acceso:")
 
-    qr = qrcode.QRCode(
-        version=1,
-        box_size=4,
-        border=3
-    )
-
-    qr.add_data(f"{matricula}|{datetime.now(zona).strftime('%Y%m%d')}")
-    qr.make(fit=True)
-
-    img = qr.make_image(
-        fill_color="black",
-        back_color="white"
-    )
-
-    buf = BytesIO()
-    img.save(buf, format="PNG")
-    buf.seek(0)
-
-    st.image(
-        buf,
-        width=220,
-        caption="Código válido SOLO para hoy"
-    )
-
-    st.warning("⚠️ Uso indebido de esta credencial será sancionado")
 
 # ================= MÓDULO: REPORTES =================
 
@@ -951,6 +924,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
