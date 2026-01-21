@@ -6,8 +6,9 @@ openpyxl
 pytz
 plotly
 fpdf
-qrcode[pil]
+
 streamlit-camera-qrcode-scanner
+
 
 
 
