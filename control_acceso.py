@@ -116,6 +116,34 @@ if st.sidebar.button("Cerrar Sesión"):
     st.rerun()
 
 # ================= MÓDULO: PUERTA DE ENTRADA =================
+st.markdown("""
+<style>
+@keyframes flashGreen {
+    0% { background-color: rgba(0, 230, 118, 0.0); }
+    50% { background-color: rgba(0, 230, 118, 0.30); }
+    100% { background-color: rgba(0, 230, 118, 0.0); }
+}
+@keyframes flashAmber {
+    0% { background-color: rgba(255, 152, 0, 0.0); }
+    50% { background-color: rgba(255, 152, 0, 0.30); }
+    100% { background-color: rgba(255, 152, 0, 0.0); }
+}
+@keyframes flashRed {
+    0% { background-color: rgba(255, 23, 68, 0.0); }
+    50% { background-color: rgba(255, 23, 68, 0.30); }
+    100% { background-color: rgba(255, 23, 68, 0.0); }
+}
+.flash-ok {
+    animation: flashGreen 0.6s ease-in-out;
+}
+.flash-warn {
+    animation: flashAmber 0.6s ease-in-out;
+}
+.flash-error {
+    animation: flashRed 0.6s ease-in-out;
+}
+</style>
+""", unsafe_allow_html=True)
 elif menu == "Puerta de Entrada":
 
     st.markdown("""
@@ -209,7 +237,7 @@ elif menu == "Puerta de Entrada":
         res = st.session_state.resultado
 
         if res["tipo"] == "ok":
-            st.balloons()
+            st.markdown("<div class='flash-ok'></div>", unsafe_allow_html=True)
             st.markdown(f"""
                 <div style='text-align:center;
                             background:rgba(30, 132, 73, 0.2);
@@ -257,6 +285,7 @@ elif menu == "Puerta de Entrada":
                 """, unsafe_allow_html=True)
 
         elif res["tipo"] == "bloqueado":
+            st.markdown("<div class='flash-warn'></div>", unsafe_allow_html=True)
             st.markdown(f"""
                 <div style='text-align:center;
                             background:rgba(255, 152, 0, 0.2);
@@ -282,6 +311,7 @@ elif menu == "Puerta de Entrada":
             """, unsafe_allow_html=True)
 
         else:  # ERROR
+            st.markdown("<div class='flash-error'></div>", unsafe_allow_html=True)
             st.markdown(f"""
                 <div style='text-align:center;
                             background:rgba(231, 76, 60, 0.2);
@@ -834,6 +864,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
