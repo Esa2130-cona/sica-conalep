@@ -391,7 +391,7 @@ elif menu == "Credencial Digital":
                     border=3
                 )
 
-                qr.add_data(f"{matricula}|{datetime.now(zona).strftime('%Y%m%d')}")
+                qr.add_data(f"{matricula}")
                 qr.make(fit=True)
 
                 img = qr.make_image(
@@ -945,6 +945,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
