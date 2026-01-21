@@ -164,6 +164,7 @@ if st.sidebar.button("Cerrar Sesión"):
     st.rerun()
 
 # ================= MÓDULO: PUERTA DE ENTRADA (CORREGIDO) =================
+# ================= MÓDULO: PUERTA DE ENTRADA (ESTABLE Y PROFESIONAL) =================
 elif menu == "Puerta de Entrada":
 
     def obtener_conteo_hoy():
@@ -173,43 +174,45 @@ elif menu == "Puerta de Entrada":
             return res.count if res.count else 0
         except: return 0
 
-    # --- INDICADOR DE ALUMNOS (MÁS CHICO Y ELEGANTE) ---
+    # --- INDICADOR SUPERIOR ---
     presentes = obtener_conteo_hoy()
     st.markdown(f"""
-        <div style='text-align: center; background: #1e1e1e; padding: 10px; border-radius: 12px; border: 1px solid #333; margin-bottom: 15px;'>
-            <p style='color: #888; font-size: 14px; margin: 0; text-transform: uppercase; letter-spacing: 1px;'>Alumnos en Plantel</p>
-            <h2 style='color: #00e676; font-size: 45px; margin: 5px 0;'>{presentes}</h2>
+        <div style='text-align: center; background: #161b22; padding: 10px; border-radius: 12px; border: 1px solid #30363d; margin-bottom: 10px;'>
+            <p style='color: #8b949e; font-size: 14px; margin: 0; text-transform: uppercase;'>Alumnos en Plantel Hoy</p>
+            <h2 style='color: #00e676; font-size: 40px; margin: 0;'>{presentes}</h2>
         </div>
     """, unsafe_allow_html=True)
 
     st.markdown("""
         <div class='scan-card'>
             <div class='scan-subtitle'>SICA</div>
-            <div class='scan-title' style='font-size: 35px !important;'>CONTROL DE ACCESO</div>
+            <div class='scan-title' style='font-size: 30px !important;'>CONTROL DE ACCESO</div>
         </div>
     """, unsafe_allow_html=True)
 
     if "resultado" not in st.session_state: 
         st.session_state.resultado = None
 
-    # --- INTERFAZ DE ESCANEO ---
+    # --- INTERFAZ DE ESCANEO (SIN ERRORES) ---
     st.markdown("<br>", unsafe_allow_html=True)
     
     _, col_input, _ = st.columns([1, 2, 1])
+    
     with col_input:
-        # El input capturará el texto enviado por el láser
-        matricula_scaneada = st.text_input(
-            "ESCANEE CREDENCIAL",
-            key="input_laser",
-            placeholder="Esperando lectura...",
-            label_visibility="collapsed"
-        )
+        # Usamos un formulario para que el input se limpie automáticamente al dar Enter
+        with st.form("lector_form", clear_on_submit=True):
+            matricula_scaneada = st.text_input(
+                "ESCANEE CREDENCIAL", 
+                placeholder="Esperando lectura láser...",
+                label_visibility="collapsed"
+            )
+            # Botón oculto necesario para que el formulario procese el 'Enter' del láser
+            submit = st.form_submit_button("Procesar", use_container_width=True)
 
-    # LÓGICA DE PROCESAMIENTO
     if matricula_scaneada:
         mat = normalizar_matricula(matricula_scaneada)
         try:
-            # Consultas a la base de datos
+            # 1. Buscar Alumno
             al_res = supabase.table("alumnos").select("*, estatus").eq("matricula", mat).execute()
             
             if not al_res.data:
@@ -220,15 +223,15 @@ elif menu == "Puerta de Entrada":
                     st.session_state.resultado = {"tipo": "bloqueado", "nombre": al.get("nombre"), "mensaje": "ACCESO BLOQUEADO"}
                 else:
                     hoy = datetime.now(zona).strftime("%Y-%m-%d")
+                    # 2. Verificar Duplicado
                     check = supabase.table("entradas").select("id").eq("matricula", mat).eq("fecha", hoy).execute()
                     
                     if check.data:
                         st.session_state.resultado = {"tipo": "warning", "nombre": al.get("nombre"), "mensaje": "YA INGRESÓ HOY"}
                     else:
-                        # Obtener avisos si existen
+                        # 3. Guardar Entrada
                         av_res = supabase.table("avisos").select("mensaje, prioridad").eq("matricula", mat).eq("activo", True).execute()
                         
-                        # Guardar entrada
                         enviar("entradas", {
                             "fecha": hoy, 
                             "hora": datetime.now(zona).strftime("%H:%M:%S"),
@@ -241,17 +244,12 @@ elif menu == "Puerta de Entrada":
                             "tipo": "ok", "nombre": al.get("nombre"), "grupo": al.get("grupo"),
                             "aviso": av_res.data[0] if av_res.data else None
                         }
-            
-            # Limpiar input y forzar refresco
-            st.session_state.input_laser = ""
             st.rerun()
 
         except Exception as e:
-            # Si hay un error, lo registramos internamente pero no bloqueamos la pantalla
-            st.session_state.resultado = {"tipo": "error", "mensaje": "ERROR DE CONEXIÓN - REINTENTE"}
-            st.session_state.input_laser = ""
+            st.error("Error de conexión. Reintente.")
 
-    # --- MOSTRAR RESULTADOS ---
+    # --- MOSTRAR RESULTADOS (TARJETAS) ---
     if st.session_state.resultado:
         res = st.session_state.resultado
         
@@ -259,9 +257,9 @@ elif menu == "Puerta de Entrada":
             st.markdown("<div class='flash-overlay flash-ok'></div>", unsafe_allow_html=True)
             st.markdown(f"""
                 <div style='text-align:center; background:rgba(30,132,73,0.2); padding:30px; border-radius:15px; border:2px solid #00e676;'>
-                    <div style='font-size:20px; color:#00e676;'>✅ ACCESO PERMITIDO</div>
-                    <div style='font-size:45px; font-weight:900; color:white;'>{res['nombre']}</div>
-                    <div style='font-size:25px; color:#aaa;'>GRUPO: {res['grupo']}</div>
+                    <div style='font-size:18px; color:#00e676; font-weight:bold;'>✅ ACCESO PERMITIDO</div>
+                    <div style='font-size:40px; font-weight:900; color:white; line-height:1.1;'>{res['nombre']}</div>
+                    <div style='font-size:22px; color:#f0f6fc; margin-top:5px;'>GRUPO: {res['grupo']}</div>
                 </div>
             """, unsafe_allow_html=True)
         
@@ -269,8 +267,8 @@ elif menu == "Puerta de Entrada":
             st.markdown("<div class='flash-overlay flash-warn'></div>", unsafe_allow_html=True)
             st.markdown(f"""
                 <div style='text-align:center; background:rgba(255,152,0,0.1); padding:30px; border-radius:15px; border:2px solid #ff9800;'>
-                    <div style='font-size:30px; color:#ff9800;'>⚠️ {res['mensaje']}</div>
-                    <div style='font-size:40px; font-weight:900; color:white;'>{res['nombre']}</div>
+                    <div style='font-size:25px; color:#ff9800; font-weight:bold;'>⚠️ {res['mensaje']}</div>
+                    <div style='font-size:35px; font-weight:900; color:white;'>{res['nombre']}</div>
                 </div>
             """, unsafe_allow_html=True)
         
@@ -278,8 +276,8 @@ elif menu == "Puerta de Entrada":
             st.markdown("<div class='flash-overlay flash-error'></div>", unsafe_allow_html=True)
             st.markdown(f"""
                 <div style='text-align:center; background:rgba(255,23,68,0.1); padding:30px; border-radius:15px; border:2px solid #ff1744;'>
-                    <div style='font-size:35px; color:#ff1744;'>❌ {res['mensaje']}</div>
-                    <div style='font-size:40px; font-weight:900; color:white;'>{res.get('nombre', '')}</div>
+                    <div style='font-size:30px; color:#ff1744; font-weight:bold;'>❌ {res['mensaje']}</div>
+                    <div style='font-size:35px; font-weight:900; color:white;'>{res.get('nombre', '')}</div>
                 </div>
             """, unsafe_allow_html=True)
 
@@ -882,6 +880,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
