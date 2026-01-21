@@ -114,8 +114,11 @@ menu = st.sidebar.radio("📋 MENÚ PRINCIPAL", opciones)
 if st.sidebar.button("Cerrar Sesión"):
     st.session_state.user = None
     st.rerun()
+
 # ================= MÓDULO: PUERTA DE ENTRADA =================
 elif menu == "Puerta de Entrada":
+    from streamlit_qr_barcode_scanner import qrcode_scanner
+
     st.markdown("""
         <div class='scan-card'>
             <div class='scan-subtitle'>SICA</div>
@@ -128,8 +131,8 @@ elif menu == "Puerta de Entrada":
     if "resultado" not in st.session_state: 
         st.session_state.resultado = None
 
-    # Función unificada para procesar la matrícula (venga de cámara o lector)
-    def procesar_matricula(mat_detectada):
+    # Función unificada (corregido el nombre para que coincida abajo)
+    def ejecutar_entrada(mat_detectada):
         mat = normalizar_matricula(mat_detectada)
         if not mat: return
         try:
@@ -153,24 +156,26 @@ elif menu == "Puerta de Entrada":
                     })
                     st.session_state.resultado = {"tipo": "ok", "nombre": al.get("nombre"), "grupo": al.get("grupo"), "aviso": av_query.data[0] if av_query.data else None}
         except Exception as e: st.error(f"Error: {e}")
- =
-    # --- NUEVA SECCIÓN DE ESCANEO HÍBRIDO ---
+
+    # --- SECCIÓN DE ESCANEO ---
     _, col_central, _ = st.columns([1, 2, 1])
     
     with col_central:
-        # 1. Opción para Celular (Cámara)
-        with st.expander("📷 USAR CÁMARA DEL CELULAR"):
-            foto_credencial = st.camera_input("Captura el código de la credencial")
-            if foto_credencial:
-                st.info("Foto capturada. Nota: El lector láser es necesario para procesar el texto automáticamente. Esta foto sirve como respaldo visual.")
+        # 1. ESCÁNER DE CÁMARA (Real para celulares)
+        with st.expander("📷 ABRIR ESCÁNER (CELULAR)"):
+            # Este componente lee el código y devuelve el texto automáticamente
+            barcode_captured = qrcode_scanner(key="scanner_puerta")
+            if barcode_captured:
+                ejecutar_entrada(barcode_captured)
 
-        # 2. Entrada para Lector Físico (No se mueve nada de tu lógica original)
+        # 2. LECTOR FÍSICO (Input de texto)
+        # Cambié on_change para que use la función correcta 'ejecutar_entrada'
         st.text_input("ESCANEE SU CREDENCIAL AQUÍ", 
                      key="scan_input", 
-                     on_change=procesar_scan, 
+                     on_change=lambda: ejecutar_entrada(st.session_state.scan_input), 
                      placeholder="Esperando lectura...")
 
-    # --- RESULTADOS VISUALES ACTUALIZADOS ---
+    # --- RESULTADOS VISUALES ---
     if st.session_state.resultado:
         res = st.session_state.resultado
         
@@ -180,29 +185,26 @@ elif menu == "Puerta de Entrada":
                 <div style='text-align:center; background:rgba(30, 132, 73, 0.2); padding:40px; border-radius:20px; border:2px solid #00e676;'>
                     <div style='font-size:30px; color:#00e676; font-weight:bold;'>✅ ACCESO PERMITIDO</div>
                     <div style='font-size:60px; font-weight:900; color:white;'>{res['nombre']}</div>
-                    <div style='font-size:35px; color:#f0f6fc;'>GRUPO: {res['grupo']}</div>
+                    <div style='font-size:35px; color:#f0f6fc;'>{res['grupo']}</div>
                 </div>
             """, unsafe_allow_html=True)
-            # ... (sección de avisos se mantiene igual)
 
         elif res["tipo"] == "bloqueado":
-            # Diseño especial para alumnos bloqueados
             st.markdown(f"""
                 <div style='text-align:center; background:rgba(255, 152, 0, 0.2); padding:40px; border-radius:20px; border:2px solid #ff9800;'>
                     <div style='font-size:40px; color:#ff9800; font-weight:bold;'>⚠️ {res['mensaje']}</div>
                     <div style='font-size:50px; font-weight:900; color:white;'>{res['nombre']}</div>
-                    <div style='font-size:25px; color:#f0f6fc; margin-top:10px;'>FAVOR DE PASAR A LA OFICINA</div>
                 </div>
             """, unsafe_allow_html=True)
 
-        else: # Error de no registrado
+        else:
             st.markdown(f"""
                 <div style='text-align:center; background:rgba(231, 76, 60, 0.2); padding:40px; border-radius:20px; border:2px solid #ff1744;'>
                     <div style='font-size:50px; color:#ff1744; font-weight:bold;'>❌ {res['mensaje']}</div>
                 </div>
             """, unsafe_allow_html=True)
         
-        time.sleep(3.5)
+        time.sleep(3.0)
         st.session_state.resultado = None
         st.rerun()
 # ================= MÓDULO: REPORTES =================
@@ -740,6 +742,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
