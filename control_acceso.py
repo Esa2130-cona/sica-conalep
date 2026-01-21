@@ -151,9 +151,9 @@ st.sidebar.markdown(f"""
 # Lógica de Menú por Roles
 if rol == "KIOSKO": opciones = ["Puerta de Entrada"]
 elif rol == "DIRECTOR": opciones = ["Dashboard", "Expediente Digital"]
-elif rol == "PREFECTO": opciones = ["Reportes", "Historial", "Avisos", "Expediente Digital"]
+elif rol == "PREFECTO": opciones = ["Reportes", "Historial", "Avisos", "Expediente Digital","Credencial Digital"]
 elif rol == "GENERAL": opciones = ["Reportes", "Avisos", "Servicios y Técnica", "Expediente Digital"]
-elif rol == "ADMIN": opciones = ["Puerta de Entrada", "Reportes", "Historial", "Avisos", "Dashboard", "Servicios y Técnica", "Expediente Digital"]
+elif rol == "ADMIN": opciones = ["Puerta de Entrada", "Reportes", "Historial", "Avisos", "Dashboard", "Servicios y Técnica", "Expediente Digital","Credencial Digital"]
 else: opciones = ["Puerta de Entrada"]
 
 menu = st.sidebar.radio("📋 MENÚ PRINCIPAL", opciones)
@@ -347,6 +347,67 @@ elif menu == "Puerta de Entrada":
         time.sleep(3.5)
         st.session_state.resultado = None
         st.rerun()
+        # ================= MÓDULO: CREDENCIAL DIGITAL =================
+elif menu == "Credencial Digital":
+
+    st.markdown("""
+        <div class='scan-card'>
+            <div class='scan-subtitle'>SICA</div>
+            <div class='scan-title'>CREDENCIAL DIGITAL</div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    matricula = st.text_input(
+        "MATRÍCULA DEL ALUMNO",
+        placeholder="Escanea o escribe la matrícula"
+    ).strip().upper()
+
+    if matricula:
+
+        res = supabase.table("alumnos") \
+            .select("nombre, grupo, estatus") \
+            .eq("matricula", matricula) \
+            .execute()
+
+        if not res.data:
+            st.error("❌ MATRÍCULA NO ENCONTRADA")
+
+        else:
+            alumno = res.data[0]
+
+            if alumno["estatus"] is False:
+                st.error("⛔ ALUMNO BLOQUEADO")
+
+            else:
+                st.success(f"✅ {alumno['nombre']} — GRUPO {alumno['grupo']}")
+
+                # ===== GENERAR QR =====
+                qr = qrcode.QRCode(
+                    version=1,
+                    box_size=8,
+                    border=4
+                )
+
+                qr.add_data(f"{matricula}|{datetime.now(zona).strftime('%Y%m%d')}")
+                qr.make(fit=True)
+
+                img = qr.make_image(
+                    fill_color="black",
+                    back_color="white"
+                )
+
+                buf = BytesIO()
+                img.save(buf, format="PNG")
+
+                st.image(
+                    buf,
+                    caption="Código válido SOLO para hoy",
+                    use_container_width=True
+                )
+
+                st.warning("⚠️ Uso indebido de esta credencial será sancionado")
 # ================= MÓDULO: REPORTES =================
 elif menu == "Reportes":
     st.title("🚨 Gestión de Reportes")
@@ -882,6 +943,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
