@@ -6,35 +6,51 @@ import pytz
 import time
 import plotly.express as px
 from fpdf import FPDF
-# ================= ESTILOS GLOBALES =================
+
+# ================= ESTILOS DE FLASH =================
 st.markdown("""
 <style>
+.flash-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 9999;
+    pointer-events: none;
+}
+
 @keyframes flashGreen {
     0% { background-color: rgba(0, 230, 118, 0.0); }
-    50% { background-color: rgba(0, 230, 118, 0.30); }
+    40% { background-color: rgba(0, 230, 118, 0.35); }
     100% { background-color: rgba(0, 230, 118, 0.0); }
 }
+
 @keyframes flashAmber {
     0% { background-color: rgba(255, 152, 0, 0.0); }
-    50% { background-color: rgba(255, 152, 0, 0.30); }
+    40% { background-color: rgba(255, 152, 0, 0.35); }
     100% { background-color: rgba(255, 152, 0, 0.0); }
 }
+
 @keyframes flashRed {
     0% { background-color: rgba(255, 23, 68, 0.0); }
-    50% { background-color: rgba(255, 23, 68, 0.30); }
+    40% { background-color: rgba(255, 23, 68, 0.35); }
     100% { background-color: rgba(255, 23, 68, 0.0); }
 }
+
 .flash-ok {
     animation: flashGreen 0.6s ease-in-out;
 }
+
 .flash-warn {
     animation: flashAmber 0.6s ease-in-out;
 }
+
 .flash-error {
     animation: flashRed 0.6s ease-in-out;
 }
 </style>
-""", unsafe_allow_html=True) 
+""", unsafe_allow_html=True)
 
 
 # ================= CONFIGURACIÓN INICIAL =================
@@ -239,7 +255,7 @@ elif menu == "Puerta de Entrada":
         res = st.session_state.resultado
 
         if res["tipo"] == "ok":
-            st.markdown("<div class='flash-ok'></div>", unsafe_allow_html=True)
+            st.markdown("<div class='flash-overlay flash-ok'></div>", unsafe_allow_html=True)
             st.markdown(f"""
                 <div style='text-align:center;
                             background:rgba(30, 132, 73, 0.2);
@@ -287,7 +303,7 @@ elif menu == "Puerta de Entrada":
                 """, unsafe_allow_html=True)
 
         elif res["tipo"] == "bloqueado":
-            st.markdown("<div class='flash-warn'></div>", unsafe_allow_html=True)
+            st.markdown("<div class='flash-overlay flash-warn'></div>", unsafe_allow_html=True)
             st.markdown(f"""
                 <div style='text-align:center;
                             background:rgba(255, 152, 0, 0.2);
@@ -313,7 +329,7 @@ elif menu == "Puerta de Entrada":
             """, unsafe_allow_html=True)
 
         else:  # ERROR
-            st.markdown("<div class='flash-error'></div>", unsafe_allow_html=True)
+            st.markdown("<div class='flash-overlay flash-error'></div>", unsafe_allow_html=True)
             st.markdown(f"""
                 <div style='text-align:center;
                             background:rgba(231, 76, 60, 0.2);
@@ -866,6 +882,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
