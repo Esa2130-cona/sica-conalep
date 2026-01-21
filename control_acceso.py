@@ -258,6 +258,92 @@ elif menu == "Puerta de Entrada":
             st.session_state.scan_input = ""
             st.session_state.procesando = False
 
+    def ejecutar_salida(mat_raw):
+    if not mat_raw or st.session_state.procesando:
+        return
+
+    st.session_state.procesando = True
+    mat = normalizar_matricula(mat_raw)
+
+    try:
+        fecha_hoy = datetime.now(zona).strftime("%Y-%m-%d")
+
+        # 1️⃣ Verificar alumno
+        al_query = supabase.table("alumnos") \
+            .select("nombre, grupo, estatus") \
+            .eq("matricula", mat) \
+            .execute()
+
+        if not al_query.data:
+            st.session_state.resultado = {
+                "tipo": "error",
+                "mensaje": "MATRÍCULA NO REGISTRADA"
+            }
+            return
+
+        al = al_query.data[0]
+
+        if al.get("estatus") is False:
+            st.session_state.resultado = {
+                "tipo": "bloqueado",
+                "nombre": al.get("nombre"),
+                "mensaje": "SALIDA NO PERMITIDA / BLOQUEADO"
+            }
+            return
+
+        # 2️⃣ Verificar que SÍ tenga entrada hoy
+        entrada = supabase.table("entradas") \
+            .select("id") \
+            .eq("matricula", mat) \
+            .eq("fecha", fecha_hoy) \
+            .execute()
+
+        if not entrada.data:
+            st.session_state.resultado = {
+                "tipo": "warning",
+                "nombre": al.get("nombre"),
+                "mensaje": "NO HAY ENTRADA REGISTRADA HOY"
+            }
+            return
+
+        # 3️⃣ Verificar que NO tenga salida hoy
+        salida_existente = supabase.table("salidas") \
+            .select("id") \
+            .eq("matricula", mat) \
+            .eq("fecha", fecha_hoy) \
+            .execute()
+
+        if salida_existente.data:
+            st.session_state.resultado = {
+                "tipo": "warning",
+                "nombre": al.get("nombre"),
+                "mensaje": "SALIDA YA REGISTRADA HOY"
+            }
+            return
+
+        # 4️⃣ Registrar salida
+        enviar("salidas", {
+            "fecha": fecha_hoy,
+            "hora": datetime.now(zona).strftime("%H:%M:%S"),
+            "matricula": mat,
+            "nombre": al.get("nombre", "N/A"),
+            "grupo": al.get("grupo", "N/A"),
+            "registro_por": user.get("usuario", "Sistema")
+        })
+
+        st.session_state.resultado = {
+            "tipo": "salida_ok",
+            "nombre": al.get("nombre"),
+            "grupo": al.get("grupo")
+        }
+
+    except Exception as e:
+        st.error(f"Error: {e}")
+
+    finally:
+        st.session_state.scan_input = ""
+        st.session_state.procesando = False
+
     # --- INTERFAZ DE ESCANEO (LECTOR FÍSICO) ---
     _, col_input, _ = st.columns([1, 2, 1])
     with col_input:
@@ -367,6 +453,30 @@ elif menu == "Puerta de Entrada":
         time.sleep(3.5)
         st.session_state.resultado = None
         st.rerun()
+        elif res["tipo"] == "salida_ok":
+    st.markdown("<div class='flash-ok'></div>", unsafe_allow_html=True)
+    st.markdown(f"""
+        <div style='text-align:center;
+                    background:rgba(52, 152, 219, 0.2);
+                    padding:40px;
+                    border-radius:20px;
+                    border:2px solid #3498db;'>
+            <div style='font-size:35px;
+                        color:#3498db;
+                        font-weight:bold;'>
+                🚪 SALIDA REGISTRADA
+            </div>
+            <div style='font-size:55px;
+                        font-weight:900;
+                        color:white;'>
+                {res['nombre']}
+            </div>
+            <div style='font-size:30px;
+                        color:#f0f6fc;'>
+                ¡Buen regreso!
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
         # ================= MÓDULO: CREDENCIAL DIGITAL =================
 elif menu == "Credencial Digital":
 
@@ -963,6 +1073,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
