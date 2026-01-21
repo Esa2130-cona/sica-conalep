@@ -6,7 +6,8 @@ import pytz
 import time
 import plotly.express as px
 from fpdf import FPDF
-from streamlit_barcode_reader import streamlit_barcode_reader
+from streamlit_barcode_reader 
+import streamlit_barcode_reader
 # ================= CONFIGURACIÓN INICIAL =================
 st.set_page_config(page_title="SICA CONALEP CUAUTLA", layout="wide")
 zona = pytz.timezone("America/Mexico_City")
@@ -737,6 +738,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
