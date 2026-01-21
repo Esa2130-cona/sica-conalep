@@ -163,125 +163,208 @@ if st.sidebar.button("Cerrar Sesión"):
     st.session_state.user = None
     st.rerun()
 
-# ================= MÓDULO: PUERTA DE ENTRADA (CORREGIDO) =================
-# ================= MÓDULO: PUERTA DE ENTRADA (ESTABLE Y PROFESIONAL) =================
+# ================= MÓDULO: PUERTA DE ENTRADA =================
 elif menu == "Puerta de Entrada":
-
-    def obtener_conteo_hoy():
-        try:
-            fecha_hoy = datetime.now(zona).strftime("%Y-%m-%d")
-            res = supabase.table("entradas").select("id", count="exact").eq("fecha", fecha_hoy).execute()
-            return res.count if res.count else 0
-        except: return 0
-
-    # --- INDICADOR SUPERIOR ---
-    presentes = obtener_conteo_hoy()
-    st.markdown(f"""
-        <div style='text-align: center; background: #161b22; padding: 10px; border-radius: 12px; border: 1px solid #30363d; margin-bottom: 10px;'>
-            <p style='color: #8b949e; font-size: 14px; margin: 0; text-transform: uppercase;'>Alumnos en Plantel Hoy</p>
-            <h2 style='color: #00e676; font-size: 40px; margin: 0;'>{presentes}</h2>
-        </div>
-    """, unsafe_allow_html=True)
 
     st.markdown("""
         <div class='scan-card'>
             <div class='scan-subtitle'>SICA</div>
-            <div class='scan-title' style='font-size: 30px !important;'>CONTROL DE ACCESO</div>
+            <div class='scan-title'>SISTEMA DE ACCESO<br>CONALEP CUAUTLA</div>
         </div>
     """, unsafe_allow_html=True)
 
-    if "resultado" not in st.session_state: 
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    if "resultado" not in st.session_state:
         st.session_state.resultado = None
 
-    # --- INTERFAZ DE ESCANEO (SIN ERRORES) ---
-    st.markdown("<br>", unsafe_allow_html=True)
-    
-    _, col_input, _ = st.columns([1, 2, 1])
-    
-    with col_input:
-        # Usamos un formulario para que el input se limpie automáticamente al dar Enter
-        with st.form("lector_form", clear_on_submit=True):
-            matricula_scaneada = st.text_input(
-                "ESCANEE CREDENCIAL", 
-                placeholder="Esperando lectura láser...",
-                label_visibility="collapsed"
-            )
-            # Botón oculto necesario para que el formulario procese el 'Enter' del láser
-            submit = st.form_submit_button("Procesar", use_container_width=True)
+    if "procesando" not in st.session_state:
+        st.session_state.procesando = False
 
-    if matricula_scaneada:
-        mat = normalizar_matricula(matricula_scaneada)
+    def ejecutar_procesamiento(mat_raw):
+        if not mat_raw or st.session_state.procesando:
+            return
+
+        st.session_state.procesando = True
+        mat = normalizar_matricula(mat_raw)
+
         try:
-            # 1. Buscar Alumno
-            al_res = supabase.table("alumnos").select("*, estatus").eq("matricula", mat).execute()
-            
-            if not al_res.data:
-                st.session_state.resultado = {"tipo": "error", "mensaje": "MATRÍCULA NO ENCONTRADA"}
+            al_query = supabase.table("alumnos") \
+                .select("*, estatus") \
+                .filter("matricula", "eq", mat) \
+                .execute()
+
+            av_query = supabase.table("avisos") \
+                .select("mensaje, prioridad") \
+                .filter("matricula", "eq", mat) \
+                .filter("activo", "eq", True) \
+                .execute()
+
+            if not al_query.data:
+                st.session_state.resultado = {
+                    "tipo": "error",
+                    "mensaje": "MATRÍCULA NO REGISTRADA"
+                }
+
             else:
-                al = al_res.data[0]
+                al = al_query.data[0]
+
                 if al.get("estatus") is False:
-                    st.session_state.resultado = {"tipo": "bloqueado", "nombre": al.get("nombre"), "mensaje": "ACCESO BLOQUEADO"}
+                    st.session_state.resultado = {
+                        "tipo": "bloqueado",
+                        "nombre": al.get("nombre"),
+                        "mensaje": "ACCESO DENEGADO / BLOQUEADO"
+                    }
+
                 else:
-                    hoy = datetime.now(zona).strftime("%Y-%m-%d")
-                    # 2. Verificar Duplicado
-                    check = supabase.table("entradas").select("id").eq("matricula", mat).eq("fecha", hoy).execute()
-                    
-                    if check.data:
-                        st.session_state.resultado = {"tipo": "warning", "nombre": al.get("nombre"), "mensaje": "YA INGRESÓ HOY"}
-                    else:
-                        # 3. Guardar Entrada
-                        av_res = supabase.table("avisos").select("mensaje, prioridad").eq("matricula", mat).eq("activo", True).execute()
-                        
-                        enviar("entradas", {
-                            "fecha": hoy, 
-                            "hora": datetime.now(zona).strftime("%H:%M:%S"),
-                            "matricula": mat, 
-                            "nombre": al.get("nombre", "N/A"),
-                            "grupo": al.get("grupo", "N/A"), 
-                            "registro_por": user.get("usuario", "Sistema")
-                        })
+                    # ================= EVITAR DOBLE ENTRADA EL MISMO DÍA =================
+                    fecha_hoy = datetime.now(zona).strftime("%Y-%m-%d")
+
+                    entrada_existente = supabase.table("entradas") \
+                        .select("id") \
+                        .eq("matricula", mat) \
+                        .eq("fecha", fecha_hoy) \
+                        .execute()
+
+                    if entrada_existente.data:
                         st.session_state.resultado = {
-                            "tipo": "ok", "nombre": al.get("nombre"), "grupo": al.get("grupo"),
-                            "aviso": av_res.data[0] if av_res.data else None
+                            "tipo": "warning",
+                            "nombre": al.get("nombre"),
+                            "mensaje": "ENTRADA YA REGISTRADA HOY"
                         }
-            st.rerun()
+                        return
+                    # =====================================================================
+
+                    enviar("entradas", {
+                        "fecha": fecha_hoy,
+                        "hora": datetime.now(zona).strftime("%H:%M:%S"),
+                        "matricula": mat,
+                        "nombre": al.get("nombre", "N/A"),
+                        "grupo": al.get("grupo", "N/A"),
+                        "registro_por": user.get("usuario", "Sistema")
+                    })
+
+                    st.session_state.resultado = {
+                        "tipo": "ok",
+                        "nombre": al.get("nombre"),
+                        "grupo": al.get("grupo"),
+                        "aviso": av_query.data[0] if av_query.data else None
+                    }
 
         except Exception as e:
-            st.error("Error de conexión. Reintente.")
+            st.error(f"Error: {e}")
 
-    # --- MOSTRAR RESULTADOS (TARJETAS) ---
+        finally:
+            st.session_state.scan_input = ""
+            st.session_state.procesando = False
+
+    # --- INTERFAZ DE ESCANEO (LECTOR FÍSICO) ---
+    _, col_input, _ = st.columns([1, 2, 1])
+    with col_input:
+        st.text_input(
+            "ESCANEE SU CREDENCIAL AQUÍ (LECTOR LÁSER)",
+            key="scan_input",
+            placeholder="Esperando lectura...",
+            on_change=lambda: ejecutar_procesamiento(
+                st.session_state.scan_input
+            )
+        )
+
+    # --- RESULTADOS VISUALES (DISEÑO ORIGINAL) ---
     if st.session_state.resultado:
         res = st.session_state.resultado
-        
+
         if res["tipo"] == "ok":
             st.markdown("<div class='flash-overlay flash-ok'></div>", unsafe_allow_html=True)
             st.markdown(f"""
-                <div style='text-align:center; background:rgba(30,132,73,0.2); padding:30px; border-radius:15px; border:2px solid #00e676;'>
-                    <div style='font-size:18px; color:#00e676; font-weight:bold;'>✅ ACCESO PERMITIDO</div>
-                    <div style='font-size:40px; font-weight:900; color:white; line-height:1.1;'>{res['nombre']}</div>
-                    <div style='font-size:22px; color:#f0f6fc; margin-top:5px;'>GRUPO: {res['grupo']}</div>
-                </div>
-            """, unsafe_allow_html=True)
-        
-        elif res["tipo"] == "warning":
-            st.markdown("<div class='flash-overlay flash-warn'></div>", unsafe_allow_html=True)
-            st.markdown(f"""
-                <div style='text-align:center; background:rgba(255,152,0,0.1); padding:30px; border-radius:15px; border:2px solid #ff9800;'>
-                    <div style='font-size:25px; color:#ff9800; font-weight:bold;'>⚠️ {res['mensaje']}</div>
-                    <div style='font-size:35px; font-weight:900; color:white;'>{res['nombre']}</div>
-                </div>
-            """, unsafe_allow_html=True)
-        
-        elif res["tipo"] == "bloqueado" or res["tipo"] == "error":
-            st.markdown("<div class='flash-overlay flash-error'></div>", unsafe_allow_html=True)
-            st.markdown(f"""
-                <div style='text-align:center; background:rgba(255,23,68,0.1); padding:30px; border-radius:15px; border:2px solid #ff1744;'>
-                    <div style='font-size:30px; color:#ff1744; font-weight:bold;'>❌ {res['mensaje']}</div>
-                    <div style='font-size:35px; font-weight:900; color:white;'>{res.get('nombre', '')}</div>
+                <div style='text-align:center;
+                            background:rgba(30, 132, 73, 0.2);
+                            padding:40px;
+                            border-radius:20px;
+                            border:2px solid #00e676;'>
+                    <div style='font-size:30px;
+                                color:#00e676;
+                                font-weight:bold;'>
+                        ✅ ACCESO PERMITIDO
+                    </div>
+                    <div style='font-size:60px;
+                                font-weight:900;
+                                color:white;'>
+                        {res['nombre']}
+                    </div>
+                    <div style='font-size:35px;
+                                color:#f0f6fc;'>
+                        GRUPO: {res['grupo']}
+                    </div>
                 </div>
             """, unsafe_allow_html=True)
 
-        time.sleep(2.5)
+            # --- AVISOS ---
+            if res.get("aviso"):
+                av = res["aviso"]
+                color_aviso = "#ff1744" if av["prioridad"] == "ALTA" else "#ffeb3b"
+
+                st.markdown(f"""
+                    <div style='margin-top:20px;
+                                padding:20px;
+                                background:rgba(255,255,255,0.1);
+                                border-left:10px solid {color_aviso};
+                                border-radius:10px;'>
+                        <h3 style='color:{color_aviso};
+                                   margin:0;'>
+                            ⚠️ AVISO PRIORIDAD {av["prioridad"]}
+                        </h3>
+                        <p style='font-size:24px;
+                                  color:white;
+                                  margin:10px 0;'>
+                            {av["mensaje"]}
+                        </p>
+                    </div>
+                """, unsafe_allow_html=True)
+
+        elif res["tipo"] == "bloqueado":
+            st.markdown("<div class='flash-overlay flash-warn'></div>", unsafe_allow_html=True)
+            st.markdown(f"""
+                <div style='text-align:center;
+                            background:rgba(255, 152, 0, 0.2);
+                            padding:40px;
+                            border-radius:20px;
+                            border:2px solid #ff9800;'>
+                    <div style='font-size:40px;
+                                color:#ff9800;
+                                font-weight:bold;'>
+                        ⚠️ {res['mensaje']}
+                    </div>
+                    <div style='font-size:50px;
+                                font-weight:900;
+                                color:white;'>
+                        {res['nombre']}
+                    </div>
+                    <div style='font-size:25px;
+                                color:#f0f6fc;
+                                margin-top:10px;'>
+                        FAVOR DE PASAR A LA OFICINA
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+
+        else:  # ERROR
+            st.markdown("<div class='flash-overlay flash-error'></div>", unsafe_allow_html=True)
+            st.markdown(f"""
+                <div style='text-align:center;
+                            background:rgba(231, 76, 60, 0.2);
+                            padding:40px;
+                            border-radius:20px;
+                            border:2px solid #ff1744;'>
+                    <div style='font-size:50px;
+                                color:#ff1744;
+                                font-weight:bold;'>
+                        ❌ {res['mensaje']}
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+
+        time.sleep(3.5)
         st.session_state.resultado = None
         st.rerun()
         # ================= MÓDULO: CREDENCIAL DIGITAL =================
@@ -880,25 +963,6 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
