@@ -165,9 +165,10 @@ if st.sidebar.button("Cerrar Sesión"):
 
 # ================= MÓDULO: PUERTA DE ENTRADA =================
 # ================= MÓDULO: PUERTA DE ENTRADA (ACTUALIZADO) =================
+# ================= MÓDULO: PUERTA DE ENTRADA (SOLUCIÓN DEFINITIVA) =================
 elif menu == "Puerta de Entrada":
 
-    # --- CONTADOR DE ALUMNOS (NUEVO) ---
+    # 1. Función de conteo rápido
     def obtener_conteo_hoy():
         try:
             fecha_hoy = datetime.now(zona).strftime("%Y-%m-%d")
@@ -175,6 +176,7 @@ elif menu == "Puerta de Entrada":
             return res.count if res.count else 0
         except: return 0
 
+    # UI Superior
     presentes = obtener_conteo_hoy()
     st.markdown(f"""
         <div style='text-align: right; margin-bottom: -20px;'>
@@ -191,39 +193,34 @@ elif menu == "Puerta de Entrada":
         </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("<br>", unsafe_allow_html=True)
+    # Inicializar estados de sesión
+    if "resultado" not in st.session_state: st.session_state.resultado = None
+    if "procesando" not in st.session_state: st.session_state.procesando = False
 
-    if "resultado" not in st.session_state:
-        st.session_state.resultado = None
-
-    if "procesando" not in st.session_state:
-        st.session_state.procesando = False
-
-    # --- LÓGICA DE PROCESAMIENTO (TU LÓGICA INTACTA) ---
+    # --- FUNCIÓN DE PROCESAMIENTO MODIFICADA ---
     def ejecutar_procesamiento(mat_raw):
-        if not mat_raw or st.session_state.procesando:
-            return
-
-        st.session_state.procesando = True
+        # NO usamos st.session_state.procesando aquí para evitar bloqueos
         mat = normalizar_matricula(mat_raw)
-
         try:
-            al_query = supabase.table("alumnos").select("*, estatus").filter("matricula", "eq", mat).execute()
-            av_query = supabase.table("avisos").select("mensaje, prioridad").filter("matricula", "eq", mat).filter("activo", "eq", True).execute()
+            # Consultas a Supabase
+            al_query = supabase.table("alumnos").select("*, estatus").eq("matricula", mat).execute()
+            av_query = supabase.table("avisos").select("mensaje, prioridad").eq("matricula", mat).eq("activo", True).execute()
 
             if not al_query.data:
                 st.session_state.resultado = {"tipo": "error", "mensaje": "MATRÍCULA NO REGISTRADA"}
             else:
                 al = al_query.data[0]
                 if al.get("estatus") is False:
-                    st.session_state.resultado = {"tipo": "bloqueado", "nombre": al.get("nombre"), "mensaje": "ACCESO DENEGADO / BLOQUEADO"}
+                    st.session_state.resultado = {"tipo": "bloqueado", "nombre": al.get("nombre"), "mensaje": "ACCESO DENEGADO"}
                 else:
                     fecha_hoy = datetime.now(zona).strftime("%Y-%m-%d")
-                    entrada_existente = supabase.table("entradas").select("id").eq("matricula", mat).eq("fecha", fecha_hoy).execute()
-
-                    if entrada_existente.data:
-                        st.session_state.resultado = {"tipo": "warning", "nombre": al.get("nombre"), "mensaje": "ENTRADA YA REGISTRADA HOY"}
+                    # Verificar duplicado
+                    check = supabase.table("entradas").select("id").eq("matricula", mat).eq("fecha", fecha_hoy).execute()
+                    
+                    if check.data:
+                        st.session_state.resultado = {"tipo": "warning", "nombre": al.get("nombre"), "mensaje": "YA REGISTRADO HOY"}
                     else:
+                        # Insertar entrada
                         enviar("entradas", {
                             "fecha": fecha_hoy,
                             "hora": datetime.now(zona).strftime("%H:%M:%S"),
@@ -233,29 +230,36 @@ elif menu == "Puerta de Entrada":
                             "registro_por": user.get("usuario", "Sistema")
                         })
                         st.session_state.resultado = {
-                            "tipo": "ok",
-                            "nombre": al.get("nombre"),
-                            "grupo": al.get("grupo"),
-                            "aviso": av_query.data[0] if av_query.data else None
+                            "tipo": "ok", "nombre": al.get("nombre"), 
+                            "grupo": al.get("grupo"), "aviso": av_query.data[0] if av_query.data else None
                         }
         except Exception as e:
-            st.error(f"Error: {e}")
-        finally:
-            st.session_state.procesando = False
+            st.error(f"Error de base de datos: {e}")
 
-    # --- INTERFAZ DE ESCANEO CON ANIMACIÓN ---
-    def manejar_cambio():
-        if st.session_state.temp_input:
-            # Activamos el spinner visualmente
+    # --- INTERFAZ DE ENTRADA ---
+    st.markdown("<br>", unsafe_allow_html=True)
+    status_placeholder = st.empty()
+    
+    _, col_input, _ = st.columns([1, 2, 1])
+    with col_input:
+        # Usamos temp_input y procesamos el valor DESPUÉS de capturarlo
+        matricula_scaneada = st.text_input(
+            "ESCANEE SU CREDENCIAL AQUÍ",
+            key="temp_input",
+            placeholder="Esperando lectura láser..."
+        )
+
+        if matricula_scaneada:
+            # 1. Mostrar Spinner
             status_placeholder.markdown("""
                 <div style='text-align:center; margin-bottom: 20px;'>
                     <div class='spinner'></div>
-                    <p style='color:#1e8449; font-weight:bold; margin-top:10px;'>Verificando Identidad...</p>
+                    <p style='color:#00e676; font-weight:bold;'>Verificando...</p>
                 </div>
                 <style>
                     .spinner {
                         border: 4px solid rgba(255,255,255,0.1);
-                        width: 40px; height: 40px; border-radius: 50%;
+                        width: 30px; height: 30px; border-radius: 50%;
                         border-left-color: #00e676;
                         animation: spin 0.8s linear infinite; margin: auto;
                     }
@@ -263,59 +267,33 @@ elif menu == "Puerta de Entrada":
                 </style>
             """, unsafe_allow_html=True)
             
-            # Procesamos y limpiamos de forma segura
-            ejecutar_procesamiento(st.session_state.temp_input)
+            # 2. Ejecutar lógica
+            ejecutar_procesamiento(matricula_scaneada)
+            
+            # 3. Limpiar y refrescar inmediatamente
             st.session_state.temp_input = ""
+            st.rerun()
 
-    status_placeholder = st.empty()
-    _, col_input, _ = st.columns([1, 2, 1])
-    with col_input:
-        st.text_input(
-            "ESCANEE SU CREDENCIAL AQUÍ",
-            key="temp_input",
-            placeholder="Esperando lectura láser...",
-            on_change=manejar_cambio
-        )
-
-    # --- RESULTADOS VISUALES (TU DISEÑO ORIGINAL) ---
+    # --- MOSTRAR RESULTADOS (TUS TARJETAS ORIGINALES) ---
     if st.session_state.resultado:
         res = st.session_state.resultado
-
         if res["tipo"] == "ok":
             st.markdown("<div class='flash-overlay flash-ok'></div>", unsafe_allow_html=True)
-            st.markdown(f"""
-                <div style='text-align:center; background:rgba(30, 132, 73, 0.2); padding:40px; border-radius:20px; border:2px solid #00e676;'>
-                    <div style='font-size:30px; color:#00e676; font-weight:bold;'>✅ ACCESO PERMITIDO</div>
-                    <div style='font-size:60px; font-weight:900; color:white;'>{res['nombre']}</div>
-                    <div style='font-size:35px; color:#f0f6fc;'>GRUPO: {res['grupo']}</div>
-                </div>
-            """, unsafe_allow_html=True)
-
+            st.markdown(f"""<div style='text-align:center; background:rgba(30,132,73,0.2); padding:40px; border-radius:20px; border:2px solid #00e676;'><div style='font-size:30px; color:#00e676; font-weight:bold;'>✅ ACCESO PERMITIDO</div><div style='font-size:60px; font-weight:900; color:white;'>{res['nombre']}</div><div style='font-size:35px; color:#f0f6fc;'>GRUPO: {res['grupo']}</div></div>""", unsafe_allow_html=True)
             if res.get("aviso"):
                 av = res["aviso"]
-                color_aviso = "#ff1744" if av["prioridad"] == "ALTA" else "#ffeb3b"
-                st.markdown(f"""
-                    <div style='margin-top:20px; padding:20px; background:rgba(255,255,255,0.1); border-left:10px solid {color_aviso}; border-radius:10px;'>
-                        <h3 style='color:{color_aviso}; margin:0;'>⚠️ AVISO PRIORIDAD {av["prioridad"]}</h3>
-                        <p style='font-size:24px; color:white; margin:10px 0;'>{av["mensaje"]}</p>
-                    </div>
-                """, unsafe_allow_html=True)
-
+                color_av = "#ff1744" if av["prioridad"] == "ALTA" else "#ffeb3b"
+                st.markdown(f"<div style='margin-top:20px; padding:20px; background:rgba(255,255,255,0.1); border-left:10px solid {color_av}; border-radius:10px;'><h3 style='color:{color_av}; margin:0;'>⚠️ AVISO PRIORIDAD {av['prioridad']}</h3><p style='font-size:24px; color:white; margin:10px 0;'>{av['mensaje']}</p></div>", unsafe_allow_html=True)
+        
         elif res["tipo"] == "bloqueado":
             st.markdown("<div class='flash-overlay flash-warn'></div>", unsafe_allow_html=True)
-            st.markdown(f"""
-                <div style='text-align:center; background:rgba(255, 152, 0, 0.2); padding:40px; border-radius:20px; border:2px solid #ff9800;'>
-                    <div style='font-size:40px; color:#ff9800; font-weight:bold;'>⚠️ {res['mensaje']}</div>
-                    <div style='font-size:50px; font-weight:900; color:white;'>{res['nombre']}</div>
-                    <div style='font-size:25px; color:#f0f6fc; margin-top:10px;'>FAVOR DE PASAR A LA OFICINA</div>
-                </div>
-            """, unsafe_allow_html=True)
-
+            st.markdown(f"<div style='text-align:center; background:rgba(255,152,0,0.2); padding:40px; border-radius:20px; border:2px solid #ff9800;'><div style='font-size:40px; color:#ff9800; font-weight:bold;'>⚠️ {res['mensaje']}</div><div style='font-size:50px; font-weight:900; color:white;'>{res['nombre']}</div></div>", unsafe_allow_html=True)
+        
         else:
             st.markdown("<div class='flash-overlay flash-error'></div>", unsafe_allow_html=True)
-            st.markdown(f"<div style='text-align:center; background:rgba(231, 76, 60, 0.2); padding:40px; border-radius:20px; border:2px solid #ff1744;'><div style='font-size:50px; color:#ff1744; font-weight:bold;'>❌ {res['mensaje']}</div></div>", unsafe_allow_html=True)
+            st.error(f"❌ {res['mensaje']}")
 
-        time.sleep(3.2)
+        time.sleep(3.0)
         st.session_state.resultado = None
         st.rerun()
         # ================= MÓDULO: CREDENCIAL DIGITAL =================
@@ -914,6 +892,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
