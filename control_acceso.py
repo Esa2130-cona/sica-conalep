@@ -384,7 +384,6 @@ elif menu == "Credencial Digital":
 
             else:
                 st.success(f"✅ {alumno['nombre']} — GRUPO {alumno['grupo']}")
-
             else:
     st.success(f"¡Hola {alumno['nombre']}! Aquí está tu código de acceso:")
 
@@ -949,6 +948,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
