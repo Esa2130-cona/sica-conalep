@@ -6,6 +6,8 @@ import pytz
 import time
 import plotly.express as px
 from fpdf import FPDF
+import qrcode
+from io import BytesIO
 
 # ================= ESTILOS DE FLASH =================
 st.markdown("""
@@ -943,6 +945,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
