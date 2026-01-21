@@ -6,6 +6,36 @@ import pytz
 import time
 import plotly.express as px
 from fpdf import FPDF
+# ================= ESTILOS GLOBALES =================
+st.markdown("""
+<style>
+@keyframes flashGreen {
+    0% { background-color: rgba(0, 230, 118, 0.0); }
+    50% { background-color: rgba(0, 230, 118, 0.30); }
+    100% { background-color: rgba(0, 230, 118, 0.0); }
+}
+@keyframes flashAmber {
+    0% { background-color: rgba(255, 152, 0, 0.0); }
+    50% { background-color: rgba(255, 152, 0, 0.30); }
+    100% { background-color: rgba(255, 152, 0, 0.0); }
+}
+@keyframes flashRed {
+    0% { background-color: rgba(255, 23, 68, 0.0); }
+    50% { background-color: rgba(255, 23, 68, 0.30); }
+    100% { background-color: rgba(255, 23, 68, 0.0); }
+}
+.flash-ok {
+    animation: flashGreen 0.6s ease-in-out;
+}
+.flash-warn {
+    animation: flashAmber 0.6s ease-in-out;
+}
+.flash-error {
+    animation: flashRed 0.6s ease-in-out;
+}
+</style>
+""", unsafe_allow_html=True) 
+
 
 # ================= CONFIGURACIÓN INICIAL =================
 st.set_page_config(page_title="SICA CONALEP CUAUTLA", layout="wide")
@@ -116,34 +146,7 @@ if st.sidebar.button("Cerrar Sesión"):
     st.rerun()
 
 # ================= MÓDULO: PUERTA DE ENTRADA =================
-st.markdown("""
-<style>
-@keyframes flashGreen {
-    0% { background-color: rgba(0, 230, 118, 0.0); }
-    50% { background-color: rgba(0, 230, 118, 0.30); }
-    100% { background-color: rgba(0, 230, 118, 0.0); }
-}
-@keyframes flashAmber {
-    0% { background-color: rgba(255, 152, 0, 0.0); }
-    50% { background-color: rgba(255, 152, 0, 0.30); }
-    100% { background-color: rgba(255, 152, 0, 0.0); }
-}
-@keyframes flashRed {
-    0% { background-color: rgba(255, 23, 68, 0.0); }
-    50% { background-color: rgba(255, 23, 68, 0.30); }
-    100% { background-color: rgba(255, 23, 68, 0.0); }
-}
-.flash-ok {
-    animation: flashGreen 0.6s ease-in-out;
-}
-.flash-warn {
-    animation: flashAmber 0.6s ease-in-out;
-}
-.flash-error {
-    animation: flashRed 0.6s ease-in-out;
-}
-</style>
-""", unsafe_allow_html=True) elif menu == "Puerta de Entrada":
+elif menu == "Puerta de Entrada":
 
     st.markdown("""
         <div class='scan-card'>
@@ -863,6 +866,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
