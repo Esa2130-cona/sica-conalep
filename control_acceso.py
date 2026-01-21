@@ -389,8 +389,7 @@ elif menu == "Credencial Digital":
 
 
 # ================= MÓDULO: REPORTES =================
-
-    elif menu == "Reportes":
+elif menu == "Reportes":
     st.title("🚨 Gestión de Reportes")
     
     # TRUCO PARA LIMPIAR TODO: Usamos un contador en el session_state
@@ -924,6 +923,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
