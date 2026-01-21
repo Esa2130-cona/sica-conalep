@@ -164,6 +164,36 @@ if st.sidebar.button("Cerrar Sesión"):
     st.rerun()
 
 # ================= MÓDULO: PUERTA DE ENTRADA =================
+def procesar_credencial(mat_raw):
+    if not mat_raw or st.session_state.procesando:
+        return
+
+    fecha_hoy = datetime.now(zona).strftime("%Y-%m-%d")
+    mat = normalizar_matricula(mat_raw)
+
+    entrada = supabase.table("entradas") \
+        .select("id") \
+        .eq("matricula", mat) \
+        .eq("fecha", fecha_hoy) \
+        .execute()
+
+    salida = supabase.table("salidas") \
+        .select("id") \
+        .eq("matricula", mat) \
+        .eq("fecha", fecha_hoy) \
+        .execute()
+
+    if not entrada.data:
+        ejecutar_procesamiento(mat)
+    elif not salida.data:
+        ejecutar_salida(mat)
+    else:
+        st.session_state.resultado = {
+            "tipo": "warning",
+            "mensaje": "ENTRADA Y SALIDA YA REGISTRADAS HOY"
+        }
+
+# ================= MÓDULO: PUERTA DE ENTRADA =================
 elif menu == "Puerta de Entrada":
 
     st.markdown("""
@@ -188,9 +218,9 @@ elif menu == "Puerta de Entrada":
             "ESCANEE SU CREDENCIAL AQUÍ (LECTOR LÁSER)",
             key="scan_input",
             placeholder="Esperando lectura...",
-            on_change=lambda: ejecutar_procesamiento(
-                st.session_state.scan_input
-            )
+            on_change=lambda: procesar_credencial(
+    st.session_state.scan_input
+)
         )
 
     def ejecutar_procesamiento(mat_raw):
@@ -1107,6 +1137,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
