@@ -258,17 +258,41 @@ elif menu == "Puerta de Entrada":
             st.session_state.scan_input = ""
             st.session_state.procesando = False
 
-    # --- INTERFAZ DE ESCANEO (LECTOR FÍSICO) ---
+    # --- INTERFAZ DE ESCANEO ---
     _, col_input, _ = st.columns([1, 2, 1])
     with col_input:
-        st.text_input(
-            "ESCANEE SU CREDENCIAL AQUÍ (LECTOR LÁSER)",
+        # Contenedor vacío para la animación
+        status_placeholder = st.empty()
+        
+        matricula_leida = st.text_input(
+            "ESCANEE SU CREDENCIAL AQUÍ",
             key="scan_input",
-            placeholder="Esperando lectura...",
-            on_change=lambda: ejecutar_procesamiento(
-                st.session_state.scan_input
-            )
+            on_change=lambda: status_placeholder.markdown("""
+                <div style='text-align:center;'>
+                    <div class='spinner'></div>
+                    <p style='color:#1e8449; font-weight:bold;'>Verificando Identidad...</p>
+                </div>
+                <style>
+                    .spinner {
+                        border: 4px solid rgba(255,255,255,0.1);
+                        width: 36px;
+                        height: 36px;
+                        border-radius: 50%;
+                        border-left-color: #1e8449;
+                        animation: spin 1s linear infinite;
+                        margin: auto;
+                    }
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                </style>
+            """, unsafe_allow_html=True)
         )
+        
+        # Llamar a la función después de que el placeholder se active
+        if matricula_leida:
+            ejecutar_procesamiento(matricula_leida)
 
     # --- RESULTADOS VISUALES (DISEÑO ORIGINAL) ---
     if st.session_state.resultado:
@@ -963,6 +987,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
