@@ -180,6 +180,17 @@ elif menu == "Puerta de Entrada":
 
     if "procesando" not in st.session_state:
         st.session_state.procesando = False
+        # --- INPUT DE MATRÍCULA (SIEMPRE VISIBLE) --
+_, col_input, _ = st.columns([1, 2, 1])
+    with col_input:
+    st.text_input(
+        "ESCANEE SU CREDENCIAL AQUÍ (LECTOR LÁSER)",
+        key="scan_input",
+        placeholder="Esperando lectura...",
+        on_change=lambda: ejecutar_procesamiento(
+            st.session_state.scan_input
+        )
+    )
 
     def ejecutar_procesamiento(mat_raw):
         if not mat_raw or st.session_state.procesando:
@@ -344,8 +355,7 @@ def ejecutar_salida(mat_raw):
         st.session_state.scan_input = ""
         st.session_state.procesando = False
 
-    # --- INTERFAZ DE ESCANEO (LECTOR FÍSICO) ---
-    
+  
 
     # --- RESULTADOS VISUALES (DISEÑO ORIGINAL) ---
     if st.session_state.resultado:
@@ -1096,6 +1106,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
