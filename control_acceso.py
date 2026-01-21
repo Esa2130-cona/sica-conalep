@@ -163,7 +163,7 @@ if st.sidebar.button("Cerrar Sesión"):
     st.session_state.user = None
     st.rerun()
 
-# ================= MÓDULO: PUERTA DE ENTRADA =================
+# ================= MÓDULO: =================
 def procesar_credencial(mat_raw):
     if not mat_raw or st.session_state.procesando:
         return
@@ -214,14 +214,15 @@ elif menu == "Puerta de Entrada":
 
     # --- INPUT DE MATRÍCULA (SOLO AQUÍ) ---
     _, col_input, _ = st.columns([1, 2, 1])
+
     with col_input:
         st.text_input(
             "ESCANEE SU CREDENCIAL AQUÍ (LECTOR LÁSER)",
             key="scan_input",
             placeholder="Esperando lectura...",
             on_change=lambda: procesar_credencial(
-    st.session_state.scan_input
-)
+                st.session_state.scan_input
+            )
         )
 
     def ejecutar_procesamiento(mat_raw):
@@ -1138,6 +1139,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
