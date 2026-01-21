@@ -154,18 +154,21 @@ elif menu == "Puerta de Entrada":
                     })
                     st.session_state.resultado = {"tipo": "ok", "nombre": al.get("nombre"), "grupo": al.get("grupo"), "aviso": av_query.data[0] if av_query.data else None}
         except Exception as e: st.error(f"Error: {e}")
+ =
+    # --- NUEVA SECCIÓN DE ESCANEO HÍBRIDO ---
+    _, col_central, _ = st.columns([1, 2, 1])
+    
+    with col_central:
+        # 1. Opción para Celular (Cámara)
+        with st.expander("📷 USAR CÁMARA DEL CELULAR"):
+            foto_credencial = st.camera_input("Captura el código de la credencial")
+            if foto_credencial:
+                st.info("Foto capturada. Nota: El lector láser es necesario para procesar el texto automáticamente. Esta foto sirve como respaldo visual.")
 
-    # --- INTERFAZ HÍBRIDA (LECTOR + CÁMARA) ---
-    _, col_input, _ = st.columns([1, 2, 1])
-    with col_input:
-        # 1. ESCÁNER DE CÁMARA (Para Celular)
-        barcode_data = streamlit_barcode_reader(instructions="Escanee el código de barras con la cámara")
-        if barcode_data:
-            procesar_matricula(barcode_data)
-        
-        # 2. INPUT DE TEXTO (Para Lector Físico)
-        st.text_input("O ESCANEE CON LECTOR FÍSICO AQUÍ", key="scan_input", 
-                     on_change=lambda: procesar_matricula(st.session_state.scan_input), 
+        # 2. Entrada para Lector Físico (No se mueve nada de tu lógica original)
+        st.text_input("ESCANEE SU CREDENCIAL AQUÍ", 
+                     key="scan_input", 
+                     on_change=procesar_scan, 
                      placeholder="Esperando lectura...")
 
     # --- RESULTADOS VISUALES ACTUALIZADOS ---
@@ -738,6 +741,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
