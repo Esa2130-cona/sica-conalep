@@ -115,9 +115,9 @@ if st.sidebar.button("Cerrar Sesión"):
     st.session_state.user = None
     st.rerun()
 
-# ================= MÓDULO: PUERTA DE ENTRADA =================
+# ================= MÓDULO: PUERTA DE ENTRADA (RESTAURADO) =================
 elif menu == "Puerta de Entrada":
-    from streamlit_qr_barcode_scanner import qrcode_scanner
+    from streamlit_camera_qrcode_scanner import qrcode_scanner
 
     st.markdown("""
         <div class='scan-card'>
@@ -131,10 +131,9 @@ elif menu == "Puerta de Entrada":
     if "resultado" not in st.session_state: 
         st.session_state.resultado = None
 
-    # Función unificada (corregido el nombre para que coincida abajo)
-    def ejecutar_entrada(mat_detectada):
-        mat = normalizar_matricula(mat_detectada)
-        if not mat: return
+    def ejecutar_procesamiento(mat_raw):
+        if not mat_raw: return
+        mat = normalizar_matricula(mat_raw)
         try:
             al_query = supabase.table("alumnos").select("*, estatus").filter("matricula", "eq", mat).execute()
             av_query = supabase.table("avisos").select("mensaje, prioridad").filter("matricula", "eq", mat).filter("activo", "eq", True).execute()
@@ -144,7 +143,11 @@ elif menu == "Puerta de Entrada":
             else:
                 al = al_query.data[0]
                 if al.get("estatus") == False:
-                    st.session_state.resultado = {"tipo": "bloqueado", "nombre": al.get("nombre"), "mensaje": "ACCESO DENEGADO / BLOQUEADO"}
+                    st.session_state.resultado = {
+                        "tipo": "bloqueado", 
+                        "nombre": al.get("nombre"),
+                        "mensaje": "ACCESO DENEGADO / BLOQUEADO"
+                    }
                 else:
                     enviar("entradas", {
                         "fecha": datetime.now(zona).strftime("%Y-%m-%d"), 
@@ -154,28 +157,30 @@ elif menu == "Puerta de Entrada":
                         "grupo": al.get("grupo", "N/A"),
                         "registro_por": user.get("usuario", "Sistema")
                     })
-                    st.session_state.resultado = {"tipo": "ok", "nombre": al.get("nombre"), "grupo": al.get("grupo"), "aviso": av_query.data[0] if av_query.data else None}
+                    st.session_state.resultado = {
+                        "tipo": "ok", 
+                        "nombre": al.get("nombre"), 
+                        "grupo": al.get("grupo"), 
+                        "aviso": av_query.data[0] if av_query.data else None
+                    }
         except Exception as e: st.error(f"Error: {e}")
 
-    # --- SECCIÓN DE ESCANEO ---
-    _, col_central, _ = st.columns([1, 2, 1])
-    
-    with col_central:
-        # 1. ESCÁNER DE CÁMARA (Real para celulares)
-        with st.expander("📷 ABRIR ESCÁNER (CELULAR)"):
-            # Este componente lee el código y devuelve el texto automáticamente
-            barcode_captured = qrcode_scanner(key="scanner_puerta")
-            if barcode_captured:
-                ejecutar_entrada(barcode_captured)
-
-        # 2. LECTOR FÍSICO (Input de texto)
-        # Cambié on_change para que use la función correcta 'ejecutar_entrada'
-        st.text_input("ESCANEE SU CREDENCIAL AQUÍ", 
+    # --- INTERFAZ DUAL (CÁMARA + LECTOR) ---
+    _, col_input, _ = st.columns([1, 2, 1])
+    with col_input:
+        # Escáner para Celular
+        with st.expander("📷 ACTIVAR CÁMARA PARA ESCANEAR"):
+            cam_data = qrcode_scanner(key="scanner_celular")
+            if cam_data:
+                ejecutar_procesamiento(cam_data)
+        
+        # Lector Físico
+        st.text_input("ESCANEE SU CREDENCIAL AQUÍ (LECTOR LÁSER)", 
                      key="scan_input", 
-                     on_change=lambda: ejecutar_entrada(st.session_state.scan_input), 
+                     on_change=lambda: ejecutar_procesamiento(st.session_state.scan_input), 
                      placeholder="Esperando lectura...")
 
-    # --- RESULTADOS VISUALES ---
+    # --- RESULTADOS VISUALES (TU DISEÑO ORIGINAL RESTAURADO) ---
     if st.session_state.resultado:
         res = st.session_state.resultado
         
@@ -185,26 +190,38 @@ elif menu == "Puerta de Entrada":
                 <div style='text-align:center; background:rgba(30, 132, 73, 0.2); padding:40px; border-radius:20px; border:2px solid #00e676;'>
                     <div style='font-size:30px; color:#00e676; font-weight:bold;'>✅ ACCESO PERMITIDO</div>
                     <div style='font-size:60px; font-weight:900; color:white;'>{res['nombre']}</div>
-                    <div style='font-size:35px; color:#f0f6fc;'>{res['grupo']}</div>
+                    <div style='font-size:35px; color:#f0f6fc;'>GRUPO: {res['grupo']}</div>
                 </div>
             """, unsafe_allow_html=True)
+            
+            # --- SECCIÓN DE AVISOS ORIGINAL ---
+            if res.get("aviso"):
+                av = res["aviso"]
+                color_aviso = "#ff1744" if av['prioridad'] == "ALTA" else "#ffeb3b"
+                st.markdown(f"""
+                    <div style='margin-top:20px; padding:20px; background:rgba(255,255,255,0.1); border-left:10px solid {color_aviso}; border-radius:10px;'>
+                        <h3 style='color:{color_aviso}; margin:0;'>⚠️ AVISO PRIORIDAD {av['prioridad']}</h3>
+                        <p style='font-size:24px; color:white; margin:10px 0;'>{av['mensaje']}</p>
+                    </div>
+                """, unsafe_allow_html=True)
 
         elif res["tipo"] == "bloqueado":
             st.markdown(f"""
                 <div style='text-align:center; background:rgba(255, 152, 0, 0.2); padding:40px; border-radius:20px; border:2px solid #ff9800;'>
                     <div style='font-size:40px; color:#ff9800; font-weight:bold;'>⚠️ {res['mensaje']}</div>
                     <div style='font-size:50px; font-weight:900; color:white;'>{res['nombre']}</div>
+                    <div style='font-size:25px; color:#f0f6fc; margin-top:10px;'>FAVOR DE PASAR A LA OFICINA</div>
                 </div>
             """, unsafe_allow_html=True)
 
-        else:
+        else: # Error
             st.markdown(f"""
                 <div style='text-align:center; background:rgba(231, 76, 60, 0.2); padding:40px; border-radius:20px; border:2px solid #ff1744;'>
                     <div style='font-size:50px; color:#ff1744; font-weight:bold;'>❌ {res['mensaje']}</div>
                 </div>
             """, unsafe_allow_html=True)
         
-        time.sleep(3.0)
+        time.sleep(3.5)
         st.session_state.resultado = None
         st.rerun()
 # ================= MÓDULO: REPORTES =================
@@ -742,6 +759,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
