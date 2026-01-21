@@ -404,9 +404,9 @@ elif menu == "Credencial Digital":
                 img.save(buf, format="PNG")
 
                 st.image(
-                    buf,
+                    buf, width=220
                     caption="Código válido SOLO para hoy",
-                    use_container_width=True
+                    
                 )
 
                 st.warning("⚠️ Uso indebido de esta credencial será sancionado")
@@ -945,6 +945,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
