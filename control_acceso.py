@@ -194,6 +194,7 @@ def procesar_credencial(mat_raw):
         }
 
 # ================= MÓDULO: PUERTA DE ENTRADA =================
+    
 elif menu == "Puerta de Entrada":
 
     st.markdown("""
@@ -1137,6 +1138,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
