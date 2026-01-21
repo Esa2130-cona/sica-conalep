@@ -347,7 +347,7 @@ def ejecutar_salida(mat_raw):
     # --- INTERFAZ DE ESCANEO (LECTOR FÍSICO) ---
     # --- INPUT DE MATRÍCULA (SIEMPRE VISIBLE) --
 _, col_input, _ = st.columns([1, 2, 1])
-with col_input:
+    with col_input:
     st.text_input(
         "ESCANEE SU CREDENCIAL AQUÍ (LECTOR LÁSER)",
         key="scan_input",
@@ -1106,6 +1106,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
