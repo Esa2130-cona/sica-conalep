@@ -479,7 +479,12 @@ elif res["tipo"] == "salida_ok":
         </div>
     """, unsafe_allow_html=True)
 else:
-    # ERROR 
+    st.markdown("<div class='flash-overlay flash-error'></div>", unsafe_allow_html=True)
+        st.markdown(f""" ... """, unsafe_allow_html=True)
+
+    time.sleep(3.5)
+    st.session_state.resultado = None
+    st.rerun() 
         # ================= MÓDULO: CREDENCIAL DIGITAL =================
 elif menu == "Credencial Digital":
 
@@ -1076,6 +1081,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
