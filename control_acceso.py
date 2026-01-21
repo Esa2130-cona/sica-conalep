@@ -217,8 +217,26 @@ elif menu == "Puerta de Entrada":
                     }
 
                 else:
+                    # ================= EVITAR DOBLE ENTRADA EL MISMO DÍA =================
+                    fecha_hoy = datetime.now(zona).strftime("%Y-%m-%d")
+
+                    entrada_existente = supabase.table("entradas") \
+                        .select("id") \
+                        .eq("matricula", mat) \
+                        .eq("fecha", fecha_hoy) \
+                        .execute()
+
+                    if entrada_existente.data:
+                        st.session_state.resultado = {
+                            "tipo": "warning",
+                            "nombre": al.get("nombre"),
+                            "mensaje": "ENTRADA YA REGISTRADA HOY"
+                        }
+                        return
+                    # =====================================================================
+
                     enviar("entradas", {
-                        "fecha": datetime.now(zona).strftime("%Y-%m-%d"),
+                        "fecha": fecha_hoy,
                         "hora": datetime.now(zona).strftime("%H:%M:%S"),
                         "matricula": mat,
                         "nombre": al.get("nombre", "N/A"),
@@ -945,6 +963,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
