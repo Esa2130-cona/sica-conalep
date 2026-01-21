@@ -117,73 +117,88 @@ if st.sidebar.button("Cerrar Sesión"):
 
 # ================= MÓDULO: PUERTA DE ENTRADA (RESTAURADO) =================
 elif menu == "Puerta de Entrada":
-    from streamlit_camera_qrcode_scanner import qrcode_scanner
-
     st.markdown("""
         <div class='scan-card'>
             <div class='scan-subtitle'>SICA</div>
             <div class='scan-title'>SISTEMA DE ACCESO<br>CONALEP CUAUTLA</div>
         </div>
     """, unsafe_allow_html=True)
-    
-    st.markdown("<br>", unsafe_allow_html=True)
 
-    if "resultado" not in st.session_state: 
+    if "resultado" not in st.session_state:
         st.session_state.resultado = None
 
+    if "procesando" not in st.session_state:
+        st.session_state.procesando = False
+
     def ejecutar_procesamiento(mat_raw):
-        if not mat_raw: return
+        if not mat_raw or st.session_state.procesando:
+            return
+
+        st.session_state.procesando = True
         mat = normalizar_matricula(mat_raw)
+
         try:
-            al_query = supabase.table("alumnos").select("*, estatus").filter("matricula", "eq", mat).execute()
-            av_query = supabase.table("avisos").select("mensaje, prioridad").filter("matricula", "eq", mat).filter("activo", "eq", True).execute()
-            
+            al_query = supabase.table("alumnos").select("*, estatus").eq("matricula", mat).execute()
+            av_query = supabase.table("avisos").select("mensaje, prioridad").eq("matricula", mat).eq("activo", True).execute()
+
             if not al_query.data:
                 st.session_state.resultado = {"tipo": "error", "mensaje": "MATRÍCULA NO REGISTRADA"}
+
             else:
                 al = al_query.data[0]
-                if al.get("estatus") == False:
+
+                if al.get("estatus") is False:
                     st.session_state.resultado = {
-                        "tipo": "bloqueado", 
+                        "tipo": "bloqueado",
                         "nombre": al.get("nombre"),
                         "mensaje": "ACCESO DENEGADO / BLOQUEADO"
                     }
+
                 else:
                     enviar("entradas", {
-                        "fecha": datetime.now(zona).strftime("%Y-%m-%d"), 
+                        "fecha": datetime.now(zona).strftime("%Y-%m-%d"),
                         "hora": datetime.now(zona).strftime("%H:%M:%S"),
-                        "matricula": mat, 
-                        "nombre": al.get("nombre", "N/A"), 
+                        "matricula": mat,
+                        "nombre": al.get("nombre", "N/A"),
                         "grupo": al.get("grupo", "N/A"),
                         "registro_por": user.get("usuario", "Sistema")
                     })
+
                     st.session_state.resultado = {
-                        "tipo": "ok", 
-                        "nombre": al.get("nombre"), 
-                        "grupo": al.get("grupo"), 
+                        "tipo": "ok",
+                        "nombre": al.get("nombre"),
+                        "grupo": al.get("grupo"),
                         "aviso": av_query.data[0] if av_query.data else None
                     }
-        except Exception as e: st.error(f"Error: {e}")
 
-    # --- INTERFAZ DUAL (CÁMARA + LECTOR) ---
+        except Exception as e:
+            st.error(f"Error: {e}")
+
+        finally:
+            st.session_state.scan_input = ""
+            st.session_state.procesando = False
+
     _, col_input, _ = st.columns([1, 2, 1])
     with col_input:
-        # Escáner para Celular
-        with st.expander("📷 ACTIVAR CÁMARA PARA ESCANEAR"):
-            cam_data = qrcode_scanner(key="scanner_celular")
-            if cam_data:
-                ejecutar_procesamiento(cam_data)
-        
-        # Lector Físico
-        st.text_input("ESCANEE SU CREDENCIAL AQUÍ (LECTOR LÁSER)", 
-                     key="scan_input", 
-                     on_change=lambda: ejecutar_procesamiento(st.session_state.scan_input), 
-                     placeholder="Esperando lectura...")
 
-    # --- RESULTADOS VISUALES (TU DISEÑO ORIGINAL RESTAURADO) ---
+        # 📷 CÁMARA (CELULAR)
+        with st.expander("📷 ACTIVAR CÁMARA PARA ESCANEAR"):
+            foto = st.camera_input("Escanee código QR")
+            if foto:
+                st.info("Use QR (la cámara no lee bien código de barras)")
+
+        # 🔫 LECTOR FÍSICO (NO SE TOCA)
+        st.text_input(
+            "ESCANEE SU CREDENCIAL AQUÍ (LECTOR LÁSER)",
+            key="scan_input",
+            placeholder="Esperando lectura...",
+            on_change=lambda: ejecutar_procesamiento(st.session_state.scan_input)
+        )
+
+    # --- RESULTADOS VISUALES (100% TU DISEÑO) ---
     if st.session_state.resultado:
         res = st.session_state.resultado
-        
+
         if res["tipo"] == "ok":
             st.balloons()
             st.markdown(f"""
@@ -193,8 +208,7 @@ elif menu == "Puerta de Entrada":
                     <div style='font-size:35px; color:#f0f6fc;'>GRUPO: {res['grupo']}</div>
                 </div>
             """, unsafe_allow_html=True)
-            
-            # --- SECCIÓN DE AVISOS ORIGINAL ---
+
             if res.get("aviso"):
                 av = res["aviso"]
                 color_aviso = "#ff1744" if av['prioridad'] == "ALTA" else "#ffeb3b"
@@ -214,13 +228,13 @@ elif menu == "Puerta de Entrada":
                 </div>
             """, unsafe_allow_html=True)
 
-        else: # Error
+        else:
             st.markdown(f"""
                 <div style='text-align:center; background:rgba(231, 76, 60, 0.2); padding:40px; border-radius:20px; border:2px solid #ff1744;'>
                     <div style='font-size:50px; color:#ff1744; font-weight:bold;'>❌ {res['mensaje']}</div>
                 </div>
             """, unsafe_allow_html=True)
-        
+
         time.sleep(3.5)
         st.session_state.resultado = None
         st.rerun()
@@ -759,6 +773,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
