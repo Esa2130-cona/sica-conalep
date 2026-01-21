@@ -6,7 +6,7 @@ import pytz
 import time
 import plotly.express as px
 from fpdf import FPDF
-
+from streamlit_barcode_reader import streamlit_barcode_reader
 # ================= CONFIGURACIÓN INICIAL =================
 st.set_page_config(page_title="SICA CONALEP CUAUTLA", layout="wide")
 zona = pytz.timezone("America/Mexico_City")
@@ -128,12 +128,11 @@ elif menu == "Puerta de Entrada":
     if "resultado" not in st.session_state: 
         st.session_state.resultado = None
 
-    def procesar_scan():
-        mat = normalizar_matricula(st.session_state.scan_input)
-        st.session_state.scan_input = ""
+    # Función unificada para procesar la matrícula (venga de cámara o lector)
+    def procesar_matricula(mat_detectada):
+        mat = normalizar_matricula(mat_detectada)
         if not mat: return
         try:
-            # --- CAMBIO AQUÍ: Agregamos 'estatus' a la consulta ---
             al_query = supabase.table("alumnos").select("*, estatus").filter("matricula", "eq", mat).execute()
             av_query = supabase.table("avisos").select("mensaje, prioridad").filter("matricula", "eq", mat).filter("activo", "eq", True).execute()
             
@@ -141,17 +140,9 @@ elif menu == "Puerta de Entrada":
                 st.session_state.resultado = {"tipo": "error", "mensaje": "MATRÍCULA NO REGISTRADA"}
             else:
                 al = al_query.data[0]
-                
-                # --- CAMBIO AQUÍ: Validación de Bloqueo ---
-                # Asumimos que en Supabase la columna 'estatus' es boolean (true = activo)
                 if al.get("estatus") == False:
-                    st.session_state.resultado = {
-                        "tipo": "bloqueado", 
-                        "nombre": al.get("nombre"),
-                        "mensaje": "ACCESO DENEGADO / BLOQUEADO"
-                    }
+                    st.session_state.resultado = {"tipo": "bloqueado", "nombre": al.get("nombre"), "mensaje": "ACCESO DENEGADO / BLOQUEADO"}
                 else:
-                    # Si está activo, procede con el registro normal
                     enviar("entradas", {
                         "fecha": datetime.now(zona).strftime("%Y-%m-%d"), 
                         "hora": datetime.now(zona).strftime("%H:%M:%S"),
@@ -160,17 +151,21 @@ elif menu == "Puerta de Entrada":
                         "grupo": al.get("grupo", "N/A"),
                         "registro_por": user.get("usuario", "Sistema")
                     })
-                    st.session_state.resultado = {
-                        "tipo": "ok", 
-                        "nombre": al.get("nombre"), 
-                        "grupo": al.get("grupo"), 
-                        "aviso": av_query.data[0] if av_query.data else None
-                    }
+                    st.session_state.resultado = {"tipo": "ok", "nombre": al.get("nombre"), "grupo": al.get("grupo"), "aviso": av_query.data[0] if av_query.data else None}
         except Exception as e: st.error(f"Error: {e}")
 
+    # --- INTERFAZ HÍBRIDA (LECTOR + CÁMARA) ---
     _, col_input, _ = st.columns([1, 2, 1])
     with col_input:
-        st.text_input("ESCANEE SU CREDENCIAL AQUÍ", key="scan_input", on_change=procesar_scan, placeholder="Esperando lectura...")
+        # 1. ESCÁNER DE CÁMARA (Para Celular)
+        barcode_data = streamlit_barcode_reader(instructions="Escanee el código de barras con la cámara")
+        if barcode_data:
+            procesar_matricula(barcode_data)
+        
+        # 2. INPUT DE TEXTO (Para Lector Físico)
+        st.text_input("O ESCANEE CON LECTOR FÍSICO AQUÍ", key="scan_input", 
+                     on_change=lambda: procesar_matricula(st.session_state.scan_input), 
+                     placeholder="Esperando lectura...")
 
     # --- RESULTADOS VISUALES ACTUALIZADOS ---
     if st.session_state.resultado:
@@ -742,6 +737,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
