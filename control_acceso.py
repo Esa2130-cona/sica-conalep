@@ -115,14 +115,17 @@ if st.sidebar.button("Cerrar Sesión"):
     st.session_state.user = None
     st.rerun()
 
-# ================= MÓDULO: PUERTA DE ENTRADA (RESTAURADO) =================
+# ================= MÓDULO: PUERTA DE ENTRADA =================
 elif menu == "Puerta de Entrada":
+
     st.markdown("""
         <div class='scan-card'>
             <div class='scan-subtitle'>SICA</div>
             <div class='scan-title'>SISTEMA DE ACCESO<br>CONALEP CUAUTLA</div>
         </div>
     """, unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
 
     if "resultado" not in st.session_state:
         st.session_state.resultado = None
@@ -138,11 +141,22 @@ elif menu == "Puerta de Entrada":
         mat = normalizar_matricula(mat_raw)
 
         try:
-            al_query = supabase.table("alumnos").select("*, estatus").eq("matricula", mat).execute()
-            av_query = supabase.table("avisos").select("mensaje, prioridad").eq("matricula", mat).eq("activo", True).execute()
+            al_query = supabase.table("alumnos") \
+                .select("*, estatus") \
+                .filter("matricula", "eq", mat) \
+                .execute()
+
+            av_query = supabase.table("avisos") \
+                .select("mensaje, prioridad") \
+                .filter("matricula", "eq", mat) \
+                .filter("activo", "eq", True) \
+                .execute()
 
             if not al_query.data:
-                st.session_state.resultado = {"tipo": "error", "mensaje": "MATRÍCULA NO REGISTRADA"}
+                st.session_state.resultado = {
+                    "tipo": "error",
+                    "mensaje": "MATRÍCULA NO REGISTRADA"
+                }
 
             else:
                 al = al_query.data[0]
@@ -178,60 +192,107 @@ elif menu == "Puerta de Entrada":
             st.session_state.scan_input = ""
             st.session_state.procesando = False
 
+    # --- INTERFAZ DE ESCANEO (LECTOR FÍSICO) ---
     _, col_input, _ = st.columns([1, 2, 1])
     with col_input:
-
-        # 📷 CÁMARA (CELULAR)
-        with st.expander("📷 ACTIVAR CÁMARA PARA ESCANEAR"):
-            foto = st.camera_input("Escanee código QR")
-            if foto:
-                st.info("Use QR (la cámara no lee bien código de barras)")
-
-        # 🔫 LECTOR FÍSICO (NO SE TOCA)
         st.text_input(
             "ESCANEE SU CREDENCIAL AQUÍ (LECTOR LÁSER)",
             key="scan_input",
             placeholder="Esperando lectura...",
-            on_change=lambda: ejecutar_procesamiento(st.session_state.scan_input)
+            on_change=lambda: ejecutar_procesamiento(
+                st.session_state.scan_input
+            )
         )
 
-    # --- RESULTADOS VISUALES (100% TU DISEÑO) ---
+    # --- RESULTADOS VISUALES (DISEÑO ORIGINAL) ---
     if st.session_state.resultado:
         res = st.session_state.resultado
 
         if res["tipo"] == "ok":
             st.balloons()
             st.markdown(f"""
-                <div style='text-align:center; background:rgba(30, 132, 73, 0.2); padding:40px; border-radius:20px; border:2px solid #00e676;'>
-                    <div style='font-size:30px; color:#00e676; font-weight:bold;'>✅ ACCESO PERMITIDO</div>
-                    <div style='font-size:60px; font-weight:900; color:white;'>{res['nombre']}</div>
-                    <div style='font-size:35px; color:#f0f6fc;'>GRUPO: {res['grupo']}</div>
+                <div style='text-align:center;
+                            background:rgba(30, 132, 73, 0.2);
+                            padding:40px;
+                            border-radius:20px;
+                            border:2px solid #00e676;'>
+                    <div style='font-size:30px;
+                                color:#00e676;
+                                font-weight:bold;'>
+                        ✅ ACCESO PERMITIDO
+                    </div>
+                    <div style='font-size:60px;
+                                font-weight:900;
+                                color:white;'>
+                        {res['nombre']}
+                    </div>
+                    <div style='font-size:35px;
+                                color:#f0f6fc;'>
+                        GRUPO: {res['grupo']}
+                    </div>
                 </div>
             """, unsafe_allow_html=True)
 
+            # --- AVISOS ---
             if res.get("aviso"):
                 av = res["aviso"]
-                color_aviso = "#ff1744" if av['prioridad'] == "ALTA" else "#ffeb3b"
+                color_aviso = "#ff1744" if av["prioridad"] == "ALTA" else "#ffeb3b"
+
                 st.markdown(f"""
-                    <div style='margin-top:20px; padding:20px; background:rgba(255,255,255,0.1); border-left:10px solid {color_aviso}; border-radius:10px;'>
-                        <h3 style='color:{color_aviso}; margin:0;'>⚠️ AVISO PRIORIDAD {av['prioridad']}</h3>
-                        <p style='font-size:24px; color:white; margin:10px 0;'>{av['mensaje']}</p>
+                    <div style='margin-top:20px;
+                                padding:20px;
+                                background:rgba(255,255,255,0.1);
+                                border-left:10px solid {color_aviso};
+                                border-radius:10px;'>
+                        <h3 style='color:{color_aviso};
+                                   margin:0;'>
+                            ⚠️ AVISO PRIORIDAD {av["prioridad"]}
+                        </h3>
+                        <p style='font-size:24px;
+                                  color:white;
+                                  margin:10px 0;'>
+                            {av["mensaje"]}
+                        </p>
                     </div>
                 """, unsafe_allow_html=True)
 
         elif res["tipo"] == "bloqueado":
             st.markdown(f"""
-                <div style='text-align:center; background:rgba(255, 152, 0, 0.2); padding:40px; border-radius:20px; border:2px solid #ff9800;'>
-                    <div style='font-size:40px; color:#ff9800; font-weight:bold;'>⚠️ {res['mensaje']}</div>
-                    <div style='font-size:50px; font-weight:900; color:white;'>{res['nombre']}</div>
-                    <div style='font-size:25px; color:#f0f6fc; margin-top:10px;'>FAVOR DE PASAR A LA OFICINA</div>
+                <div style='text-align:center;
+                            background:rgba(255, 152, 0, 0.2);
+                            padding:40px;
+                            border-radius:20px;
+                            border:2px solid #ff9800;'>
+                    <div style='font-size:40px;
+                                color:#ff9800;
+                                font-weight:bold;'>
+                        ⚠️ {res['mensaje']}
+                    </div>
+                    <div style='font-size:50px;
+                                font-weight:900;
+                                color:white;'>
+                        {res['nombre']}
+                    </div>
+                    <div style='font-size:25px;
+                                color:#f0f6fc;
+                                margin-top:10px;'>
+                        FAVOR DE PASAR A LA OFICINA
+                    </div>
                 </div>
             """, unsafe_allow_html=True)
 
-        else:
+        else:  # ERROR
             st.markdown(f"""
-                <div style='text-align:center; background:rgba(231, 76, 60, 0.2); padding:40px; border-radius:20px; border:2px solid #ff1744;'>
-                    <div style='font-size:50px; color:#ff1744; font-weight:bold;'>❌ {res['mensaje']}</div>
+                <div style='text-align:center;
+                            background:rgba(231, 76, 60, 0.2);
+                            padding:40px;
+                            border-radius:20px;
+                            border:2px solid #ff1744;'>
+                    <div style='font-size:50px;
+                                color:#ff1744;
+                                font-weight:bold;'>
+                        ❌ {res['mensaje']}
+                    </div>
                 </div>
             """, unsafe_allow_html=True)
 
@@ -773,6 +834,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
