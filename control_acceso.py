@@ -144,7 +144,8 @@ st.markdown("""
 }
 </style>
 """, unsafe_allow_html=True)
-elif menu == "Puerta de Entrada":
+
+ elif menu == "Puerta de Entrada":
 
     st.markdown("""
         <div class='scan-card'>
@@ -864,6 +865,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
