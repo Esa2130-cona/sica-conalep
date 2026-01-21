@@ -386,7 +386,7 @@ def ejecutar_salida(mat_raw):
             """, unsafe_allow_html=True)
 
             # --- AVISOS ---
-            if st.session_state.resultado:
+if st.session_state.resultado:
     res = st.session_state.resultado
 
     if res["tipo"] == "ok":
@@ -1105,6 +1105,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
