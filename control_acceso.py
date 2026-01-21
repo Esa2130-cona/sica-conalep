@@ -166,7 +166,7 @@ if st.sidebar.button("Cerrar Sesión"):
 # ================= MÓDULO: PUERTA DE ENTRADA (SOLUCIÓN DEFINITIVA) =================
 # ================= MÓDULO: PUERTA DE ENTRADA (SOLUCIÓN FINAL ESTABLE) =================
 elif menu == "Puerta de Entrada":
-    # --- INDICADOR DE ASISTENCIA TOTAL ---
+    # --- INDICADOR DE ASISTENCIA (OPCIONAL) ---
     def obtener_conteo_hoy():
         try:
             fecha_hoy = datetime.now(zona).strftime("%Y-%m-%d")
@@ -174,6 +174,7 @@ elif menu == "Puerta de Entrada":
             return res.count if res.count else 0
         except: return 0
 
+    # UI Superior
     presentes = obtener_conteo_hoy()
     st.markdown(f"""
         <div style='text-align: right; margin-bottom: -15px;'>
@@ -190,59 +191,64 @@ elif menu == "Puerta de Entrada":
         </div>
     """, unsafe_allow_html=True)
 
-    if "resultado" not in st.session_state: st.session_state.resultado = None
+    if "resultado" not in st.session_state: 
+        st.session_state.resultado = None
 
     # --- INTERFAZ DE ESCANEO ---
     st.markdown("<br>", unsafe_allow_html=True)
     
     _, col_input, _ = st.columns([1, 2, 1])
     with col_input:
-        # Usamos un input simple. Al NO tener 'key' vinculada a session_state, evitamos el error de la foto.
+        # El input no tiene 'key' para evitar el error de StreamlitAPIException
         matricula_scaneada = st.text_input(
             "ESCANEE SU CREDENCIAL AQUÍ",
             placeholder="Esperando lectura láser...",
             label_visibility="collapsed"
         )
 
+    # Lógica de ejecución inmediata al detectar entrada
     if matricula_scaneada:
-        # En lugar de animaciones CSS que fallan, usamos una barra de carga nativa
-        with st.status("Verificando identidad...", expanded=False) as status:
-            mat = normalizar_matricula(matricula_scaneada)
-            try:
-                # LÓGICA DE BASE DE DATOS
-                al_res = supabase.table("alumnos").select("*, estatus").eq("matricula", mat).execute()
-                av_res = supabase.table("avisos").select("mensaje, prioridad").eq("matricula", mat).eq("activo", True).execute()
+        mat = normalizar_matricula(matricula_scaneada)
+        
+        # Notificación rápida en la esquina (Muy profesional)
+        st.toast(f"Verificando: {mat}...", icon="🔍")
+        
+        try:
+            # Consultas a Supabase
+            al_res = supabase.table("alumnos").select("*, estatus").eq("matricula", mat).execute()
+            av_res = supabase.table("avisos").select("mensaje, prioridad").eq("matricula", mat).eq("activo", True).execute()
 
-                if not al_res.data:
-                    st.session_state.resultado = {"tipo": "error", "mensaje": "MATRÍCULA NO REGISTRADA"}
+            if not al_res.data:
+                st.session_state.resultado = {"tipo": "error", "mensaje": "MATRÍCULA NO REGISTRADA"}
+            else:
+                al = al_res.data[0]
+                if al.get("estatus") is False:
+                    st.session_state.resultado = {"tipo": "bloqueado", "nombre": al.get("nombre"), "mensaje": "ACCESO DENEGADO"}
                 else:
-                    al = al_res.data[0]
-                    if al.get("estatus") is False:
-                        st.session_state.resultado = {"tipo": "bloqueado", "nombre": al.get("nombre"), "mensaje": "ACCESO DENEGADO"}
+                    hoy = datetime.now(zona).strftime("%Y-%m-%d")
+                    check = supabase.table("entradas").select("id").eq("matricula", mat).eq("fecha", hoy).execute()
+                    
+                    if check.data:
+                        st.session_state.resultado = {"tipo": "warning", "nombre": al.get("nombre"), "mensaje": "YA REGISTRADO HOY"}
                     else:
-                        hoy = datetime.now(zona).strftime("%Y-%m-%d")
-                        check = supabase.table("entradas").select("id").eq("matricula", mat).eq("fecha", hoy).execute()
-                        
-                        if check.data:
-                            st.session_state.resultado = {"tipo": "warning", "nombre": al.get("nombre"), "mensaje": "YA REGISTRADO HOY"}
-                        else:
-                            enviar("entradas", {
-                                "fecha": hoy, "hora": datetime.now(zona).strftime("%H:%M:%S"),
-                                "matricula": mat, "nombre": al.get("nombre", "N/A"),
-                                "grupo": al.get("grupo", "N/A"), "registro_por": user.get("usuario", "Sistema")
-                            })
-                            st.session_state.resultado = {
-                                "tipo": "ok", "nombre": al.get("nombre"), "grupo": al.get("grupo"),
-                                "aviso": av_res.data[0] if av_res.data else None
-                            }
-                status.update(label="Verificación completada", state="complete")
-            except Exception as e:
-                st.error(f"Error: {e}")
+                        # Registro de entrada
+                        enviar("entradas", {
+                            "fecha": hoy, "hora": datetime.now(zona).strftime("%H:%M:%S"),
+                            "matricula": mat, "nombre": al.get("nombre", "N/A"),
+                            "grupo": al.get("grupo", "N/A"), "registro_por": user.get("usuario", "Sistema")
+                        })
+                        st.session_state.resultado = {
+                            "tipo": "ok", "nombre": al.get("nombre"), "grupo": al.get("grupo"),
+                            "aviso": av_res.data[0] if av_res.data else None
+                        }
             
-            # El rerun final limpia el input automáticamente sin causar el error de la foto
+            # Limpieza inmediata y salto a mostrar el resultado
             st.rerun()
 
-    # --- RENDERIZADO DE TARJETAS ---
+        except Exception as e:
+            st.error(f"Error de conexión: {e}")
+
+    # --- MOSTRAR TARJETAS DE RESULTADO ---
     if st.session_state.resultado:
         res = st.session_state.resultado
         
@@ -255,9 +261,10 @@ elif menu == "Puerta de Entrada":
                     <div style='font-size:30px; color:#f0f6fc;'>GRUPO: {res['grupo']}</div>
                 </div>
             """, unsafe_allow_html=True)
+            
             if res.get("aviso"):
                 av = res["aviso"]; color_av = "#ff1744" if av["prioridad"] == "ALTA" else "#ffeb3b"
-                st.markdown(f"<div style='margin-top:15px; padding:15px; background:rgba(255,255,255,0.1); border-left:10px solid {color_av}; border-radius:10px;'><h3 style='color:{color_av}; margin:0;'>⚠️ AVISO {av['prioridad']}</h3><p style='font-size:20px; color:white; margin:5px 0;'>{av['mensaje']}</p></div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='margin-top:15px; padding:15px; background:rgba(255,255,255,0.1); border-left:10px solid {color_av}; border-radius:10px;'><h3 style='color:{color_av}; margin:0;'>⚠️ AVISO {av['prioridad']}</h3><p style='font-size:20px; color:white;'>{av['mensaje']}</p></div>", unsafe_allow_html=True)
         
         elif res["tipo"] == "warning":
             st.markdown("<div class='flash-overlay flash-warn'></div>", unsafe_allow_html=True)
@@ -268,9 +275,9 @@ elif menu == "Puerta de Entrada":
             st.markdown(f"<div style='text-align:center; background:rgba(255, 23, 68, 0.2); padding:40px; border-radius:20px; border:2px solid #ff1744;'><div style='font-size:40px; color:#ff1744; font-weight:bold;'>⛔ {res['mensaje']}</div><div style='font-size:50px; font-weight:900; color:white;'>{res['nombre']}</div></div>", unsafe_allow_html=True)
 
         else:
-            st.markdown("<div class='flash-overlay flash-error'></div>", unsafe_allow_html=True)
             st.error(f"❌ {res['mensaje']}")
 
+        # Pausa visual y reinicio del ciclo
         time.sleep(3.0)
         st.session_state.resultado = None
         st.rerun()
@@ -870,6 +877,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
