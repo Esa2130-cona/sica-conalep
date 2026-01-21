@@ -7,5 +7,5 @@ pytz
 plotly
 fpdf
 qrcode[pil]
-streamlit-barcode-reader
+
 
