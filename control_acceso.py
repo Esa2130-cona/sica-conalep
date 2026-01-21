@@ -388,8 +388,8 @@ elif menu == "Credencial Digital":
                 # ===== GENERAR QR =====
                 qr = qrcode.QRCode(
                     version=1,
-                    box_size=8,
-                    border=4
+                    box_size=6,
+                    border=3
                 )
 
                 qr.add_data(f"{matricula}|{datetime.now(zona).strftime('%Y%m%d')}")
@@ -945,6 +945,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
