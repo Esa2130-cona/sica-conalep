@@ -388,7 +388,7 @@ elif menu == "Registro de Prácticas":
         
         with col1:
             taller_sel = st.selectbox("📍 Seleccione el Taller", 
-                                    ["Informática", "Automotriz", "Electromecánica", "Contabilidad", "Construcción"])
+                                    ["Informática", "Autotronica", "SHYPC", "Contabilidad",])
             grupo_sel = st.text_input("👥 Grupo", placeholder="Ej: 402-INFO").upper()
 
         with col2:
@@ -421,7 +421,7 @@ elif menu == "Registro de Prácticas":
                         "alumnos_asistentes": asistentes_p,
                         "reporte_incidencia": incidencia_p
                     })
-                    st.balloons()
+                    st.info("Los datos se guardaron correctamente")()
                     st.success("🎉 ¡Registro guardado con éxito!")
                     time.sleep(1.5)
                     st.rerun()
@@ -445,23 +445,6 @@ elif menu == "Registro de Prácticas":
             st.info("Aún no tienes prácticas registradas.")
     except:
         pass
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     # ================= MÓDULO: CREDENCIAL DIGITAL =================
 elif menu == "Credencial Digital":
 
@@ -1058,6 +1041,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
