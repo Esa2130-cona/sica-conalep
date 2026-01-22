@@ -625,7 +625,7 @@ elif menu == "Gestión de Accesos":
         with st.form("form_registro", clear_on_submit=True):
             new_user = st.text_input("ID de Usuario (ej: m.perez)").strip().lower()
             new_pin = st.text_input("PIN de Acceso (4 dígitos)", type="password")
-            new_rol = st.selectbox("Rol del Usuario", ["DOCENTE", "PREFECTO", "ADMIN", "ORIENTADOR"])
+            new_rol = st.selectbox("Rol del Usuario", ["DOCENTE", "PREFECTO", "ADMIN","GENERAL","DIRECTOR"])
             submit = st.form_submit_button("✅ Guardar en Base de Datos")
             
             if submit:
@@ -1253,6 +1253,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
