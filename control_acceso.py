@@ -562,136 +562,109 @@ elif menu == "Registro de Prácticas":
         st.error(f"Error al cargar historial: {e}")
 
 
-# ================= MÓDULO: GESTIÓN DE ACCESOS (VISTA CARNET + PDF MINI) =================
+
+# ================= MÓDULO: GESTIÓN DE ACCESOS (GAFETE PROFESIONAL) =================
 elif menu == "Gestión de Accesos":
     st.markdown("""
-        <style>
-            .carnet-preview {
-                background: #161b22;
-                border: 2px solid #1e8449;
-                border-radius: 12px;
-                padding: 20px;
-                max-width: 400px;
-                margin: 20px auto;
-                border-top: 10px solid #1e8449;
-                box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-                text-align: left;
-            }
-            .carnet-label { color: #8b949e; font-size: 10px; text-transform: uppercase; margin: 0; }
-            .carnet-data { color: white; font-size: 18px; font-weight: bold; margin-bottom: 10px; }
-            .carnet-role { 
-                background: #1e8449; color: white; padding: 3px 10px; 
-                border-radius: 4px; font-size: 12px; font-weight: bold;
-            }
-        </style>
-    """, unsafe_allow_html=True)
-
-    st.markdown(f"""
         <div style='background-color: #161b22; padding: 20px; border-radius: 15px; border-left: 8px solid #1e8449; margin-bottom: 20px;'>
-            <h1 style='margin: 0; color: white;'>🎫 Generador de Carnets QR</h1>
-            <p style='margin: 0; color: #8b949e;'>Vista previa y descarga en tamaño credencial (85x55mm)</p>
+            <h1 style='margin: 0; color: white;'>🎫 Generador de Carnets</h1>
+            <p style='margin: 0; color: #8b949e;'>Credencial oficial tamaño estándar (85x55mm)</p>
         </div>
     """, unsafe_allow_html=True)
 
-    # 1. BÚSQUEDA
-    u_busqueda = st.text_input("🔍 Buscar usuario para generar carnet", placeholder="Ej: jose.esteban").strip()
+    u_busqueda = st.text_input("🔍 Buscar usuario para carnet", placeholder="Ej: jose.esteban").strip()
 
     if u_busqueda:
-        # Búsqueda flexible con ilike
         res = supabase.table("usuarios").select("usuario, pin, rol").ilike("usuario", f"%{u_busqueda}%").execute()
 
         if res.data:
             doc = res.data[0]
             u_db, p_db, r_db = doc['usuario'], doc['pin'], doc['rol']
             
-            # Generar QR para el PDF y la Vista Previa
             url_final = f"https://sica-conalep-cuautla.streamlit.app/?u={u_db}&p={p_db}"
             qr = qrcode.make(url_final)
             buf_qr = BytesIO()
             qr.save(buf_qr, format="PNG")
             qr_img_bytes = buf_qr.getvalue()
 
-            # --- MOSTRAR VISTA PREVIA TIPO CARNET ---
-            st.markdown("### 👀 Vista Previa del Carnet")
-            col_previa, col_qr_img = st.columns([1.5, 1])
-            
-            with col_previa:
+            # --- VISTA PREVIA EN PANTALLA ---
+            st.markdown("### 👀 Vista Previa")
+            col_pre, col_img = st.columns([1.5, 1])
+            with col_pre:
                 st.markdown(f"""
-                <div class="carnet-preview">
-                    <p style="color: #1e8449; font-weight: 800; font-size: 14px; margin-bottom: 15px;">CONALEP CUAUTLA</p>
-                    <p class="carnet-label">USUARIO / ID</p>
-                    <p class="carnet-data">{u_db.upper()}</p>
-                    <p class="carnet-label">ROL ASIGNADO</p>
-                    <p><span class="carnet-role">{r_db}</span></p>
-                    <p style="font-size: 9px; color: #444; margin-top: 20px;">SICA v2.0 - ACCESO SEGURO</p>
+                <div style='background:#161b22; border:2px solid #1e8449; border-radius:12px; padding:20px; border-top:10px solid #1e8449;'>
+                    <p style='color:#1e8449; font-weight:800; font-size:14px; margin-bottom:10px;'>CONALEP CUAUTLA</p>
+                    <p style='color:#8b949e; font-size:10px; margin:0;'>USUARIO</p>
+                    <p style='color:white; font-size:20px; font-weight:bold; margin-bottom:10px;'>{u_db.upper()}</p>
+                    <span style='background:#1e8449; color:white; padding:3px 10px; border-radius:4px; font-size:12px; font-weight:bold;'>{r_db}</span>
                 </div>
                 """, unsafe_allow_html=True)
+            with col_img:
+                st.image(qr_img_bytes, width=150)
 
-            with col_qr_img:
-                st.image(qr_img_bytes, width=180, caption="Código de Acceso Directo")
-
-            # --- GENERACIÓN DE PDF (TAMAÑO TARJETA REAL) ---
-            def generar_pdf_mini(u, r, img_bytes):
-                # Tamaño exacto 85mm ancho x 55mm alto
+            # --- FUNCIÓN PDF CORREGIDA (SOLO 1 HOJA) ---
+            def generar_carnet_unico(u, r, img_bytes):
+                # Forzamos tamaño 85x55mm
                 pdf = FPDF(orientation='L', unit='mm', format=(55, 85))
+                pdf.set_auto_page_break(auto=False, margin=0) # EVITA GENERAR HOJAS EXTRAS
                 pdf.add_page()
                 
-                # Fondo
+                # Fondo Principal
                 pdf.set_fill_color(22, 27, 34)
                 pdf.rect(0, 0, 85, 55, 'F')
                 
-                # Diseño: Franja decorativa
+                # Diseño: Franjas Verdes (Superior e Inferior)
                 pdf.set_fill_color(30, 132, 73)
-                pdf.rect(0, 0, 85, 3, 'F') # Franja superior
-                pdf.rect(0, 52, 85, 3, 'F') # Franja inferior
+                pdf.rect(0, 0, 85, 4, 'F')
+                pdf.rect(0, 51, 85, 4, 'F')
                 
-                # Texto Institucional
+                # Nombre del Plantel
                 pdf.set_text_color(255, 255, 255)
-                pdf.set_font("Arial", 'B', 9)
+                pdf.set_font("Arial", 'B', 10)
                 pdf.set_xy(7, 8)
                 pdf.cell(40, 5, "CONALEP CUAUTLA", ln=True)
                 
-                # Datos del Usuario
+                # Nombre del Usuario (Alineado a la izquierda)
                 pdf.set_font("Arial", 'B', 14)
                 pdf.set_xy(7, 18)
-                u_clean = u.encode('latin-1', 'replace').decode('latin-1').upper()
-                pdf.multi_cell(45, 7, u_clean, align='L')
+                u_pdf = u.encode('latin-1', 'replace').decode('latin-1').upper()
+                pdf.multi_cell(45, 7, u_pdf, align='L')
                 
-                # Rol
-                pdf.set_xy(7, 35)
+                # Etiqueta de Rol
+                pdf.set_xy(7, 38)
                 pdf.set_fill_color(30, 132, 73)
-                pdf.set_font("Arial", 'B', 8)
+                pdf.set_font("Arial", 'B', 9)
                 pdf.cell(30, 6, f"  {r}", 0, 0, 'L', True)
                 
-                # QR (Posicionado a la derecha para no estorbar el nombre)
-                with open("temp_qr_print.png", "wb") as f:
+                # QR Posicionado a la derecha (x=50) para no encimarse
+                with open("temp_qr_final.png", "wb") as f:
                     f.write(img_bytes)
-                pdf.image("temp_qr_print.png", x=52, y=12, w=28)
+                # w=30mm es el tamaño ideal para que no salte de página
+                pdf.image("temp_qr_final.png", x=50, y=10, w=30)
                 
-                # Borde de corte
-                pdf.set_draw_color(80, 80, 80)
+                # Borde de Corte Técnico
+                pdf.set_draw_color(60, 60, 60)
                 pdf.rect(0, 0, 85, 55, 'D')
                 
                 return pdf.output(dest='S').encode('latin-1', 'ignore')
 
             # Botón de Descarga
-            pdf_out = generar_pdf_mini(u_db, r_db, qr_img_bytes)
+            pdf_data = generar_carnet_unico(u_db, r_db, qr_img_bytes)
             st.download_button(
-                label=f"📥 Imprimir Carnet de {u_db} (PDF)",
-                data=pdf_out,
+                label=f"📥 Descargar Carnet de {u_db} (PDF)",
+                data=pdf_data,
                 file_name=f"Carnet_{u_db}.pdf",
                 mime="application/pdf",
                 use_container_width=True
             )
         else:
-            st.error("No se encontró el usuario en la base de datos.")
+            st.error("Usuario no encontrado.")
 
-    st.markdown("---")
-    # --- LISTA DE USUARIOS ---
-    with st.expander("📋 Ver lista de usuarios registrados"):
-        res_list = supabase.table("usuarios").select("usuario, rol, pin").execute()
-        if res_list.data:
-            st.dataframe(pd.DataFrame(res_list.data), use_container_width=True, hide_index=True)
+    # LISTA DE USUARIOS ABAJO
+    with st.expander("📋 Usuarios en Sistema"):
+        res_all = supabase.table("usuarios").select("usuario, rol, pin").execute()
+        if res_all.data:
+            st.dataframe(pd.DataFrame(res_all.data), use_container_width=True, hide_index=True)
   # ================= MÓDULO: CREDENCIAL DIGITAL =================
 elif menu == "Credencial Digital":
 
@@ -1288,6 +1261,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
