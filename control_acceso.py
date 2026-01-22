@@ -175,7 +175,7 @@ elif rol == "DIRECTOR": opciones = ["Dashboard", "Expediente Digital"]
 elif rol == "PREFECTO": opciones = ["Reportes", "Historial", "Avisos", "Expediente Digital","Credencial Digital"]
 elif rol == "GENERAL": opciones = ["Reportes", "Avisos", "Servicios y Técnica", "Expediente Digital"]
 elif rol == "DOCENTE": opciones = ["Registro de Prácticas", "Expediente Digital"]
-elif rol == "ADMIN": opciones = ["Puerta de Entrada", "Reportes", "Historial", "Avisos", "Dashboard", "Servicios y Técnica", "Expediente Digital","Credencial Digital","Registro de Prácticas"]
+elif rol == "ADMIN": opciones = ["Puerta de Entrada", "Reportes", "Historial", "Avisos", "Dashboard", "Servicios y Técnica", "Expediente Digital","Credencial Digital","Gestión de Accesos","Registro de Prácticas"]
 else: opciones = ["Puerta de Entrada"]
 
 menu = st.sidebar.radio("📋 MENÚ PRINCIPAL", opciones)
@@ -560,7 +560,100 @@ elif menu == "Registro de Prácticas":
             
     except Exception as e:
         st.error(f"Error al cargar historial: {e}")
-    # ================= MÓDULO: CREDENCIAL DIGITAL =================
+
+# ================= MÓDULO: GESTIÓN DE ACCESOS (ESTILO GAFETE) =================
+elif menu == "Gestión de Accesos":
+    st.markdown("""
+        <style>
+            .gafete-container {
+                background: #161b22;
+                border-radius: 15px;
+                border: 2px solid #1e8449;
+                padding: 20px;
+                text-align: center;
+                max-width: 300px;
+                margin: auto;
+                border-top: 12px solid #1e8449;
+                box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+            }
+            .gafete-header {
+                color: #1e8449;
+                font-weight: 800;
+                font-size: 14px;
+                margin-bottom: 10px;
+                letter-spacing: 1px;
+            }
+            .gafete-user {
+                color: white;
+                font-size: 22px;
+                font-weight: 700;
+                margin: 5px 0;
+            }
+            .gafete-role {
+                background: #1e8449;
+                color: white;
+                padding: 3px 12px;
+                border-radius: 50px;
+                font-size: 11px;
+                font-weight: bold;
+                display: inline-block;
+            }
+            .gafete-footer {
+                color: #8b949e;
+                font-size: 10px;
+                margin-top: 15px;
+            }
+        </style>
+    """, unsafe_allow_html=True)
+
+    st.title("🔑 Generador de Llaves QR")
+    u_busqueda = st.text_input("Ingresa el Usuario del Docente").strip()
+
+    if u_busqueda:
+        res = supabase.table("usuarios").select("usuario, pin, rol").eq("usuario", u_busqueda).execute()
+
+        if res.data:
+            doc = res.data[0]
+            u_db, p_db, r_db = doc['usuario'], doc['pin'], doc['rol']
+
+            # 1. GENERACIÓN DE LA URL Y EL QR
+            url_final = f"https://sica-conalep-cuautla.streamlit.app/?u={u_db}&p={p_db}"
+            qr = qrcode.make(url_final)
+            buf = BytesIO()
+            qr.save(buf, format="PNG")
+            byte_im = buf.getvalue()
+
+            # 2. VISTA PREVIA DEL GAFETE EN PANTALLA
+            st.markdown(f"""
+                <div class="gafete-container">
+                    <div class="gafete-header">CONALEP CUAUTLA</div>
+                    <div style="font-size: 40px; margin: 10px 0;">👤</div>
+                    <div class="gafete-user">{u_db}</div>
+                    <div class="gafete-role">{r_db}</div>
+                    <div style="background: white; padding: 10px; border-radius: 10px; margin-top: 15px; display: inline-block;">
+                        </div>
+                    <div class="gafete-footer">ACCESO RÁPIDO SICA</div>
+                </div>
+            """, unsafe_allow_html=True)
+
+            # Colocamos el QR real sobre el diseño
+            st.image(byte_im, width=180, use_container_width=False)
+
+            # 3. BOTÓN DE DESCARGA
+            st.download_button(
+                label=f"📥 Descargar Gafete de {u_db}",
+                data=byte_im,
+                file_name=f"GAFETE_QR_{u_db}.png",
+                mime="image/png",
+                use_container_width=True
+            )
+            
+            st.info(f"PIN actual de este usuario: {p_db}")
+        else:
+            st.error("Usuario no encontrado.")
+
+
+  # ================= MÓDULO: CREDENCIAL DIGITAL =================
 elif menu == "Credencial Digital":
 
     st.markdown("""
@@ -1156,6 +1249,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
