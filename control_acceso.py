@@ -8,6 +8,9 @@ import plotly.express as px
 from fpdf import FPDF
 import qrcode
 from io import BytesIO
+# 1. CONFIGURACIÓN INICIAL (DEBE SER LO PRIMERO)
+st.set_page_config(page_title="SICA CONALEP CUAUTLA", layout="wide")
+zona = pytz.timezone("America/Mexico_City")
 
 # ================= ESTILOS DE FLASH =================
 st.markdown("""
@@ -54,11 +57,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-
-# ================= CONFIGURACIÓN INICIAL =================
-st.set_page_config(page_title="SICA CONALEP CUAUTLA", layout="wide")
-zona = pytz.timezone("America/Mexico_City")
-
 @st.cache_resource
 def init_connection():
     try:
@@ -78,8 +76,12 @@ def normalizar_matricula(mat):
 def enviar(tabla, datos):
     datos_db = {k.lower(): v for k, v in datos.items()}
     return supabase.table(tabla).insert(datos_db).execute()
+# ================
+# 2. INICIALIZAR SESSION STATE (EVITA EL ATTRIBUTE ERROR)
+if "user" not in st.session_state:
+    st.session_state.user = None
 
-# ================= ESTILOS CSS (FONDO OSCURO / TEXTO NEGRO EN INPUTS) =================
+    # ================= ESTILOS CSS (FONDO OSCURO / TEXTO NEGRO EN INPUTS) =================
 st.markdown("""
 <style>
     .stApp { background-color: #050a10; color: #f0f6fc; }
@@ -118,7 +120,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ================= 1. SISTEMA DE LOGIN =================
-supabase = init_connection()
 
 # ================= 1. AUTO-LOGIN POR QR (AÑADIR AQUÍ) =================
 if "user" not in st.session_state or st.session_state.user is None:
@@ -1155,6 +1156,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
