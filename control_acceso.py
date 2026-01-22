@@ -659,65 +659,137 @@ elif menu == "Gestión de Accesos":
         st.dataframe(pd.DataFrame(res_all.data), use_container_width=True, hide_index=True)
   # ================= MÓDULO: CREDENCIAL DIGITAL =================
 elif menu == "Credencial Digital":
-
     st.markdown("""
-        <div class='scan-card'>
-            <div class='scan-subtitle'>SICA</div>
-            <div class='scan-title'>CREDENCIAL DIGITAL</div>
-        </div>
+        <style>
+            .al-card-preview {
+                background: #161b22;
+                border-radius: 15px;
+                border: 2px solid #1e8449;
+                padding: 20px;
+                max-width: 380px;
+                margin: auto;
+                border-top: 10px solid #1e8449;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+                display: flex;
+                align-items: center;
+                gap: 15px;
+            }
+            .photo-placeholder {
+                width: 80px;
+                height: 100px;
+                background: #21262d;
+                border: 1px solid #30363d;
+                border-radius: 8px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: #8b949e;
+                font-size: 40px;
+            }
+            .al-info { text-align: left; flex-grow: 1; }
+            .al-name { color: white; font-size: 16px; font-weight: bold; margin: 0; }
+            .al-group { color: #1e8449; font-size: 13px; font-weight: bold; margin: 0; }
+            .al-label { color: #8b949e; font-size: 9px; text-transform: uppercase; margin-top: 8px; }
+        </style>
     """, unsafe_allow_html=True)
 
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("<div class='scan-card'><div class='scan-subtitle'>SICA</div><div class='scan-title'>CREDENCIAL DIGITAL</div></div>", unsafe_allow_html=True)
 
-    matricula = st.text_input(
-        "MATRÍCULA DEL ALUMNO",
-        placeholder="Escanea o escribe la matrícula"
-    ).strip().upper()
+    matricula = st.text_input("MATRÍCULA DEL ALUMNO", placeholder="Escanea o escribe la matrícula").strip().upper()
 
     if matricula:
-
-        res = supabase.table("alumnos") \
-            .select("nombre, grupo, estatus") \
-            .eq("matricula", matricula) \
-            .execute()
+        res = supabase.table("alumnos").select("nombre, grupo, estatus").eq("matricula", matricula).execute()
 
         if not res.data:
             st.error("❌ MATRÍCULA NO ENCONTRADA")
-
         else:
             alumno = res.data[0]
-
             if alumno["estatus"] is False:
                 st.error("⛔ ALUMNO BLOQUEADO")
-
             else:
-                st.success(f"✅ {alumno['nombre']} — GRUPO {alumno['grupo']}")
-      # ===== GENERAR QR =====
-                qr = qrcode.QRCode(
-                    version=1,
-                    box_size=4,
-                    border=3
+                nombre_al = alumno['nombre']
+                grupo_al = alumno['grupo']
+
+                # 1. GENERAR QR (Solo matrícula)
+                qr = qrcode.make(matricula)
+                buf_qr = BytesIO()
+                qr.save(buf_qr, format="PNG")
+                qr_bytes = buf_qr.getvalue()
+
+                # 2. PREVISUALIZACIÓN TIPO CARNET
+                st.markdown("### 👀 Previsualización de Credencial")
+                st.markdown(f"""
+                <div class="al-card-preview">
+                    <div class="photo-placeholder">👤</div>
+                    <div class="al-info">
+                        <p style="color:#1e8449; font-weight:800; font-size:12px; margin-bottom:10px;">CONALEP CUAUTLA</p>
+                        <p class="al-label">NOMBRE DEL ALUMNO</p>
+                        <p class="al-name">{nombre_al.upper()}</p>
+                        <p class="al-label">GRUPO</p>
+                        <p class="al-group">{grupo_al}</p>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                st.image(qr_bytes, width=150, caption="QR de Acceso Escolar")
+
+                # 3. FUNCIÓN PDF TAMAÑO CREDENCIAL (85x55mm)
+                def generar_pdf_alumno(nom, grp, mat, img_q):
+                    pdf = FPDF(orientation='L', unit='mm', format=(55, 85))
+                    pdf.set_auto_page_break(auto=False, margin=0)
+                    pdf.add_page()
+                    
+                    # Fondo Oscuro
+                    pdf.set_fill_color(22, 27, 34)
+                    pdf.rect(0, 0, 85, 55, 'F')
+                    
+                    # Franja Verde Superior
+                    pdf.set_fill_color(30, 132, 73)
+                    pdf.rect(0, 0, 85, 4, 'F')
+                    
+                    # Espacio para Foto (Cuadro Gris)
+                    pdf.set_fill_color(40, 44, 52)
+                    pdf.rect(6, 10, 22, 28, 'F')
+                    pdf.set_text_color(100, 100, 100)
+                    pdf.set_font("Arial", 'B', 20)
+                    pdf.set_xy(6, 18)
+                    pdf.cell(22, 10, "FOTO", 0, 0, 'C')
+
+                    # Datos Alumno
+                    pdf.set_text_color(255, 255, 255)
+                    pdf.set_font("Arial", 'B', 8)
+                    pdf.set_xy(32, 10)
+                    pdf.cell(0, 5, "CONALEP CUAUTLA", ln=True)
+                    
+                    pdf.set_xy(32, 18)
+                    pdf.set_font("Arial", 'B', 10)
+                    nom_p = nom.encode('latin-1', 'replace').decode('latin-1').upper()
+                    pdf.multi_cell(45, 5, nom_p, align='L')
+                    
+                    pdf.set_xy(32, 32)
+                    pdf.set_font("Arial", 'B', 8)
+                    pdf.set_text_color(30, 132, 73)
+                    pdf.cell(0, 5, f"GRUPO: {grp}", ln=True)
+
+                    # QR en la parte inferior derecha
+                    with open("temp_al.png", "wb") as f: f.write(img_q)
+                    pdf.image("temp_al.png", x=55, y=28, w=25)
+                    
+                    # Borde de Corte
+                    pdf.set_draw_color(60, 60, 60)
+                    pdf.rect(0, 0, 85, 55, 'D')
+                    
+                    return pdf.output(dest='S').encode('latin-1', 'ignore')
+
+                # Botón de Descarga
+                pdf_bin = generar_pdf_alumno(nombre_al, grupo_al, matricula, qr_bytes)
+                st.download_button(
+                    label=f"📥 Descargar Credencial PDF ({matricula})",
+                    data=pdf_bin,
+                    file_name=f"Credencial_Alumno_{matricula}.pdf",
+                    mime="application/pdf",
+                    use_container_width=True
                 )
-
-                qr.add_data(f"{matricula}")
-                qr.make(fit=True)
-
-                img = qr.make_image(
-                    fill_color="black",
-                    back_color="white"
-                )
-
-                buf = BytesIO()
-                img.save(buf, format="PNG")
-
-                st.image(
-                    buf,
-                    width=220,
-                    caption="Código válido SOLO para hoy",
-                   
-                )
-
-                st.warning("⚠️ Uso indebido de esta credencial será sancionado")
 # ================= MÓDULO: REPORTES =================
 elif menu == "Reportes":
     st.title("🚨 Gestión de Reportes")
@@ -1253,6 +1325,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
