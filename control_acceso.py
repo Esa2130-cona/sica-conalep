@@ -561,15 +561,12 @@ elif menu == "Registro de Prácticas":
     except Exception as e:
         st.error(f"Error al cargar historial: {e}")
 
-
-
-
-# ================= MÓDULO: GESTIÓN DE ACCESOS (GAFETE PEQUEÑO + LISTA) =================
+# ================= MÓDULO: GESTIÓN DE ACCESOS (TAMAÑO CREDENCIAL REAL) =================
 elif menu == "Gestión de Accesos":
     st.markdown("""
         <div style='background-color: #161b22; padding: 20px; border-radius: 15px; border-left: 8px solid #1e8449; margin-bottom: 20px;'>
             <h1 style='margin: 0; color: white;'>🎫 Gestión de Accesos</h1>
-            <p style='margin: 0; color: #8b949e;'>Generación de Gafetes (85x55mm) y Consulta de Usuarios</p>
+            <p style='margin: 0; color: #8b949e;'>Gafetes tamaño estándar (85x55mm)</p>
         </div>
     """, unsafe_allow_html=True)
 
@@ -591,82 +588,83 @@ elif menu == "Gestión de Accesos":
             qr_bytes = qr_buf.getvalue()
 
             def crear_pdf_tarjeta(u, r, qr_img_bytes):
+                # 'L' = Landscape, 'mm' = milímetros, format = (85mm ancho x 55mm alto)
                 pdf = FPDF(orientation='L', unit='mm', format=(55, 85))
                 pdf.add_page()
                 
-                # Diseño Base
+                # Fondo Base Oscuro
                 pdf.set_fill_color(22, 27, 34)
                 pdf.rect(0, 0, 85, 55, 'F')
                 
-                # Borde de corte (línea fina gris)
-                pdf.set_draw_color(100, 100, 100)
-                pdf.rect(0, 0, 85, 55, 'D')
-                
-                # Franja Verde
+                # Franja Verde Izquierda
                 pdf.set_fill_color(30, 132, 73)
-                pdf.rect(0, 0, 5, 55, 'F')
+                pdf.rect(0, 0, 4, 55, 'F')
                 
-                # Textos
+                # Texto Superior Institucional
                 pdf.set_text_color(255, 255, 255)
-                pdf.set_font("Arial", 'B', 10)
-                pdf.set_xy(8, 5)
-                pdf.cell(0, 5, "CONALEP CUAUTLA", ln=True)
+                pdf.set_font("Arial", 'B', 9)
+                pdf.set_xy(7, 6)
+                pdf.cell(40, 5, "CONALEP CUAUTLA", ln=False)
                 
-                pdf.set_font("Arial", 'B', 14)
-                pdf.set_xy(8, 15)
+                # Nombre del Usuario (A la izquierda del QR)
+                pdf.set_font("Arial", 'B', 12)
+                pdf.set_xy(7, 18)
                 u_pdf = u.encode('latin-1', 'replace').decode('latin-1').upper()
-                pdf.cell(45, 10, u_pdf, ln=True)
+                pdf.multi_cell(45, 6, u_pdf, align='L') # multi_cell evita que se salga si es largo
                 
-                pdf.set_xy(8, 25)
+                # Rol con fondo verde
+                pdf.set_xy(7, 32)
                 pdf.set_fill_color(30, 132, 73)
                 pdf.set_font("Arial", 'B', 8)
-                pdf.cell(30, 6, f"  {r}", 0, 0, 'L', True)
+                pdf.cell(35, 6, f"  {r}", 0, 0, 'L', True)
                 
-                # QR
-                with open("temp_qr.png", "wb") as f: f.write(qr_img_bytes)
-                pdf.image("temp_qr.png", x=50, y=10, w=30)
+                # QR (Posicionado a la derecha y sin tapar nada)
+                with open("temp_qr_acceso.png", "wb") as f: 
+                    f.write(qr_img_bytes)
+                # x=52 (empieza después de la mitad), y=10 (arriba), w=28 (tamaño moderado)
+                pdf.image("temp_qr_acceso.png", x=52, y=12, w=28)
+                
+                # Pie de Gafete
+                pdf.set_font("Arial", 'I', 6)
+                pdf.set_text_color(150, 150, 150)
+                pdf.set_xy(7, 48)
+                pdf.cell(0, 4, "SICA - SISTEMA DE CONTROL DE ACCESO", ln=True)
+                
+                # Línea de corte (opcional para impresión)
+                pdf.set_draw_color(50, 50, 50)
+                pdf.rect(0, 0, 85, 55, 'D')
                 
                 return pdf.output(dest='S').encode('latin-1', 'ignore')
 
-            st.success(f"Gafete generado para: {u_db}")
+            st.success(f"Gafete listo para: {u_db}")
             pdf_data = crear_pdf_tarjeta(u_db, r_db, qr_bytes)
             
             st.download_button(
-                label=f"📥 Descargar Gafete PDF ({u_db})",
+                label=f"📥 Descargar PDF Tamaño Credencial ({u_db})",
                 data=pdf_data,
-                file_name=f"Gafete_{u_db}.pdf",
+                file_name=f"Credencial_{u_db}.pdf",
                 mime="application/pdf",
                 use_container_width=True
             )
+            
+            # Previsualización en la App
+            st.image(qr_bytes, width=150, caption="QR de la credencial")
+
         else:
             st.error("No se encontró el usuario.")
 
     st.markdown("---")
 
-    # --- PARTE 2: LISTA DE USUARIOS (AQUÍ ESTÁ LA LISTA) ---
-    st.subheader("📋 Usuarios Registrados en el Sistema")
-    
+    # --- PARTE 2: LISTA DE USUARIOS ---
+    st.subheader("📋 Usuarios Registrados")
     try:
-        # Consultamos todos los usuarios
         res_all = supabase.table("usuarios").select("usuario, rol, pin").execute()
-        
         if res_all.data:
             df_users = pd.DataFrame(res_all.data)
-            
-            # Mostramos la lista en un Expander para que sea opcional verla
-            with st.expander("Ver lista completa de usuarios y roles", expanded=True):
-                st.dataframe(
-                    df_users[['usuario', 'rol', 'pin']], 
-                    use_container_width=True, 
-                    hide_index=True
-                )
-                st.caption(f"Total de usuarios registrados: {len(df_users)}")
-        else:
-            st.info("No hay usuarios registrados aún.")
-            
+            with st.expander("Ver lista completa", expanded=True):
+                st.dataframe(df_users, use_container_width=True, hide_index=True)
     except Exception as e:
-        st.error(f"Error al cargar la lista: {e}")
-
+        st.error(f"Error al cargar lista: {e}")
   # ================= MÓDULO: CREDENCIAL DIGITAL =================
 elif menu == "Credencial Digital":
 
@@ -1263,6 +1261,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
