@@ -577,7 +577,7 @@ elif menu == "Gestión de Accesos":
 
     # --- PESTAÑA 1: GENERADOR DE CARNET ---
     with tab_gafete:
-        u_busqueda = st.text_input("🔍 Buscar usuario para carnet", placeholder="Ej: jose.esteban").strip()
+        u_busqueda = st.text_input("🔍 Buscar usuario para su llave inteligente", placeholder="Ej: jose.esteban").strip()
         if u_busqueda:
             res = supabase.table("usuarios").select("usuario, pin, rol").ilike("usuario", f"%{u_busqueda}%").execute()
             if res.data:
@@ -615,7 +615,7 @@ elif menu == "Gestión de Accesos":
                     pdf.image("temp.png", x=50, y=10, w=30)
                     return pdf.output(dest='S').encode('latin-1', 'ignore')
 
-                st.download_button("📥 Descargar Carnet PDF", generar_pdf_v3(u_db, r_db, qr_img_bytes), f"Carnet_{u_db}.pdf", "application/pdf")
+                st.download_button("📥 Descargar llave PDF", generar_pdf_v3(u_db, r_db, qr_img_bytes), f"Carnet_{u_db}.pdf", "application/pdf")
             else:
                 st.error("Usuario no encontrado.")
 
@@ -626,7 +626,7 @@ elif menu == "Gestión de Accesos":
             new_user = st.text_input("ID de Usuario (ej: m.perez)").strip().lower()
             new_pin = st.text_input("PIN de Acceso (4 dígitos)", type="password")
             new_rol = st.selectbox("Rol del Usuario", ["DOCENTE", "PREFECTO", "ADMIN","GENERAL","DIRECTOR"])
-            submit = st.form_submit_button("✅ Guardar en Base de Datos")
+            submit = st.form_submit_button("✅ Guardar Usuario Nuevo")
             
             if submit:
                 if new_user and new_pin:
@@ -1253,6 +1253,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
