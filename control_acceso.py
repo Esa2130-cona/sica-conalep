@@ -385,7 +385,7 @@ elif menu == "Registro de Prácticas":
 
     # 2. FORMULARIO DE REGISTRO
     with st.form("registro_taller", clear_on_submit=True):
-        st.subheader("📝 Registro de Practica")
+        st.subheader("📝 Registro de Práctica")
         col1, col2 = st.columns(2)
         
         with col1:
@@ -1105,6 +1105,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
