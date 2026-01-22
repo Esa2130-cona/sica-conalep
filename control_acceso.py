@@ -149,7 +149,32 @@ st.sidebar.markdown(f"""
     <span style='background-color: #1e8449; color: white; padding: 2px 8px; border-radius: 5px; font-size: 10px; font-weight: bold;'>ROL: {rol}</span>
 </div>
 """, unsafe_allow_html=True)
-
+# Lógica de Menú por Roles
+# ================= BIENVENIDA PERSONALIZADA (DOCENTES) =================
+if rol == "DOCENTE" and menu == "Registro de Prácticas":
+    try:
+        # Consultamos cuántas prácticas lleva en el mes actual
+        mes_actual = datetime.now(zona).month
+        res_conteo = supabase.table("practicas_talleres")\
+            .select("id", count="exact")\
+            .eq("maestro", maestro_id)\
+            .filter("fecha", "gte", datetime.now(zona).replace(day=1).strftime("%Y-%m-%d"))\
+            .execute()
+        
+        total_mes = res_conteo.count if res_conteo.count else 0
+        
+        st.markdown(f"""
+            <div style='background: linear-gradient(90deg, #1e8449 0%, #161b22 100%); 
+                        padding: 15px; border-radius: 10px; margin-bottom: 20px;'>
+                <h4 style='margin:0; color:white;'>¡Hola, {nombre_maestro.split()[0]}! 👋</h4>
+                <p style='margin:0; color:#e0e0e0; font-size: 14px;'>
+                    Llevas <b>{total_mes}</b> prácticas registradas en este mes. 
+                    { "¡Buen trabajo!" if total_mes > 0 else "Aún no hay registros este mes." }
+                </p>
+            </div>
+        """, unsafe_allow_html=True)
+    except:
+        pass
 # Lógica de Menú por Roles
 if rol == "KIOSKO": opciones = ["Puerta de Entrada"]
 elif rol == "DIRECTOR": opciones = ["Dashboard", "Expediente Digital"]
@@ -1106,6 +1131,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
