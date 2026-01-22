@@ -367,23 +367,25 @@ elif menu == "Puerta de Entrada":
         time.sleep(3.5)
         st.session_state.resultado = None
         st.rerun()
-       
-# ================= MÓDULO: REGISTRO DE PRÁCTICAS (DOCENTES) =================
+
 # ================= MÓDULO: REGISTRO DE PRÁCTICAS (DOCENTES) =================
 elif menu == "Registro de Prácticas":
     st.markdown(f"""
         <div style='background-color: #161b22; padding: 20px; border-radius: 15px; border-left: 8px solid #1e8449; margin-bottom: 20px;'>
             <h1 style='margin: 0; color: white;'>🛠️ Bitácora de Talleres</h1>
-            <p style='margin: 0; color: #8b949e;'>Registro rápido de actividades prácticas</p>
+            <p style='margin: 0; color: #8b949e;'>Registro rápido de actividades y descarga de evidencias</p>
         </div>
     """, unsafe_allow_html=True)
 
-    # Datos automáticos
-    fecha_hoy = datetime.now(zona).strftime("%Y-%m-%d")
+    # 1. DATOS AUTOMÁTICOS Y FILTROS
+    fecha_actual = datetime.now(zona)
+    fecha_hoy = fecha_actual.strftime("%Y-%m-%d")
     maestro_id = user.get("usuario", "Sin Identificar")
+    nombre_maestro = user.get("nombre_completo", maestro_id)
 
-    # Formulario optimizado para móvil
+    # 2. FORMULARIO DE REGISTRO
     with st.form("registro_taller", clear_on_submit=True):
+        st.subheader("📝 Nueva Entrada")
         col1, col2 = st.columns(2)
         
         with col1:
@@ -401,14 +403,11 @@ elif menu == "Registro de Prácticas":
             incidencia_p = st.text_area("Describa si hubo alguna falla técnica o falta de material:", 
                                        placeholder="Ej: La PC 5 no enciende o falta jabón en tarjas.")
 
-        enviar_btn = st.form_submit_button("✅ GUARDAR PRÁCTICA")
-
-        if enviar_btn:
+        if st.form_submit_button("✅ GUARDAR PRÁCTICA"):
             if not grupo_sel or not nombre_p:
                 st.error("⚠️ Los campos 'Grupo' y 'Nombre de la Práctica' son obligatorios.")
             else:
                 try:
-                    # Guardamos el resultado del envío
                     enviar("practicas_talleres", {
                         "fecha": fecha_hoy,
                         "maestro": maestro_id,
@@ -419,31 +418,89 @@ elif menu == "Registro de Prácticas":
                         "alumnos_asistentes": asistentes_p,
                         "reporte_incidencia": incidencia_p
                     })
-                    
-                    # Mensaje de éxito limpio e institucional
-                    st.success("✅ Registro guardado correctamente en el sistema.")
-                    time.sleep(1.5)
+                    st.success("✅ Registro guardado correctamente.")
+                    time.sleep(1.2)
                     st.rerun()
                 except Exception as e:
-                    st.error(f"❌ Error al guardar en base de datos: {e}")
+                    st.error(f"❌ Error en base de datos: {e}")
 
-    # --- HISTORIAL RÁPIDO PARA EL DOCENTE ---
+    # 3. HISTORIAL Y FILTRO POR MES
     st.markdown("---")
-    st.subheader("📅 Mis registros recientes")
+    st.subheader("📅 Historial de Prácticas Realizadas")
+    
+    # Selector de Mes para el reporte
+    meses_nombres = {1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril", 5: "Mayo", 6: "Junio", 
+                     7: "Julio", 8: "Agosto", 9: "Septiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre"}
+    
+    col_f1, col_f2 = st.columns([1, 2])
+    with col_f1:
+        mes_sel = st.selectbox("Filtrar por Mes", options=list(meses_nombres.keys()), 
+                               format_func=lambda x: meses_nombres[x], index=fecha_actual.month - 1)
+
     try:
-        hist_p = supabase.table("practicas_talleres")\
-            .select("fecha, grupo, taller, nombre_practica")\
-            .eq("maestro", maestro_id)\
-            .order("fecha", desc=True)\
-            .limit(5).execute()
+        # Consulta filtrada por maestro
+        res_p = supabase.table("practicas_talleres").select("*").eq("maestro", maestro_id).order("fecha", desc=True).execute()
         
-        if hist_p.data:
-            df_hist = pd.DataFrame(hist_p.data)
-            st.dataframe(df_hist, use_container_width=True, hide_index=True)
+        if res_p.data:
+            df_full = pd.DataFrame(res_p.data)
+            df_full['fecha'] = pd.to_datetime(df_full['fecha'])
+            
+            # Aplicar filtro de mes
+            df_mes = df_full[df_full['fecha'].dt.month == mes_sel]
+            
+            if not df_mes.empty:
+                st.dataframe(df_mes[['fecha', 'grupo', 'taller', 'nombre_practica', 'alumnos_asistentes']], 
+                             use_container_width=True, hide_index=True)
+                
+                # 4. GENERACIÓN DE PDF INSTITUCIONAL
+                st.markdown("### 📄 Generar Informe Oficial")
+                
+                def crear_pdf(datos_df, maestro):
+                    pdf = FPDF()
+                    pdf.add_page()
+                    pdf.set_font("Arial", 'B', 16)
+                    pdf.cell(200, 10, "CONALEP CUAUTLA - BITÁCORA DE TALLERES", ln=True, align='C')
+                    pdf.set_font("Arial", '', 12)
+                    pdf.cell(0, 10, f"Docente: {maestro}", ln=True)
+                    pdf.cell(0, 10, f"Periodo: {meses_nombres[mes_sel]} {fecha_actual.year}", ln=True)
+                    pdf.ln(5)
+                    
+                    # Encabezados de tabla
+                    pdf.set_fill_color(30, 132, 73)
+                    pdf.set_text_color(255, 255, 255)
+                    pdf.set_font("Arial", 'B', 10)
+                    pdf.cell(30, 10, "FECHA", 1, 0, 'C', True)
+                    pdf.cell(30, 10, "GRUPO", 1, 0, 'C', True)
+                    pdf.cell(90, 10, "PRÁCTICA", 1, 0, 'C', True)
+                    pdf.cell(40, 10, "ASIST.", 1, 1, 'C', True)
+                    
+                    # Filas de la tabla
+                    pdf.set_text_color(0, 0, 0)
+                    pdf.set_font("Arial", '', 9)
+                    for _, r in datos_df.iterrows():
+                        pdf.cell(30, 8, str(r['fecha'].date()), 1)
+                        pdf.cell(30, 8, str(r['grupo']), 1)
+                        nombre_limpio = str(r['nombre_practica']).encode('latin-1', 'replace').decode('latin-1')
+                        pdf.cell(90, 8, nombre_limpio, 1)
+                        pdf.cell(40, 8, str(r['alumnos_asistentes']), 1, 1)
+                    
+                    return pdf.output(dest='S').encode('latin-1', 'ignore')
+
+                pdf_data = crear_pdf(df_mes, nombre_maestro)
+                st.download_button(
+                    label=f"📥 Descargar Reporte de {meses_nombres[mes_sel]}",
+                    data=pdf_data,
+                    file_name=f"Bitacora_{maestro_id}_{meses_nombres[mes_sel]}.pdf",
+                    mime="application/pdf",
+                    use_container_width=True
+                )
+            else:
+                st.warning(f"No hay registros encontrados para el mes de {meses_nombres[mes_sel]}.")
         else:
-            st.info("Aún no tienes prácticas registradas.")
-    except:
-        pass
+            st.info("Aún no tienes prácticas registradas en el sistema.")
+            
+    except Exception as e:
+        st.error(f"Error al cargar historial: {e}")
     # ================= MÓDULO: CREDENCIAL DIGITAL =================
 elif menu == "Credencial Digital":
 
@@ -1040,6 +1097,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
