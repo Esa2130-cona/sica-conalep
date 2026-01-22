@@ -424,6 +424,7 @@ elif menu == "Registro de Prácticas":
                 except Exception as e:
                     st.error(f"❌ Error en base de datos: {e}")
 
+  
     # 3. HISTORIAL Y FILTRO POR MES
     st.markdown("---")
     st.subheader("📅 Historial de Prácticas Realizadas")
@@ -438,21 +439,28 @@ elif menu == "Registro de Prácticas":
                                format_func=lambda x: meses_nombres[x], index=fecha_actual.month - 1)
 
     try:
-        # Consulta filtrada por maestro
+        # Consulta completa para el maestro
         res_p = supabase.table("practicas_talleres").select("*").eq("maestro", maestro_id).order("fecha", desc=True).execute()
         
         if res_p.data:
             df_full = pd.DataFrame(res_p.data)
             df_full['fecha'] = pd.to_datetime(df_full['fecha'])
             
-            # Aplicar filtro de mes
+            # Aplicar filtro de mes para el PDF y la vista
             df_mes = df_full[df_full['fecha'].dt.month == mes_sel]
             
             if not df_mes.empty:
-                st.dataframe(df_mes[['fecha', 'grupo', 'taller', 'nombre_practica', 'alumnos_asistentes']], 
+                # --- VISTA LIMITADA (Solo los primeros 8 para rapidez visual) ---
+                st.write(f"Mostrando los últimos registros de {meses_nombres[mes_sel]}:")
+                df_vista = df_mes.head(8) # AQUÍ LIMITAMOS A 8 FILAS
+                
+                st.dataframe(df_vista[['fecha', 'grupo', 'taller', 'nombre_practica', 'alumnos_asistentes']], 
                              use_container_width=True, hide_index=True)
                 
-                # 4. GENERACIÓN DE PDF INSTITUCIONAL
+                if len(df_mes) > 8:
+                    st.caption(f"Ver más: El PDF descargable contiene los {len(df_mes)} registros del mes.")
+
+                # 4. GENERACIÓN DE PDF INSTITUCIONAL (Usa df_mes para incluir TODO el mes)
                 st.markdown("### 📄 Generar Informe Oficial")
                 
                 def crear_pdf(datos_df, maestro):
@@ -488,7 +496,7 @@ elif menu == "Registro de Prácticas":
 
                 pdf_data = crear_pdf(df_mes, nombre_maestro)
                 st.download_button(
-                    label=f"📥 Descargar Reporte de {meses_nombres[mes_sel]}",
+                    label=f"📥 Descargar Reporte Completo ({meses_nombres[mes_sel]})",
                     data=pdf_data,
                     file_name=f"Bitacora_{maestro_id}_{meses_nombres[mes_sel]}.pdf",
                     mime="application/pdf",
@@ -1097,6 +1105,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
