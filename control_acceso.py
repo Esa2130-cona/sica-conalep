@@ -563,108 +563,100 @@ elif menu == "Registro de Prácticas":
 
 
 
-# ================= MÓDULO: GESTIÓN DE ACCESOS (GAFETE PROFESIONAL) =================
+
+# ================= MÓDULO: GESTIÓN DE ACCESOS (GAFETE + CRUD) =================
 elif menu == "Gestión de Accesos":
     st.markdown("""
         <div style='background-color: #161b22; padding: 20px; border-radius: 15px; border-left: 8px solid #1e8449; margin-bottom: 20px;'>
-            <h1 style='margin: 0; color: white;'>🎫 Generador de Carnets</h1>
-            <p style='margin: 0; color: #8b949e;'>Credencial oficial tamaño estándar (85x55mm)</p>
+            <h1 style='margin: 0; color: white;'>🔑 Administración de Personal</h1>
+            <p style='margin: 0; color: #8b949e;'>Control total de usuarios y credenciales SICA</p>
         </div>
     """, unsafe_allow_html=True)
 
-    u_busqueda = st.text_input("🔍 Buscar usuario para carnet", placeholder="Ej: jose.esteban").strip()
+    tab_gafete, tab_registro, tab_eliminar = st.tabs(["🔑 Generar Acceso Inteligente", "➕ Registrar Nuevo", "🗑️ Eliminar Personal"])
 
-    if u_busqueda:
-        res = supabase.table("usuarios").select("usuario, pin, rol").ilike("usuario", f"%{u_busqueda}%").execute()
+    # --- PESTAÑA 1: GENERADOR DE CARNET ---
+    with tab_gafete:
+        u_busqueda = st.text_input("🔍 Buscar usuario para carnet", placeholder="Ej: jose.esteban").strip()
+        if u_busqueda:
+            res = supabase.table("usuarios").select("usuario, pin, rol").ilike("usuario", f"%{u_busqueda}%").execute()
+            if res.data:
+                doc = res.data[0]
+                u_db, p_db, r_db = doc['usuario'], doc['pin'], doc['rol']
+                
+                url_final = f"https://sica-conalep-cuautla.streamlit.app/?u={u_db}&p={p_db}"
+                qr = qrcode.make(url_final)
+                buf_qr = BytesIO()
+                qr.save(buf_qr, format="PNG")
+                qr_img_bytes = buf_qr.getvalue()
 
-        if res.data:
-            doc = res.data[0]
-            u_db, p_db, r_db = doc['usuario'], doc['pin'], doc['rol']
-            
-            url_final = f"https://sica-conalep-cuautla.streamlit.app/?u={u_db}&p={p_db}"
-            qr = qrcode.make(url_final)
-            buf_qr = BytesIO()
-            qr.save(buf_qr, format="PNG")
-            qr_img_bytes = buf_qr.getvalue()
-
-            # --- VISTA PREVIA EN PANTALLA ---
-            st.markdown("### 👀 Vista Previa")
-            col_pre, col_img = st.columns([1.5, 1])
-            with col_pre:
+                # Vista Previa
                 st.markdown(f"""
-                <div style='background:#161b22; border:2px solid #1e8449; border-radius:12px; padding:20px; border-top:10px solid #1e8449;'>
+                <div style='background:#161b22; border:2px solid #1e8449; border-radius:12px; padding:20px; border-top:10px solid #1e8449; max-width:350px;'>
                     <p style='color:#1e8449; font-weight:800; font-size:14px; margin-bottom:10px;'>CONALEP CUAUTLA</p>
-                    <p style='color:#8b949e; font-size:10px; margin:0;'>USUARIO</p>
-                    <p style='color:white; font-size:20px; font-weight:bold; margin-bottom:10px;'>{u_db.upper()}</p>
-                    <span style='background:#1e8449; color:white; padding:3px 10px; border-radius:4px; font-size:12px; font-weight:bold;'>{r_db}</span>
+                    <p style='color:white; font-size:20px; font-weight:bold; margin-bottom:5px;'>{u_db.upper()}</p>
+                    <span style='background:#1e8449; color:white; padding:3px 10px; border-radius:4px; font-size:12px;'>{r_db}</span>
                 </div>
                 """, unsafe_allow_html=True)
-            with col_img:
                 st.image(qr_img_bytes, width=150)
 
-            # --- FUNCIÓN PDF CORREGIDA (SOLO 1 HOJA) ---
-            def generar_carnet_unico(u, r, img_bytes):
-                # Forzamos tamaño 85x55mm
-                pdf = FPDF(orientation='L', unit='mm', format=(55, 85))
-                pdf.set_auto_page_break(auto=False, margin=0) # EVITA GENERAR HOJAS EXTRAS
-                pdf.add_page()
-                
-                # Fondo Principal
-                pdf.set_fill_color(22, 27, 34)
-                pdf.rect(0, 0, 85, 55, 'F')
-                
-                # Diseño: Franjas Verdes (Superior e Inferior)
-                pdf.set_fill_color(30, 132, 73)
-                pdf.rect(0, 0, 85, 4, 'F')
-                pdf.rect(0, 51, 85, 4, 'F')
-                
-                # Nombre del Plantel
-                pdf.set_text_color(255, 255, 255)
-                pdf.set_font("Arial", 'B', 10)
-                pdf.set_xy(7, 8)
-                pdf.cell(40, 5, "CONALEP CUAUTLA", ln=True)
-                
-                # Nombre del Usuario (Alineado a la izquierda)
-                pdf.set_font("Arial", 'B', 14)
-                pdf.set_xy(7, 18)
-                u_pdf = u.encode('latin-1', 'replace').decode('latin-1').upper()
-                pdf.multi_cell(45, 7, u_pdf, align='L')
-                
-                # Etiqueta de Rol
-                pdf.set_xy(7, 38)
-                pdf.set_fill_color(30, 132, 73)
-                pdf.set_font("Arial", 'B', 9)
-                pdf.cell(30, 6, f"  {r}", 0, 0, 'L', True)
-                
-                # QR Posicionado a la derecha (x=50) para no encimarse
-                with open("temp_qr_final.png", "wb") as f:
-                    f.write(img_bytes)
-                # w=30mm es el tamaño ideal para que no salte de página
-                pdf.image("temp_qr_final.png", x=50, y=10, w=30)
-                
-                # Borde de Corte Técnico
-                pdf.set_draw_color(60, 60, 60)
-                pdf.rect(0, 0, 85, 55, 'D')
-                
-                return pdf.output(dest='S').encode('latin-1', 'ignore')
+                def generar_pdf_v3(u, r, img_bytes):
+                    pdf = FPDF(orientation='L', unit='mm', format=(55, 85))
+                    pdf.set_auto_page_break(auto=False, margin=0)
+                    pdf.add_page()
+                    pdf.set_fill_color(22, 27, 34); pdf.rect(0, 0, 85, 55, 'F')
+                    pdf.set_fill_color(30, 132, 73); pdf.rect(0, 0, 85, 4, 'F'); pdf.rect(0, 51, 85, 4, 'F')
+                    pdf.set_text_color(255, 255, 255); pdf.set_font("Arial", 'B', 10); pdf.set_xy(7, 8); pdf.cell(40, 5, "CONALEP CUAUTLA")
+                    pdf.set_font("Arial", 'B', 14); pdf.set_xy(7, 18)
+                    u_pdf = u.encode('latin-1', 'replace').decode('latin-1').upper()
+                    pdf.multi_cell(45, 7, u_pdf, align='L')
+                    pdf.set_xy(7, 38); pdf.set_fill_color(30, 132, 73); pdf.set_font("Arial", 'B', 9); pdf.cell(30, 6, f"  {r}", 0, 0, 'L', True)
+                    with open("temp.png", "wb") as f: f.write(img_bytes)
+                    pdf.image("temp.png", x=50, y=10, w=30)
+                    return pdf.output(dest='S').encode('latin-1', 'ignore')
 
-            # Botón de Descarga
-            pdf_data = generar_carnet_unico(u_db, r_db, qr_img_bytes)
-            st.download_button(
-                label=f"📥 Descargar Carnet de {u_db} (PDF)",
-                data=pdf_data,
-                file_name=f"Carnet_{u_db}.pdf",
-                mime="application/pdf",
-                use_container_width=True
-            )
-        else:
-            st.error("Usuario no encontrado.")
+                st.download_button("📥 Descargar Carnet PDF", generar_pdf_v3(u_db, r_db, qr_img_bytes), f"Carnet_{u_db}.pdf", "application/pdf")
+            else:
+                st.error("Usuario no encontrado.")
 
-    # LISTA DE USUARIOS ABAJO
-    with st.expander("📋 Usuarios en Sistema"):
-        res_all = supabase.table("usuarios").select("usuario, rol, pin").execute()
-        if res_all.data:
-            st.dataframe(pd.DataFrame(res_all.data), use_container_width=True, hide_index=True)
+    # --- PESTAÑA 2: AGREGAR USUARIO ---
+    with tab_registro:
+        st.subheader("📝 Registrar Nuevo Personal")
+        with st.form("form_registro", clear_on_submit=True):
+            new_user = st.text_input("ID de Usuario (ej: m.perez)").strip().lower()
+            new_pin = st.text_input("PIN de Acceso (4 dígitos)", type="password")
+            new_rol = st.selectbox("Rol del Usuario", ["DOCENTE", "PREFECTO", "ADMIN", "ORIENTADOR"])
+            submit = st.form_submit_button("✅ Guardar en Base de Datos")
+            
+            if submit:
+                if new_user and new_pin:
+                    data = {"usuario": new_user, "pin": new_pin, "rol": new_rol}
+                    try:
+                        supabase.table("usuarios").insert(data).execute()
+                        st.success(f"¡Usuario {new_user} registrado correctamente!")
+                    except Exception as e:
+                        st.error(f"Error al registrar: {e}")
+                else:
+                    st.warning("Por favor llena todos los campos.")
+
+    # --- PESTAÑA 3: ELIMINAR USUARIO ---
+    with tab_eliminar:
+        st.subheader("🗑️ Baja de Personal")
+        u_del = st.text_input("Escribe el Usuario a eliminar").strip()
+        if st.button("❌ Eliminar Permanentemente", type="secondary"):
+            if u_del:
+                confirm = st.warning(f"¿Seguro que deseas eliminar a {u_del}?")
+                res_del = supabase.table("usuarios").delete().eq("usuario", u_del).execute()
+                if res_del.data:
+                    st.success(f"Usuario {u_del} ha sido eliminado.")
+                else:
+                    st.error("No se encontró el usuario para eliminar.")
+
+    # LISTA DE USUARIOS SIEMPRE VISIBLE ABAJO
+    st.markdown("---")
+    res_all = supabase.table("usuarios").select("usuario, rol, pin").execute()
+    if res_all.data:
+        st.dataframe(pd.DataFrame(res_all.data), use_container_width=True, hide_index=True)
   # ================= MÓDULO: CREDENCIAL DIGITAL =================
 elif menu == "Credencial Digital":
 
@@ -1261,6 +1253,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
