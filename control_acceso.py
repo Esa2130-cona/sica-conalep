@@ -138,10 +138,10 @@ if not st.session_state.user:
 
 # ================= 2. CONFIGURACIÓN DE USUARIO LOGUEADO =================
 user = st.session_state.user
-rol = str(user.get("rol", user.get("ROL", ""))).upper().strip()
+   rol = str(user.get("rol", user.get("ROL", ""))).upper().strip()
 # DEFINIMOS ESTAS VARIABLES AQUÍ PARA QUE ESTÉN DISPONIBLES EN TODO EL CÓDIGO
-maestro_id = user.get("usuario", "Usuario")
-nombre_maestro = user.get("nombre_completo", maestro_id)
+     maestro_id = user.get("usuario", "Usuario")
+     nombre_maestro = user.get("nombre_completo", maestro_id)
 
 # Sidebar con Bienvenida
 st.sidebar.markdown(f"""
@@ -1141,6 +1141,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
