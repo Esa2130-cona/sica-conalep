@@ -155,7 +155,7 @@ if rol == "KIOSKO": opciones = ["Puerta de Entrada"]
 elif rol == "DIRECTOR": opciones = ["Dashboard", "Expediente Digital"]
 elif rol == "PREFECTO": opciones = ["Reportes", "Historial", "Avisos", "Expediente Digital","Credencial Digital"]
 elif rol == "GENERAL": opciones = ["Reportes", "Avisos", "Servicios y Técnica", "Expediente Digital"]
-elif rol == "ADMIN": opciones = ["Puerta de Entrada", "Reportes", "Historial", "Avisos", "Dashboard", "Servicios y Técnica", "Expediente Digital","Credencial Digital"]
+elif rol == "ADMIN": opciones = ["Puerta de Entrada", "Reportes", "Historial", "Avisos", "Dashboard", "Servicios y Técnica", "Expediente Digital","Credencial Digital","Registro de Prácticas"]
 else: opciones = ["Puerta de Entrada"]
 
 menu = st.sidebar.radio("📋 MENÚ PRINCIPAL", opciones)
@@ -367,7 +367,102 @@ elif menu == "Puerta de Entrada":
         time.sleep(3.5)
         st.session_state.resultado = None
         st.rerun()
-        # ================= MÓDULO: CREDENCIAL DIGITAL =================
+       
+# ================= MÓDULO: REGISTRO DE PRÁCTICAS (DOCENTES) =================
+elif menu == "Registro de Prácticas":
+    st.markdown(f"""
+        <div style='background-color: #161b22; padding: 20px; border-radius: 15px; border-left: 8px solid #1e8449; margin-bottom: 20px;'>
+            <h1 style='margin: 0; color: white;'>🛠️ Bitácora de Talleres</h1>
+            <p style='margin: 0; color: #8b949e;'>Registro rápido de actividades prácticas</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # Datos automáticos
+    fecha_hoy = datetime.now(zona).strftime("%Y-%m-%d")
+    # Usamos el nombre del usuario logueado
+    maestro_id = user.get("usuario", "Sin Identificar")
+
+    # Formulario optimizado para móvil
+    with st.form("registro_taller", clear_on_submit=True):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            taller_sel = st.selectbox("📍 Seleccione el Taller", 
+                                    ["Informática", "Automotriz", "Electromecánica", "Contabilidad", "Construcción"])
+            grupo_sel = st.text_input("👥 Grupo", placeholder="Ej: 402-INFO").upper()
+
+        with col2:
+            modulo_p = st.text_input("📖 Módulo / Submódulo")
+            # El campo de asistentes es INTEGER
+            asistentes_p = st.number_input("🔢 Alumnos Asistentes", min_value=0, max_value=60, value=15)
+
+        nombre_p = st.text_input("🔧 Nombre de la Práctica", placeholder="Ej: Instalación de S.O. o Cambio de Frenos")
+        
+        # Campo de reporte técnico (el que sugeriste)
+        with st.expander("🚩 REPORTE DE INCIDENCIAS / FALLAS (OPCIONAL)"):
+            incidencia_p = st.text_area("Describa si hubo alguna falla técnica o falta de material:", 
+                                       placeholder="Ej: La PC 5 no enciende o falta jabón en tarjas.")
+
+        enviar_btn = st.form_submit_button("✅ GUARDAR PRÁCTICA")
+
+        if enviar_btn:
+            if not grupo_sel or not nombre_p:
+                st.error("⚠️ Los campos 'Grupo' y 'Nombre de la Práctica' son obligatorios.")
+            else:
+                try:
+                    # Usamos tu función 'enviar' definida al inicio de tu código
+                    enviar("practicas_talleres", {
+                        "fecha": fecha_hoy,
+                        "maestro": maestro_id,
+                        "taller": taller_sel,
+                        "grupo": grupo_sel,
+                        "modulo": modulo_p,
+                        "nombre_practica": nombre_p,
+                        "alumnos_asistentes": asistentes_p,
+                        "reporte_incidencia": incidencia_p
+                    })
+                    st.balloons()
+                    st.success("🎉 ¡Registro guardado con éxito!")
+                    time.sleep(1.5)
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"❌ Error al guardar en base de datos: {e}")
+
+    # --- HISTORIAL RÁPIDO PARA EL DOCENTE ---
+    st.markdown("---")
+    st.subheader("📅 Mis registros recientes")
+    try:
+        hist_p = supabase.table("practicas_talleres")\
+            .select("fecha, grupo, taller, nombre_practica")\
+            .eq("maestro", maestro_id)\
+            .order("fecha", desc=True)\
+            .limit(5).execute()
+        
+        if hist_p.data:
+            df_hist = pd.DataFrame(hist_p.data)
+            st.dataframe(df_hist, use_container_width=True, hide_index=True)
+        else:
+            st.info("Aún no tienes prácticas registradas.")
+    except:
+        pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    # ================= MÓDULO: CREDENCIAL DIGITAL =================
 elif menu == "Credencial Digital":
 
     st.markdown("""
@@ -963,6 +1058,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
