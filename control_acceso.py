@@ -711,16 +711,12 @@ elif menu == "Credencial Digital":
                 grupo_al = alumno['grupo']
 
                 # 1. GENERAR QR
-                qr_tool = qrcode.QRCode(version=1, box_size=10, border=1)
-                qr_tool.add_data(matricula)
-                qr_tool.make(fit=True)
-                img_qr = qr_tool.make_image(fill_color="black", back_color="white")
-                
+                qr = qrcode.make(matricula)
                 buf_qr = BytesIO()
-                img_qr.save(buf_qr, format="PNG")
+                qr.save(buf_qr, format="PNG")
                 qr_bytes = buf_qr.getvalue()
 
-                # 2. PREVISUALIZACIÓN TIPO CARNET
+                # 2. PREVISUALIZACIÓN EN APP
                 st.markdown("### 👀 Previsualización de Credencial")
                 st.markdown(f"""
                 <div class="al-card-preview">
@@ -735,51 +731,51 @@ elif menu == "Credencial Digital":
                 </div>
                 """, unsafe_allow_html=True)
                 
-                st.image(qr_bytes, width=120, caption="QR de Identificación")
+                st.image(qr_bytes, width=130, caption="QR de Identificación")
 
                 # 3. FUNCIÓN PDF TAMAÑO CREDENCIAL (85x55mm)
-                def generar_pdf_alumno_fijo(nom, grp, mat, img_q):
+                def generar_pdf_alumno_final(nom, grp, mat, img_q):
                     pdf = FPDF(orientation='L', unit='mm', format=(55, 85))
                     pdf.set_auto_page_break(auto=False, margin=0) 
                     pdf.add_page()
                     
-                    # Fondo Oscuro Principal
+                    # Fondo y Franjas
                     pdf.set_fill_color(22, 27, 34)
                     pdf.rect(0, 0, 85, 55, 'F')
-                    
-                    # Franja Verde Superior e Inferior
                     pdf.set_fill_color(30, 132, 73)
-                    pdf.rect(0, 0, 85, 4, 'F')
-                    pdf.rect(0, 51, 85, 4, 'F') 
+                    pdf.rect(0, 0, 85, 4, 'F') # Superior
+                    pdf.rect(0, 51, 85, 4, 'F') # Inferior
                     
                     # Espacio para Foto
                     pdf.set_fill_color(40, 44, 52)
                     pdf.rect(6, 10, 22, 28, 'F')
                     pdf.set_text_color(100, 100, 100)
-                    pdf.set_font("Arial", 'B', 14)
+                    pdf.set_font("Arial", 'B', 15)
                     pdf.set_xy(6, 18)
                     pdf.cell(22, 10, "FOTO", 0, 0, 'C')
 
-                    # Datos del Alumno
+                    # --- GRUPO: INFERIOR IZQUIERDA (Debajo de la foto) ---
+                    pdf.set_xy(6, 42)
+                    pdf.set_font("Arial", 'B', 11)
+                    pdf.set_text_color(30, 132, 73)
+                    pdf.cell(30, 5, f"{grp}", ln=False, align='L')
+
+                    # Datos Institucionales y Nombre
                     pdf.set_text_color(255, 255, 255)
                     pdf.set_font("Arial", 'B', 8)
                     pdf.set_xy(32, 8)
                     pdf.cell(0, 5, "CONALEP CUAUTLA", ln=True)
                     
                     pdf.set_xy(32, 16)
-                    pdf.set_font("Arial", 'B', 11)
+                    pdf.set_font("Arial", 'B', 12)
                     nom_p = nom.encode('latin-1', 'replace').decode('latin-1').upper()
-                    pdf.multi_cell(48, 5, nom_p, align='L')
-                    
-                    # GRUPO ABAJO PARA NO CHOCAR CON QR
-                    pdf.set_xy(32, 42) 
-                    pdf.set_font("Arial", 'B', 10)
-                    pdf.set_text_color(30, 132, 73)
-                    pdf.cell(0, 5, f"GRUPO: {grp}", ln=True)
+                    # Ancho de 48mm para que no choque con el QR
+                    pdf.multi_cell(48, 6, nom_p, align='L')
 
-                    # QR MÁS PEQUEÑO Y ESQUINADO
-                    with open("temp_qr_alumno.png", "wb") as f: f.write(img_q)
-                    pdf.image("temp_qr_alumno.png", x=62, y=30, w=17)
+                    # --- QR POSICIONADO A LA DERECHA (Sin reducir tamaño) ---
+                    with open("temp_qr_al.png", "wb") as f: f.write(img_q)
+                    # x=58 permite que el QR de 22mm quepa perfecto sin tapar el texto
+                    pdf.image("temp_qr_al.png", x=58, y=26, w=22)
                     
                     # Borde de Corte
                     pdf.set_draw_color(60, 60, 60)
@@ -788,10 +784,10 @@ elif menu == "Credencial Digital":
                     return pdf.output(dest='S').encode('latin-1', 'ignore')
 
                 # Botón de Descarga
-                pdf_bin = generar_pdf_alumno_fijo(nombre_al, grupo_al, matricula, qr_bytes)
+                pdf_data = generar_pdf_alumno_final(nombre_al, grupo_al, matricula, qr_bytes)
                 st.download_button(
                     label=f"📥 Descargar Credencial PDF ({matricula})",
-                    data=pdf_bin,
+                    data=pdf_data,
                     file_name=f"Credencial_{matricula}.pdf",
                     mime="application/pdf",
                     use_container_width=True
@@ -1331,6 +1327,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
