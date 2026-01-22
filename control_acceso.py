@@ -562,6 +562,7 @@ elif menu == "Registro de Prácticas":
         st.error(f"Error al cargar historial: {e}")
 
 # ================= MÓDULO: GESTIÓN DE ACCESOS (ESTILO GAFETE) =================
+# ================= MÓDULO: GESTIÓN DE ACCESOS (ESTILO GAFETE) =================
 elif menu == "Gestión de Accesos":
     st.markdown("""
         <style>
@@ -571,7 +572,7 @@ elif menu == "Gestión de Accesos":
                 border: 2px solid #1e8449;
                 padding: 20px;
                 text-align: center;
-                max-width: 300px;
+                max-width: 320px;
                 margin: auto;
                 border-top: 12px solid #1e8449;
                 box-shadow: 0 10px 20px rgba(0,0,0,0.4);
@@ -603,54 +604,95 @@ elif menu == "Gestión de Accesos":
                 font-size: 10px;
                 margin-top: 15px;
             }
+            .qr-white-bg {
+                background: white; 
+                padding: 10px; 
+                border-radius: 10px; 
+                margin-top: 15px; 
+                display: inline-block;
+            }
         </style>
     """, unsafe_allow_html=True)
 
-    st.title("🔑 Generador de Llaves QR")
-    u_busqueda = st.text_input("Ingresa el Usuario del Docente").strip()
+    st.markdown(f"""
+        <div style='background-color: #161b22; padding: 20px; border-radius: 15px; border-left: 8px solid #1e8449; margin-bottom: 20px;'>
+            <h1 style='margin: 0; color: white;'>🔑 Generador de Llaves QR</h1>
+            <p style='margin: 0; color: #8b949e;'>Crea accesos rápidos para Personal y Docentes del Conalep Cuautla</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # 1. BUSCADOR REFORZADO (ilike para evitar errores de escritura)
+    u_busqueda = st.text_input("🔍 Ingresa el Usuario exacto (ID)", placeholder="Ej: m.perez").strip()
 
     if u_busqueda:
-        res = supabase.table("usuarios").select("usuario, pin, rol").eq("usuario", u_busqueda).execute()
+        try:
+            # Consulta flexible: busca el usuario sin importar mayúsculas/minúsculas
+            res = supabase.table("usuarios").select("usuario, pin, rol").ilike("usuario", u_busqueda).execute()
 
-        if res.data:
-            doc = res.data[0]
-            u_db, p_db, r_db = doc['usuario'], doc['pin'], doc['rol']
+            if res.data:
+                doc = res.data[0]
+                u_db = doc['usuario']
+                p_db = doc['pin']
+                r_db = doc['rol']
 
-            # 1. GENERACIÓN DE LA URL Y EL QR
-            url_final = f"https://sica-conalep-yxadaappyp3kz3hcarykgx3.streamlit.app/?u={u_db}&p={p_db}"
-            qr = qrcode.make(url_final)
-            buf = BytesIO()
-            qr.save(buf, format="PNG")
-            byte_im = buf.getvalue()
+                st.success(f"✅ Usuario '{u_db}' localizado con éxito.")
+                
+                # --- GENERACIÓN DE LA LLAVE (URL DE AUTO-LOGIN) ---
+                
+                url_base = "https://sica-conalep-yxadaappyp3kz3hcarykgx3.streamlit.app/" 
+                url_final = f"{url_base}?u={u_db}&p={p_db}"
+                
+                qr = qrcode.make(url_final)
+                buf = BytesIO()
+                qr.save(buf, format="PNG")
+                byte_im = buf.getvalue()
 
-            # 2. VISTA PREVIA DEL GAFETE EN PANTALLA
-            st.markdown(f"""
-                <div class="gafete-container">
-                    <div class="gafete-header">CONALEP CUAUTLA</div>
-                    <div style="font-size: 40px; margin: 10px 0;">👤</div>
-                    <div class="gafete-user">{u_db}</div>
-                    <div class="gafete-role">{r_db}</div>
-                    <div style="background: white; padding: 10px; border-radius: 10px; margin-top: 15px; display: inline-block;">
+                # --- DISEÑO DEL GAFETE ---
+                col_gafete, col_instrucciones = st.columns([1, 1])
+
+                with col_gafete:
+                    st.markdown(f"""
+                        <div class="gafete-container">
+                            <div class="gafete-header">CONALEP CUAUTLA</div>
+                            <div style="font-size: 50px; margin: 10px 0;">👤</div>
+                            <div class="gafete-user">{u_db}</div>
+                            <div class="gafete-role">{r_db}</div>
+                            <div class="gafete-footer">LLAVE DE ACCESO RÁPIDO SICA</div>
                         </div>
-                    <div class="gafete-footer">ACCESO RÁPIDO SICA</div>
-                </div>
-            """, unsafe_allow_html=True)
+                    """, unsafe_allow_html=True)
+                    
+                    # El QR se muestra justo debajo del diseño para ser descargable
+                    st.image(byte_im, width=220, caption=f"QR de {u_db}")
 
-            # Colocamos el QR real sobre el diseño
-            st.image(byte_im, width=180, use_container_width=False)
+                with col_instrucciones:
+                    st.info(f"**Información de Seguridad:**")
+                    st.write(f"**Usuario:** `{u_db}`")
+                    st.write(f"**PIN:** `{p_db}`")
+                    st.write(f"**Rol:** {r_db}")
+                    
+                    st.download_button(
+                        label=f"📥 Descargar Llave de {u_db}",
+                        data=byte_im,
+                        file_name=f"LLAVE_QR_{u_db}.png",
+                        mime="image/png",
+                        use_container_width=True
+                    )
+                    st.warning("⚠️ Entrega este código al docente para que entre sin PIN.")
 
-            # 3. BOTÓN DE DESCARGA
-            st.download_button(
-                label=f"📥 Descargar Gafete de {u_db}",
-                data=byte_im,
-                file_name=f"GAFETE_QR_{u_db}.png",
-                mime="image/png",
-                use_container_width=True
-            )
-            
-            st.info(f"PIN actual de este usuario: {p_db}")
-        else:
-            st.error("Usuario no encontrado.")
+            else:
+                st.error(f"❌ No se encontró el usuario '{u_busqueda}'. Revisa que esté escrito correctamente en la base de datos.")
+                
+        except Exception as e:
+            st.error(f"Error al conectar con la base de datos: {e}")
+
+    # 2. LISTADO RÁPIDO DE APOYO
+    with st.expander("📋 Ver todos los usuarios registrados"):
+        try:
+            res_all = supabase.table("usuarios").select("usuario, rol").execute()
+            if res_all.data:
+                st.table(pd.DataFrame(res_all.data))
+        except:
+            st.write("No se pudo cargar la lista.")
 
 
   # ================= MÓDULO: CREDENCIAL DIGITAL =================
@@ -1249,6 +1291,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
