@@ -137,21 +137,21 @@ if not st.session_state.user:
     st.stop()
 
 # ================= 2. CONFIGURACIÓN DE USUARIO LOGUEADO =================
-# ================= 2. CONFIGURACIÓN DE USUARIO LOGUEADO =================
-# Asegúrate de que estas líneas estén pegadas al margen izquierdo
 user = st.session_state.user
 rol = str(user.get("rol", user.get("ROL", ""))).upper().strip()
 maestro_id = user.get("usuario", "Usuario")
+# Usamos 'nombre_maestro' como variable principal
 nombre_maestro = user.get("nombre_completo", maestro_id)
+
 # Sidebar con Bienvenida
 st.sidebar.markdown(f"""
 <div style='background-color: #161b22; padding: 15px; border-radius: 10px; border: 1px solid #30363d; margin-bottom: 20px;'>
     <p style='margin: 0; color: #8b949e; font-size: 11px;'>BIENVENIDO(A)</p>
-    <h3 style='margin: 0; color: #ffffff; font-size: 18px;'>{nombre_usuario}</h3>
+    <h3 style='margin: 0; color: #ffffff; font-size: 18px;'>{nombre_maestro}</h3>
     <span style='background-color: #1e8449; color: white; padding: 2px 8px; border-radius: 5px; font-size: 10px; font-weight: bold;'>ROL: {rol}</span>
 </div>
 """, unsafe_allow_html=True)
-# Lógica de Menú por Roles
+
 
 
 # Lógica de Menú por Roles
@@ -1141,6 +1141,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
