@@ -150,6 +150,22 @@ st.sidebar.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 # Lógica de Menú por Roles
+
+
+# Lógica de Menú por Roles
+if rol == "KIOSKO": opciones = ["Puerta de Entrada"]
+elif rol == "DIRECTOR": opciones = ["Dashboard", "Expediente Digital"]
+elif rol == "PREFECTO": opciones = ["Reportes", "Historial", "Avisos", "Expediente Digital","Credencial Digital"]
+elif rol == "GENERAL": opciones = ["Reportes", "Avisos", "Servicios y Técnica", "Expediente Digital"]
+elif rol == "DOCENTE": opciones = ["Registro de Prácticas"]
+elif rol == "ADMIN": opciones = ["Puerta de Entrada", "Reportes", "Historial", "Avisos", "Dashboard", "Servicios y Técnica", "Expediente Digital","Credencial Digital","Registro de Prácticas"]
+else: opciones = ["Puerta de Entrada"]
+
+menu = st.sidebar.radio("📋 MENÚ PRINCIPAL", opciones)
+if st.sidebar.button("Cerrar Sesión"):
+    st.session_state.user = None
+    st.rerun()
+
 # ================= BIENVENIDA PERSONALIZADA (DOCENTES) =================
 if rol == "DOCENTE" and menu == "Registro de Prácticas":
     try:
@@ -175,19 +191,11 @@ if rol == "DOCENTE" and menu == "Registro de Prácticas":
         """, unsafe_allow_html=True)
     except:
         pass
-# Lógica de Menú por Roles
-if rol == "KIOSKO": opciones = ["Puerta de Entrada"]
-elif rol == "DIRECTOR": opciones = ["Dashboard", "Expediente Digital"]
-elif rol == "PREFECTO": opciones = ["Reportes", "Historial", "Avisos", "Expediente Digital","Credencial Digital"]
-elif rol == "GENERAL": opciones = ["Reportes", "Avisos", "Servicios y Técnica", "Expediente Digital"]
-elif rol == "DOCENTE": opciones = ["Registro de Prácticas"]
-elif rol == "ADMIN": opciones = ["Puerta de Entrada", "Reportes", "Historial", "Avisos", "Dashboard", "Servicios y Técnica", "Expediente Digital","Credencial Digital","Registro de Prácticas"]
-else: opciones = ["Puerta de Entrada"]
 
-menu = st.sidebar.radio("📋 MENÚ PRINCIPAL", opciones)
-if st.sidebar.button("Cerrar Sesión"):
-    st.session_state.user = None
-    st.rerun()
+
+
+
+
 
 # ================= MÓDULO: PUERTA DE ENTRADA =================
 elif menu == "Puerta de Entrada":
@@ -1131,6 +1139,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
