@@ -584,7 +584,7 @@ elif menu == "Gestión de Accesos":
                 doc = res.data[0]
                 u_db, p_db, r_db = doc['usuario'], doc['pin'], doc['rol']
                 
-                url_final = f"https://sica-conalep-cuautla.streamlit.app/?u={u_db}&p={p_db}"
+                url_final = f"https://sica-conalep-yxadaappyp3kz3hcarykgx3.streamlit.app/?u={u_db}&p={p_db}"
                 qr = qrcode.make(url_final)
                 buf_qr = BytesIO()
                 qr.save(buf_qr, format="PNG")
@@ -1253,6 +1253,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
