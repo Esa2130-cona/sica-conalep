@@ -118,9 +118,22 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ================= 1. SISTEMA DE LOGIN =================
-if "user" not in st.session_state:
-    st.session_state.user = None
+supabase = init_connection()
 
+# ================= 1. AUTO-LOGIN POR QR (AÑADIR AQUÍ) =================
+if "user" not in st.session_state or st.session_state.user is None:
+    params = st.query_params
+    if "u" in params and "p" in params:
+        try:
+            query = supabase.table("usuarios").select("*").eq("usuario", params["u"]).eq("pin", params["p"]).execute()
+            if query.data:
+                st.session_state.user = query.data[0]
+                st.query_params.clear()
+                st.rerun()
+        except: pass
+
+
+# ================= 2. SISTEMA DE LOGIN MANUAL =================
 if not st.session_state.user:
     st.markdown("<h1 style='color:white; text-align:center;'>🔐 SICA CONALEP CUAUTLA</h1>", unsafe_allow_html=True)
     with st.container():
@@ -136,11 +149,11 @@ if not st.session_state.user:
             except Exception as e: st.error(f"Error de base de datos: {e}")
     st.stop()
 
-# ================= 2. CONFIGURACIÓN DE USUARIO LOGUEADO =================
+
+# ================= 3. CONFIGURACIÓN DE USUARIO LOGUEADO =================
 user = st.session_state.user
 rol = str(user.get("rol", user.get("ROL", ""))).upper().strip()
 maestro_id = user.get("usuario", "Usuario")
-# Usamos 'nombre_maestro' como variable principal
 nombre_maestro = user.get("nombre_completo", maestro_id)
 
 # Sidebar con Bienvenida
@@ -154,12 +167,13 @@ st.sidebar.markdown(f"""
 
 
 
-# Lógica de Menú por Roles
+
+# Lógica de Menú
 if rol == "KIOSKO": opciones = ["Puerta de Entrada"]
 elif rol == "DIRECTOR": opciones = ["Dashboard", "Expediente Digital"]
 elif rol == "PREFECTO": opciones = ["Reportes", "Historial", "Avisos", "Expediente Digital","Credencial Digital"]
 elif rol == "GENERAL": opciones = ["Reportes", "Avisos", "Servicios y Técnica", "Expediente Digital"]
-elif rol == "DOCENTE": opciones = ["Registro de Prácticas"]
+elif rol == "DOCENTE": opciones = ["Registro de Prácticas", "Expediente Digital"]
 elif rol == "ADMIN": opciones = ["Puerta de Entrada", "Reportes", "Historial", "Avisos", "Dashboard", "Servicios y Técnica", "Expediente Digital","Credencial Digital","Registro de Prácticas"]
 else: opciones = ["Puerta de Entrada"]
 
@@ -200,7 +214,7 @@ if rol == "DOCENTE" and menu == "Registro de Prácticas":
 
 
 # ================= MÓDULO: PUERTA DE ENTRADA =================
-elif menu == "Puerta de Entrada":
+if menu == "Puerta de Entrada":
 
     st.markdown("""
         <div class='scan-card'>
@@ -1141,6 +1155,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
