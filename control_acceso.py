@@ -369,6 +369,7 @@ elif menu == "Puerta de Entrada":
         st.rerun()
        
 # ================= MÓDULO: REGISTRO DE PRÁCTICAS (DOCENTES) =================
+# ================= MÓDULO: REGISTRO DE PRÁCTICAS (DOCENTES) =================
 elif menu == "Registro de Prácticas":
     st.markdown(f"""
         <div style='background-color: #161b22; padding: 20px; border-radius: 15px; border-left: 8px solid #1e8449; margin-bottom: 20px;'>
@@ -379,7 +380,6 @@ elif menu == "Registro de Prácticas":
 
     # Datos automáticos
     fecha_hoy = datetime.now(zona).strftime("%Y-%m-%d")
-    # Usamos el nombre del usuario logueado
     maestro_id = user.get("usuario", "Sin Identificar")
 
     # Formulario optimizado para móvil
@@ -388,17 +388,15 @@ elif menu == "Registro de Prácticas":
         
         with col1:
             taller_sel = st.selectbox("📍 Seleccione el Taller", 
-                                    ["Informática", "Autotronica", "SHYPC", "Contabilidad",])
+                                    ["Informática", "Autotronica", "SHYPC", "Contabilidad"])
             grupo_sel = st.text_input("👥 Grupo", placeholder="Ej: 402-INFO").upper()
 
         with col2:
             modulo_p = st.text_input("📖 Módulo / Submódulo")
-            # El campo de asistentes es INTEGER
             asistentes_p = st.number_input("🔢 Alumnos Asistentes", min_value=0, max_value=60, value=15)
 
         nombre_p = st.text_input("🔧 Nombre de la Práctica", placeholder="Ej: Instalación de S.O. o Cambio de Frenos")
         
-        # Campo de reporte técnico (el que sugeriste)
         with st.expander("🚩 REPORTE DE INCIDENCIAS / FALLAS (OPCIONAL)"):
             incidencia_p = st.text_area("Describa si hubo alguna falla técnica o falta de material:", 
                                        placeholder="Ej: La PC 5 no enciende o falta jabón en tarjas.")
@@ -410,7 +408,7 @@ elif menu == "Registro de Prácticas":
                 st.error("⚠️ Los campos 'Grupo' y 'Nombre de la Práctica' son obligatorios.")
             else:
                 try:
-                    # Usamos tu función 'enviar' definida al inicio de tu código
+                    # Guardamos el resultado del envío
                     enviar("practicas_talleres", {
                         "fecha": fecha_hoy,
                         "maestro": maestro_id,
@@ -421,8 +419,9 @@ elif menu == "Registro de Prácticas":
                         "alumnos_asistentes": asistentes_p,
                         "reporte_incidencia": incidencia_p
                     })
-                    st.info("Los datos se guardaron correctamente")()
-                    st.success("🎉 ¡Registro guardado con éxito!")
+                    
+                    # Mensaje de éxito limpio e institucional
+                    st.success("✅ Registro guardado correctamente en el sistema.")
                     time.sleep(1.5)
                     st.rerun()
                 except Exception as e:
@@ -1041,6 +1040,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
