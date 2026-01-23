@@ -520,7 +520,13 @@ elif menu == "Registro de Prácticas":
                     st.caption(f"Ver más: El PDF descargable contiene los {len(df_mes)} registros del mes.")
 
                 # 4. GENERACIÓN DE PDF INSTITUCIONAL (Usa df_mes para incluir TODO el mes)
-                st.markdown("### 📄 Generar Informe Oficial")
+                st.markdown("""
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <h3 style='display: flex; align-items: center; gap: 10px;'>
+        <i class="material-icons" style="color: #1e8449; font-size: 28px;">description</i> 
+        Generar Informe Oficial
+    </h3>
+""", unsafe_allow_html=True)
                 
                 def crear_pdf(datos_df, maestro):
                     pdf = FPDF()
@@ -1348,6 +1354,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
