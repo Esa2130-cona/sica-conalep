@@ -483,7 +483,7 @@ elif menu == "Registro de Prácticas":
     st.markdown("""
         <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
         <h3 style='display: flex; align-items: center; gap: 10px;'>
-            <i class="material-icons" style="color: #8b949e; font-size: 32px;">calendar_month</i> 
+            <i class="material-icons" style="color: #1e8449; font-size: 32px;">calendar_month</i> 
             Historial de Prácticas Realizadas
         </h3>
     """, unsafe_allow_html=True)
@@ -1341,6 +1341,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
