@@ -9,7 +9,7 @@ from fpdf import FPDF
 import qrcode
 from io import BytesIO
 # 1. CONFIGURACIÓN INICIAL (DEBE SER LO PRIMERO)
-st.set_page_config (page_title="SICA CONALEP CUAUTLA", layout="wide")
+st.set_page_config(page_title="SICA CONALEP CUAUTLA", layout="wide")
 zona = pytz.timezone("America/Mexico_City")
 
 # ================= ESTILOS DE FLASH =================
@@ -136,7 +136,7 @@ if "user" not in st.session_state or st.session_state.user is None:
 
 # ================= 2. SISTEMA DE LOGIN MANUAL =================
 if not st.session_state.user:
-    st.markdown("<h1 style='color:white; text-align:center;'>?? SICA CONALEP CUAUTLA</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='color:white; text-align:center;'>🔐 SICA CONALEP CUAUTLA</h1>", unsafe_allow_html=True)
     with st.container():
         u = st.text_input("Usuario").strip()
         p = st.text_input("PIN", type="password").strip()
@@ -175,10 +175,10 @@ elif rol == "DIRECTOR": opciones = ["Dashboard", "Expediente Digital"]
 elif rol == "PREFECTO": opciones = ["Reportes", "Historial", "Avisos", "Expediente Digital","Credencial Digital"]
 elif rol == "GENERAL": opciones = ["Reportes", "Avisos", "Servicios y Técnica", "Expediente Digital"]
 elif rol == "DOCENTE": opciones = ["Registro de Prácticas", "Expediente Digital"]
-elif rol == "ADMIN": opciones = ["Puerta de Entrada", "Reportes", "Historial", "Avisos", "Dashboard", "Servicios y Técnica", "Expediente Digital","Credencial Digital","Registro de Prácticas"]
+elif rol == "ADMIN": opciones = ["Puerta de Entrada", "Reportes", "Historial", "Avisos", "Dashboard", "Servicios y Técnica", "Expediente Digital","Credencial Digital","Gestión de Accesos","Registro de Prácticas"]
 else: opciones = ["Puerta de Entrada"]
 
-menu = st.sidebar.radio("?? MENÚ PRINCIPAL", opciones)
+menu = st.sidebar.radio("📋 MENÚ PRINCIPAL", opciones)
 if st.sidebar.button("Cerrar Sesión"):
     st.session_state.user = None
     st.rerun()
@@ -199,7 +199,7 @@ if rol == "DOCENTE" and menu == "Registro de Prácticas":
         st.markdown(f"""
             <div style='background: linear-gradient(90deg, #1e8449 0%, #161b22 100%); 
                         padding: 15px; border-radius: 10px; margin-bottom: 20px;'>
-                <h4 style='margin:0; color:white;'>¡Hola, {nombre_maestro.split()[0]}! ??</h4>
+                <h4 style='margin:0; color:white;'>¡Hola, {nombre_maestro.split()[0]}! 👋</h4>
                 <p style='margin:0; color:#e0e0e0; font-size: 14px;'>
                     Llevas <b>{total_mes}</b> prácticas registradas en este mes. 
                     { "¡Buen trabajo!" if total_mes > 0 else "Aún no hay registros este mes." }
@@ -336,7 +336,7 @@ if menu == "Puerta de Entrada":
                     <div style='font-size:30px;
                                 color:#00e676;
                                 font-weight:bold;'>
-                        ? ACCESO PERMITIDO
+                        ✅ ACCESO PERMITIDO
                     </div>
                     <div style='font-size:60px;
                                 font-weight:900;
@@ -363,7 +363,7 @@ if menu == "Puerta de Entrada":
                                 border-radius:10px;'>
                         <h3 style='color:{color_aviso};
                                    margin:0;'>
-                            ?? AVISO PRIORIDAD {av["prioridad"]}
+                            ⚠️ AVISO PRIORIDAD {av["prioridad"]}
                         </h3>
                         <p style='font-size:24px;
                                   color:white;
@@ -384,7 +384,7 @@ if menu == "Puerta de Entrada":
                     <div style='font-size:40px;
                                 color:#ff9800;
                                 font-weight:bold;'>
-                        ?? {res['mensaje']}
+                        ⚠️ {res['mensaje']}
                     </div>
                     <div style='font-size:50px;
                                 font-weight:900;
@@ -410,7 +410,7 @@ if menu == "Puerta de Entrada":
                     <div style='font-size:50px;
                                 color:#ff1744;
                                 font-weight:bold;'>
-                        ? {res['mensaje']}
+                        ❌ {res['mensaje']}
                     </div>
                 </div>
             """, unsafe_allow_html=True)
@@ -423,7 +423,7 @@ if menu == "Puerta de Entrada":
 elif menu == "Registro de Prácticas":
     st.markdown(f"""
         <div style='background-color: #161b22; padding: 20px; border-radius: 15px; border-left: 8px solid #1e8449; margin-bottom: 20px;'>
-            <h1 style='margin: 0; color: white;'>??? Bitácora de Talleres</h1>
+            <h1 style='margin: 0; color: white;'>🛠️ Bitácora de Talleres</h1>
             <p style='margin: 0; color: #8b949e;'>Registro rápido de actividades y descarga de evidencias</p>
         </div>
     """, unsafe_allow_html=True)
@@ -436,27 +436,27 @@ elif menu == "Registro de Prácticas":
 
     # 2. FORMULARIO DE REGISTRO
     with st.form("registro_taller", clear_on_submit=True):
-        st.subheader("?? Registro de Práctica")
+        st.subheader("📝 Registro de Práctica")
         col1, col2 = st.columns(2)
         
         with col1:
-            taller_sel = st.selectbox("?? Seleccione el Taller", 
+            taller_sel = st.selectbox("📍 Seleccione el Taller", 
                                     ["Informática", "Autotronica", "SHYPC", "Contabilidad"])
-            grupo_sel = st.text_input("?? Grupo", placeholder="Ej: 402-INFO").upper()
+            grupo_sel = st.text_input("👥 Grupo", placeholder="Ej: 402-INFO").upper()
 
         with col2:
-            modulo_p = st.text_input("?? Módulo / Submódulo")
-            asistentes_p = st.number_input("?? Alumnos Asistentes", min_value=0, max_value=60, value=15)
+            modulo_p = st.text_input("📖 Módulo / Submódulo")
+            asistentes_p = st.number_input("🔢 Alumnos Asistentes", min_value=0, max_value=60, value=15)
 
-        nombre_p = st.text_input("?? Nombre de la Práctica", placeholder="Ej: Instalación de S.O. o Cambio de Frenos")
+        nombre_p = st.text_input("🔧 Nombre de la Práctica", placeholder="Ej: Instalación de S.O. o Cambio de Frenos")
         
-        with st.expander("?? REPORTE DE INCIDENCIAS / FALLAS (OPCIONAL)"):
+        with st.expander("🚩 REPORTE DE INCIDENCIAS / FALLAS (OPCIONAL)"):
             incidencia_p = st.text_area("Describa si hubo alguna falla técnica o falta de material:", 
                                        placeholder="Ej: La PC 5 no enciende o falta jabón en tarjas.")
 
-        if st.form_submit_button("? GUARDAR PRÁCTICA"):
+        if st.form_submit_button("✅ GUARDAR PRÁCTICA"):
             if not grupo_sel or not nombre_p:
-                st.error("?? Los campos 'Grupo' y 'Nombre de la Práctica' son obligatorios.")
+                st.error("⚠️ Los campos 'Grupo' y 'Nombre de la Práctica' son obligatorios.")
             else:
                 try:
                     enviar("practicas_talleres", {
@@ -469,16 +469,16 @@ elif menu == "Registro de Prácticas":
                         "alumnos_asistentes": asistentes_p,
                         "reporte_incidencia": incidencia_p
                     })
-                    st.success("? Registro guardado correctamente.")
+                    st.success("✅ Registro guardado correctamente.")
                     time.sleep(1.2)
                     st.rerun()
                 except Exception as e:
-                    st.error(f"? Error en base de datos: {e}")
+                    st.error(f"❌ Error en base de datos: {e}")
 
   
     # 3. HISTORIAL Y FILTRO POR MES
     st.markdown("---")
-    st.subheader("?? Historial de Prácticas Realizadas")
+    st.subheader("📅 Historial de Prácticas Realizadas")
     
     # Selector de Mes para el reporte
     meses_nombres = {1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril", 5: "Mayo", 6: "Junio", 
@@ -512,7 +512,7 @@ elif menu == "Registro de Prácticas":
                     st.caption(f"Ver más: El PDF descargable contiene los {len(df_mes)} registros del mes.")
 
                 # 4. GENERACIÓN DE PDF INSTITUCIONAL (Usa df_mes para incluir TODO el mes)
-                st.markdown("### ?? Generar Informe Oficial")
+                st.markdown("### 📄 Generar Informe Oficial")
                 
                 def crear_pdf(datos_df, maestro):
                     pdf = FPDF()
@@ -547,7 +547,7 @@ elif menu == "Registro de Prácticas":
 
                 pdf_data = crear_pdf(df_mes, nombre_maestro)
                 st.download_button(
-                    label=f"?? Descargar Reporte Completo ({meses_nombres[mes_sel]})",
+                    label=f"📥 Descargar Reporte Completo ({meses_nombres[mes_sel]})",
                     data=pdf_data,
                     file_name=f"Bitacora_{maestro_id}_{meses_nombres[mes_sel]}.pdf",
                     mime="application/pdf",
@@ -560,70 +560,241 @@ elif menu == "Registro de Prácticas":
             
     except Exception as e:
         st.error(f"Error al cargar historial: {e}")
-    # ================= MÓDULO: CREDENCIAL DIGITAL =================
-elif menu == "Credencial Digital":
 
+
+
+
+# ================= MÓDULO: GESTIÓN DE ACCESOS (GAFETE + CRUD) =================
+elif menu == "Gestión de Accesos":
     st.markdown("""
-        <div class='scan-card'>
-            <div class='scan-subtitle'>SICA</div>
-            <div class='scan-title'>CREDENCIAL DIGITAL</div>
+        <div style='background-color: #161b22; padding: 20px; border-radius: 15px; border-left: 8px solid #1e8449; margin-bottom: 20px;'>
+            <h1 style='margin: 0; color: white;'>🔑 Administración de Personal</h1>
+            <p style='margin: 0; color: #8b949e;'>Control total de usuarios y credenciales SICA</p>
         </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("<br>", unsafe_allow_html=True)
+    tab_gafete, tab_registro, tab_eliminar = st.tabs(["🔑 Generar Acceso Inteligente", "➕ Registrar Nuevo", "🗑️ Eliminar Personal"])
 
-    matricula = st.text_input(
-        "MATRÍCULA DEL ALUMNO",
-        placeholder="Escanea o escribe la matrícula"
-    ).strip().upper()
+    # --- PESTAÑA 1: GENERADOR DE CARNET ---
+    with tab_gafete:
+        u_busqueda = st.text_input("🔍 Buscar usuario para su llave inteligente", placeholder="Ej: jose.esteban").strip()
+        if u_busqueda:
+            res = supabase.table("usuarios").select("usuario, pin, rol").ilike("usuario", f"%{u_busqueda}%").execute()
+            if res.data:
+                doc = res.data[0]
+                u_db, p_db, r_db = doc['usuario'], doc['pin'], doc['rol']
+                
+                url_final = f"https://sica-conalep-yxadaappyp3kz3hcarykgx3.streamlit.app/?u={u_db}&p={p_db}"
+                qr = qrcode.make(url_final)
+                buf_qr = BytesIO()
+                qr.save(buf_qr, format="PNG")
+                qr_img_bytes = buf_qr.getvalue()
+
+                # Vista Previa
+                st.markdown(f"""
+                <div style='background:#161b22; border:2px solid #1e8449; border-radius:12px; padding:20px; border-top:10px solid #1e8449; max-width:350px;'>
+                    <p style='color:#1e8449; font-weight:800; font-size:14px; margin-bottom:10px;'>CONALEP CUAUTLA</p>
+                    <p style='color:white; font-size:20px; font-weight:bold; margin-bottom:5px;'>{u_db.upper()}</p>
+                    <span style='background:#1e8449; color:white; padding:3px 10px; border-radius:4px; font-size:12px;'>{r_db}</span>
+                </div>
+                """, unsafe_allow_html=True)
+                st.image(qr_img_bytes, width=150)
+
+                def generar_pdf_v3(u, r, img_bytes):
+                    pdf = FPDF(orientation='L', unit='mm', format=(55, 85))
+                    pdf.set_auto_page_break(auto=False, margin=0)
+                    pdf.add_page()
+                    pdf.set_fill_color(22, 27, 34); pdf.rect(0, 0, 85, 55, 'F')
+                    pdf.set_fill_color(30, 132, 73); pdf.rect(0, 0, 85, 4, 'F'); pdf.rect(0, 51, 85, 4, 'F')
+                    pdf.set_text_color(255, 255, 255); pdf.set_font("Arial", 'B', 10); pdf.set_xy(7, 8); pdf.cell(40, 5, "CONALEP CUAUTLA")
+                    pdf.set_font("Arial", 'B', 14); pdf.set_xy(7, 18)
+                    u_pdf = u.encode('latin-1', 'replace').decode('latin-1').upper()
+                    pdf.multi_cell(45, 7, u_pdf, align='L')
+                    pdf.set_xy(7, 38); pdf.set_fill_color(30, 132, 73); pdf.set_font("Arial", 'B', 9); pdf.cell(30, 6, f"  {r}", 0, 0, 'L', True)
+                    with open("temp.png", "wb") as f: f.write(img_bytes)
+                    pdf.image("temp.png", x=50, y=10, w=30)
+                    return pdf.output(dest='S').encode('latin-1', 'ignore')
+
+                st.download_button("📥 Descargar llave PDF", generar_pdf_v3(u_db, r_db, qr_img_bytes), f"Carnet_{u_db}.pdf", "application/pdf")
+            else:
+                st.error("Usuario no encontrado.")
+
+    # --- PESTAÑA 2: AGREGAR USUARIO ---
+    with tab_registro:
+        st.subheader("📝 Registrar Nuevo Personal")
+        with st.form("form_registro", clear_on_submit=True):
+            new_user = st.text_input("ID de Usuario (ej: m.perez)").strip().lower()
+            new_pin = st.text_input("PIN de Acceso (4 dígitos)", type="password")
+            new_rol = st.selectbox("Rol del Usuario", ["DOCENTE", "PREFECTO", "ADMIN","GENERAL","DIRECTOR"])
+            submit = st.form_submit_button("✅ Guardar Usuario Nuevo")
+            
+            if submit:
+                if new_user and new_pin:
+                    data = {"usuario": new_user, "pin": new_pin, "rol": new_rol}
+                    try:
+                        supabase.table("usuarios").insert(data).execute()
+                        st.success(f"¡Usuario {new_user} registrado correctamente!")
+                    except Exception as e:
+                        st.error(f"Error al registrar: {e}")
+                else:
+                    st.warning("Por favor llena todos los campos.")
+
+    # --- PESTAÑA 3: ELIMINAR USUARIO ---
+    with tab_eliminar:
+        st.subheader("🗑️ Baja de Personal")
+        u_del = st.text_input("Escribe el Usuario a eliminar").strip()
+        if st.button("❌ Eliminar Permanentemente", type="secondary"):
+            if u_del:
+                confirm = st.warning(f"¿Seguro que deseas eliminar a {u_del}?")
+                res_del = supabase.table("usuarios").delete().eq("usuario", u_del).execute()
+                if res_del.data:
+                    st.success(f"Usuario {u_del} ha sido eliminado.")
+                else:
+                    st.error("No se encontró el usuario para eliminar.")
+
+    # LISTA DE USUARIOS SIEMPRE VISIBLE ABAJO
+    st.markdown("---")
+    res_all = supabase.table("usuarios").select("usuario, rol, pin").execute()
+    if res_all.data:
+        st.dataframe(pd.DataFrame(res_all.data), use_container_width=True, hide_index=True)
+  # ================= MÓDULO: CREDENCIAL DIGITAL =================
+elif menu == "Credencial Digital":
+    st.markdown("""
+        <style>
+            .al-card-preview {
+                background: #161b22;
+                border-radius: 15px;
+                border: 2px solid #1e8449;
+                padding: 20px;
+                max-width: 380px;
+                margin: auto;
+                border-top: 10px solid #1e8449;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+                display: flex;
+                align-items: center;
+                gap: 15px;
+            }
+            .photo-placeholder {
+                width: 80px;
+                height: 100px;
+                background: #21262d;
+                border: 1px solid #30363d;
+                border-radius: 8px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: #8b949e;
+                font-size: 40px;
+            }
+            .al-info { text-align: left; flex-grow: 1; }
+            .al-name { color: white; font-size: 16px; font-weight: bold; margin: 0; }
+            .al-group { color: #1e8449; font-size: 13px; font-weight: bold; margin: 0; }
+            .al-label { color: #8b949e; font-size: 9px; text-transform: uppercase; margin-top: 8px; }
+        </style>
+    """, unsafe_allow_html=True)
+
+    st.markdown("<div class='scan-card'><div class='scan-subtitle'>SICA</div><div class='scan-title'>CREDENCIAL DIGITAL</div></div>", unsafe_allow_html=True)
+
+    matricula = st.text_input("MATRÍCULA DEL ALUMNO", placeholder="Escanea o escribe la matrícula").strip().upper()
 
     if matricula:
-
-        res = supabase.table("alumnos") \
-            .select("nombre, grupo, estatus") \
-            .eq("matricula", matricula) \
-            .execute()
+        res = supabase.table("alumnos").select("nombre, grupo, estatus").eq("matricula", matricula).execute()
 
         if not res.data:
-            st.error("? MATRÍCULA NO ENCONTRADA")
-
+            st.error("❌ MATRÍCULA NO ENCONTRADA")
         else:
             alumno = res.data[0]
-
             if alumno["estatus"] is False:
-                st.error("? ALUMNO BLOQUEADO")
-
+                st.error("⛔ ALUMNO BLOQUEADO")
             else:
-                st.success(f"? {alumno['nombre']} — GRUPO {alumno['grupo']}")
-      # ===== GENERAR QR =====
-                qr = qrcode.QRCode(
-                    version=1,
-                    box_size=4,
-                    border=3
+                nombre_al = alumno['nombre']
+                grupo_al = alumno['grupo']
+
+                # 1. GENERAR QR
+                qr = qrcode.make(matricula)
+                buf_qr = BytesIO()
+                qr.save(buf_qr, format="PNG")
+                qr_bytes = buf_qr.getvalue()
+
+                # 2. PREVISUALIZACIÓN EN APP
+                st.markdown("### 👀 Previsualización de Credencial")
+                st.markdown(f"""
+                <div class="al-card-preview">
+                    <div class="photo-placeholder">👤</div>
+                    <div class="al-info">
+                        <p style="color:#1e8449; font-weight:800; font-size:12px; margin-bottom:10px;">CONALEP CUAUTLA</p>
+                        <p class="al-label">NOMBRE DEL ALUMNO</p>
+                        <p class="al-name">{nombre_al.upper()}</p>
+                        <p class="al-label">GRUPO</p>
+                        <p class="al-group">{grupo_al}</p>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                st.image(qr_bytes, width=130, caption="QR de Identificación")
+
+                # 3. FUNCIÓN PDF TAMAÑO CREDENCIAL (85x55mm)
+                def generar_pdf_alumno_final(nom, grp, mat, img_q):
+                    pdf = FPDF(orientation='L', unit='mm', format=(55, 85))
+                    pdf.set_auto_page_break(auto=False, margin=0) 
+                    pdf.add_page()
+                    
+                    # Fondo y Franjas
+                    pdf.set_fill_color(22, 27, 34)
+                    pdf.rect(0, 0, 85, 55, 'F')
+                    pdf.set_fill_color(30, 132, 73)
+                    pdf.rect(0, 0, 85, 4, 'F') # Superior
+                    pdf.rect(0, 51, 85, 4, 'F') # Inferior
+                    
+                    # Espacio para Foto
+                    pdf.set_fill_color(40, 44, 52)
+                    pdf.rect(6, 10, 22, 28, 'F')
+                    pdf.set_text_color(100, 100, 100)
+                    pdf.set_font("Arial", 'B', 15)
+                    pdf.set_xy(6, 18)
+                    pdf.cell(22, 10, "FOTO", 0, 0, 'C')
+
+                    # --- GRUPO: INFERIOR IZQUIERDA (Debajo de la foto) ---
+                    pdf.set_xy(6, 42)
+                    pdf.set_font("Arial", 'B', 11)
+                    pdf.set_text_color(30, 132, 73)
+                    pdf.cell(30, 5, f"{grp}", ln=False, align='L')
+
+                    # Datos Institucionales y Nombre
+                    pdf.set_text_color(255, 255, 255)
+                    pdf.set_font("Arial", 'B', 8)
+                    pdf.set_xy(32, 8)
+                    pdf.cell(0, 5, "CONALEP CUAUTLA", ln=True)
+                    
+                    pdf.set_xy(32, 16)
+                    pdf.set_font("Arial", 'B', 12)
+                    nom_p = nom.encode('latin-1', 'replace').decode('latin-1').upper()
+                    # Ancho de 48mm para que no choque con el QR
+                    pdf.multi_cell(48, 6, nom_p, align='L')
+
+                    # --- QR POSICIONADO A LA DERECHA (Sin reducir tamaño) ---
+                    with open("temp_qr_al.png", "wb") as f: f.write(img_q)
+                    # x=58 permite que el QR de 22mm quepa perfecto sin tapar el texto
+                    pdf.image("temp_qr_al.png", x=58, y=26, w=22)
+                    
+                    # Borde de Corte
+                    pdf.set_draw_color(60, 60, 60)
+                    pdf.rect(0, 0, 85, 55, 'D')
+                    
+                    return pdf.output(dest='S').encode('latin-1', 'ignore')
+
+                # Botón de Descarga
+                pdf_data = generar_pdf_alumno_final(nombre_al, grupo_al, matricula, qr_bytes)
+                st.download_button(
+                    label=f"📥 Descargar Credencial PDF ({matricula})",
+                    data=pdf_data,
+                    file_name=f"Credencial_{matricula}.pdf",
+                    mime="application/pdf",
+                    use_container_width=True
                 )
-
-                qr.add_data(f"{matricula}")
-                qr.make(fit=True)
-
-                img = qr.make_image(
-                    fill_color="black",
-                    back_color="white"
-                )
-
-                buf = BytesIO()
-                img.save(buf, format="PNG")
-
-                st.image(
-                    buf,
-                    width=220,
-                    caption="Código válido SOLO para hoy",
-                   
-                )
-
-                st.warning("?? Uso indebido de esta credencial será sancionado")
 # ================= MÓDULO: REPORTES =================
 elif menu == "Reportes":
-    st.title("?? Gestión de Reportes")
+    st.title("🚨 Gestión de Reportes")
     
     # TRUCO PARA LIMPIAR TODO: Usamos un contador en el session_state
     if "form_reset_count" not in st.session_state:
@@ -666,12 +837,12 @@ elif menu == "Reportes":
                 # Widgets con key dinámica para evitar errores al limpiar
                 tipo = st.selectbox("Tipo de falta", ["Uniforme", "Conducta", "Retardo", "Celular", "Otro"], key=f"tipo{suffix}")
                 desc = st.text_area("Descripción de lo sucedido", key=f"desc{suffix}")
-                foto = st.camera_input("?? Tomar Evidencia (Opcional)", key=f"foto{suffix}")
+                foto = st.camera_input("📸 Tomar Evidencia (Opcional)", key=f"foto{suffix}")
                 
                 col1, col2 = st.columns(2)
                 
                 with col1:
-                    if st.button("?? Guardar Registro", use_container_width=True):
+                    if st.button("💾 Guardar Registro", use_container_width=True):
                         url_foto = ""
                         
                         # Subida de foto
@@ -697,7 +868,7 @@ elif menu == "Reportes":
                                 "registrado_por": user.get("usuario", "Prefecto")
                             })
                             
-                            st.success("? Registro y evidencia guardados correctamente.")
+                            st.success("✅ Registro y evidencia guardados correctamente.")
                             time.sleep(1.2)
                             
                             # LA SOLUCIÓN DEFINITIVA:
@@ -707,7 +878,7 @@ elif menu == "Reportes":
                             st.error(f"Error al guardar: {e}")
 
                 with col2:
-                    if st.button("? Cancelar", use_container_width=True):
+                    if st.button("❌ Cancelar", use_container_width=True):
                         reiniciar_formulario()
             else:
                 st.error("Matrícula no encontrada.")
@@ -715,7 +886,7 @@ elif menu == "Reportes":
             st.error(f"Error en consulta: {e}")
 # ================= MÓDULO: HISTORIAL (ENTRADAS Y REPORTES) =================
 elif menu == "Historial":
-    st.title("?? Consulta Integral de Historial")
+    st.title("📊 Consulta Integral de Historial")
     
     mat_h = st.text_input("Ingrese Matrícula para consultar").strip().upper()
     
@@ -733,7 +904,7 @@ elif menu == "Historial":
                 </div>
                 """, unsafe_allow_html=True)
                 
-                tab1, tab2 = st.tabs(["?? Registro de Entradas", "?? Reportes"])
+                tab1, tab2 = st.tabs(["🕒 Registro de Entradas", "🚨 Reportes"])
                 
                 with tab1:
                     res_ent = supabase.table("entradas").select("fecha, hora").eq("matricula", mat_h).order("fecha", desc=True).execute()
@@ -754,7 +925,7 @@ elif menu == "Historial":
                                 col_texto, col_foto = st.columns([3, 1.2])
                                 
                                 with col_texto:
-                                    st.markdown(f"**?? {rep['fecha']} — {rep['nivel']}**")
+                                    st.markdown(f"**📅 {rep['fecha']} — {rep['nivel']}**")
                                     st.markdown(f"**Motivo:** {rep['tipo']}")
                                     st.write(f"{rep['descripcion']}")
                                     st.caption(f"Registrado por: {rep.get('registrado_por', 'Personal autorizado')}")
@@ -768,7 +939,7 @@ elif menu == "Historial":
                                                 <img src="{url}" style="width:100%; border-radius:10px; border: 1px solid #30363d; margin-bottom: 5px;">
                                             </a>
                                         """, unsafe_allow_html=True)
-                                        st.caption("?? Ampliar foto")
+                                        st.caption("🔍 Ampliar foto")
                                     else:
                                         st.info("Sin evidencia")
                                 
@@ -783,7 +954,7 @@ elif menu == "Historial":
 # ================= AVISOS=================
 
 elif menu == "Avisos":
-    st.title("?? Gestión de Avisos Escolares")
+    st.title("📢 Gestión de Avisos Escolares")
     st.markdown("Use este módulo para mostrar mensajes importantes al alumno al momento de escanear su credencial.")
 
     # Usamos la misma lógica de reset para limpiar el formulario al terminar
@@ -822,7 +993,7 @@ elif menu == "Avisos":
                     with col2:
                         st.info("El aviso estará activo automáticamente al guardar.")
 
-                    submit = st.form_submit_button("?? Publicar Aviso en Puerta")
+                    submit = st.form_submit_button("🔔 Publicar Aviso en Puerta")
 
                     if submit:
                         if mensaje.strip() == "":
@@ -845,7 +1016,7 @@ elif menu == "Avisos":
                                 supabase.table("avisos").insert(datos_aviso).execute()
                                 
                                 st.balloons()
-                                st.success(f"? Aviso publicado para {al['nombre']}.")
+                                st.success(f"✅ Aviso publicado para {al['nombre']}.")
                                 time.sleep(2)
                                 reset_avisos()
                             except Exception as e:
@@ -872,7 +1043,7 @@ elif menu == "Avisos":
             st.error(f"Error: {e}")
 # =================DASHBOARD DIRECTOR=================
 elif menu == "Dashboard":
-    st.title("??? Panel de Control Directivo - CONALEP")
+    st.title("🏛️ Panel de Control Directivo - CONALEP")
     st.markdown("---")
 
     try:
@@ -920,7 +1091,7 @@ elif menu == "Dashboard":
             c4.metric("Motivo Común", motivo)
 
             # --- GRÁFICAS ---
-            st.markdown("### ?? Análisis Visual")
+            st.markdown("### 📈 Análisis Visual")
             col_a, col_b = st.columns(2)
 
             with col_a:
@@ -955,7 +1126,7 @@ elif menu == "Dashboard":
                 # Botón de WhatsApp (Ajusta el número)
                 numero = "527351234567"
                 url_wa = f"https://wa.me/{numero}?text={texto_reporte.replace(' ', '%20')}"
-                st.markdown(f'<a href="{url_wa}" target="_blank" style="text-decoration:none;"><div style="background-color:#25d366;color:white;padding:10px;border-radius:10px;text-align:center;font-weight:bold;">?? Enviar a WhatsApp</div></a>', unsafe_allow_html=True)
+                st.markdown(f'<a href="{url_wa}" target="_blank" style="text-decoration:none;"><div style="background-color:#25d366;color:white;padding:10px;border-radius:10px;text-align:center;font-weight:bold;">📲 Enviar a WhatsApp</div></a>', unsafe_allow_html=True)
             with col_w2:
                 st.text_area("Reporte para copiar:", value=texto_reporte, height=100)
 
@@ -966,7 +1137,7 @@ elif menu == "Dashboard":
         st.error(f"Error al generar Dashboard: {e}")
 # ================= CONFIGURACIÓN INICIAL =================
 elif menu == "Servicios y Técnica":
-    st.title("?? Panel de Servicios Escolares y Formación Técnica")
+    st.title("⚙️ Panel de Servicios Escolares y Formación Técnica")
     st.markdown("---")
 
     try:
@@ -983,7 +1154,7 @@ elif menu == "Servicios y Técnica":
             df_al.columns = [c.lower().strip() for c in df_al.columns]
 
             # --- SECCIÓN: PRODUCTIVIDAD DE PREFECTURA Y PERSONAL ---
-            st.subheader("?? Control de Desempeño Operativo")
+            st.subheader("👮 Control de Desempeño Operativo")
             st.info("Métricas de reportes generados por cada miembro del personal.")
 
             if 'registrado_por' in df_rep.columns:
@@ -1010,7 +1181,7 @@ elif menu == "Servicios y Técnica":
 
                 # --- FILTRO POR PREFECTO ---
                 st.markdown("---")
-                st.subheader("?? Consultar Trabajo por Persona")
+                st.subheader("🔍 Consultar Trabajo por Persona")
                 lista_personal = df_rep['registrado_por'].unique()
                 prefecto_sel = st.selectbox("Seleccione al Prefecto/Personal para ver su detalle:", lista_personal)
                 
@@ -1026,7 +1197,7 @@ elif menu == "Servicios y Técnica":
 
             # --- SECCIÓN: ALUMNOS EN SEGUIMIENTO ---
             st.markdown("---")
-            st.subheader("?? Lista de Alumnos en Riesgo")
+            st.subheader("📋 Lista de Alumnos en Riesgo")
             conteo_al = df_rep['matricula'].value_counts().reset_index()
             conteo_al.columns = ['matricula', 'Total']
             alumnos_riesgo = conteo_al[conteo_al['Total'] >= 2]
@@ -1042,7 +1213,7 @@ elif menu == "Servicios y Técnica":
 # ================= EXPEDIENTE DIGITAL FINAL Y CORREGIDO =================
 # ================= EXPEDIENTE DIGITAL FINAL (CORRECCIÓN DE ERRORES) =================
 elif menu == "Expediente Digital":
-    st.title("??? Expediente Digital Integral")
+    st.title("🗂️ Expediente Digital Integral")
     
     mat_exp = st.text_input("Ingrese Matrícula").strip().upper()
 
@@ -1134,21 +1305,21 @@ elif menu == "Expediente Digital":
 
                 with col_accion:
                     if estatus_actual:
-                        if st.button("?? BLOQUEAR", use_container_width=True): gestionar_acceso(True)
+                        if st.button("🚫 BLOQUEAR", use_container_width=True): gestionar_acceso(True)
                     else:
-                        if st.button("? ACTIVAR", use_container_width=True, type="primary"): gestionar_acceso(False)
+                        if st.button("✅ ACTIVAR", use_container_width=True, type="primary"): gestionar_acceso(False)
 
                 # --- 5. BOTÓN PDF Y TABS ---
                 pdf_data = generar_pdf_seguro(al, df_rep, list_av, txt_r)
                 st.download_button(
-                    label="?? Descargar Expediente (PDF)",
+                    label="📥 Descargar Expediente (PDF)",
                     data=pdf_data,
                     file_name=f"Expediente_{mat_exp}.pdf",
                     mime="application/pdf",
                     use_container_width=True
                 )
 
-                t1, t2 = st.tabs(["?? Asistencias", "?? Reportes"])
+                t1, t2 = st.tabs(["🕒 Asistencias", "🚨 Reportes"])
                 with t1: st.dataframe(df_ent, use_container_width=True)
                 with t2: st.dataframe(df_rep, use_container_width=True)
 
@@ -1156,16 +1327,6 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
-
-
-
-
-
-
-
-
-
-
 
 
 
