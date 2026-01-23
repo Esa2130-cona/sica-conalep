@@ -413,9 +413,13 @@ if menu == "Puerta de Entrada":
 # ================= MÓDULO: REGISTRO DE PRÁCTICAS (DOCENTES) =================
 elif menu == "Registro de Prácticas":
     st.markdown(f"""
+        <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
         <div style='background-color: #161b22; padding: 20px; border-radius: 15px; border-left: 8px solid #1e8449; margin-bottom: 20px;'>
-            <h1 style='margin: 0; color: white;'>🛠️ Bitácora de Talleres</h1>
-            <p style='margin: 0; color: #8b949e;'>Registro rápido de actividades y descarga de evidencias</p>
+            <h1 style='margin: 0; color: white; display: flex; align-items: center; gap: 15px;'>
+                <i class="material-icons" style="font-size: 40px; color: #1e8449;">construction</i>
+                Bitácora de Talleres
+            </h1>
+            <p style='margin: 0; color: #8b949e; margin-left: 55px;'>Registro rápido de actividades y descarga de evidencias</p>
         </div>
     """, unsafe_allow_html=True)
 
@@ -1324,6 +1328,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
