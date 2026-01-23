@@ -913,8 +913,13 @@ elif menu == "Reportes":
             st.error(f"Error en consulta: {e}")
 # ================= MÓDULO: HISTORIAL (ENTRADAS Y REPORTES) =================
 elif menu == "Historial":
-    st.title("📊 Consulta Integral de Historial")
-    
+    st.markdown("""
+        <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+        <h1 style='display: flex; align-items: center; gap: 12px;'>
+            <i class="material-icons" style="font-size: 45px; color: #1e8449;">analytics</i> 
+            Consulta Integral de Historial
+        </h1>
+    """, unsafe_allow_html=True)
     mat_h = st.text_input("Ingrese Matrícula para consultar").strip().upper()
     
     if mat_h:
@@ -1354,6 +1359,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
