@@ -429,9 +429,16 @@ elif menu == "Registro de Prácticas":
     maestro_id = user.get("usuario", "Sin Identificar")
     nombre_maestro = user.get("nombre_completo", maestro_id)
 
+    
     # 2. FORMULARIO DE REGISTRO
     with st.form("registro_taller", clear_on_submit=True):
-        st.subheader("📝 Registro de Práctica")
+        st.markdown("""
+            <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+            <h3 style='display: flex; align-items: center; gap: 8px;'>
+                <i class="material-icons" style="color: #1e8449;">edit_note</i> Registro de Práctica
+            </h3>
+        """, unsafe_allow_html=True)
+        
         col1, col2 = st.columns(2)
         
         with col1:
@@ -445,13 +452,13 @@ elif menu == "Registro de Prácticas":
 
         nombre_p = st.text_input("🔧 Nombre de la Práctica", placeholder="Ej: Instalación de S.O. o Cambio de Frenos")
         
-        with st.expander("🚩 REPORTE DE INCIDENCIAS / FALLAS (OPCIONAL)"):
+        with st.expander("REPORTE DE INCIDENCIAS / FALLAS (OPCIONAL)"):
             incidencia_p = st.text_area("Describa si hubo alguna falla técnica o falta de material:", 
                                        placeholder="Ej: La PC 5 no enciende o falta jabón en tarjas.")
 
-        if st.form_submit_button("✅ GUARDAR PRÁCTICA"):
+        if st.form_submit_button("GUARDAR PRÁCTICA"):
             if not grupo_sel or not nombre_p:
-                st.error("⚠️ Los campos 'Grupo' y 'Nombre de la Práctica' son obligatorios.")
+                st.error("Los campos 'Grupo' y 'Nombre de la Práctica' son obligatorios.")
             else:
                 try:
                     enviar("practicas_talleres", {
@@ -464,11 +471,11 @@ elif menu == "Registro de Prácticas":
                         "alumnos_asistentes": asistentes_p,
                         "reporte_incidencia": incidencia_p
                     })
-                    st.success("✅ Registro guardado correctamente.")
+                    st.success("Registro guardado correctamente.")
                     time.sleep(1.2)
                     st.rerun()
                 except Exception as e:
-                    st.error(f"❌ Error en base de datos: {e}")
+                    st.error(f"Error en base de datos: {e}")
 
   
     # 3. HISTORIAL Y FILTRO POR MES
@@ -1328,6 +1335,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
