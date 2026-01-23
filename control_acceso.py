@@ -570,18 +570,25 @@ elif menu == "Registro de Prácticas":
         st.error(f"Error al cargar historial: {e}")
 
 
-
-
 # ================= MÓDULO: GESTIÓN DE ACCESOS (GAFETE + CRUD) =================
 elif menu == "Gestión de Accesos":
     st.markdown("""
+        <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
         <div style='background-color: #161b22; padding: 20px; border-radius: 15px; border-left: 8px solid #1e8449; margin-bottom: 20px;'>
-            <h1 style='margin: 0; color: white;'>🔑 Administración de Personal</h1>
-            <p style='margin: 0; color: #8b949e;'>Control total de usuarios y credenciales SICA</p>
+            <h1 style='margin: 0; color: white; display: flex; align-items: center; gap: 15px;'>
+                <i class="material-icons" style="font-size: 40px; color: #1e8449;">vpn_key</i>
+                Administración de Personal
+            </h1>
+            <p style='margin: 0; color: #8b949e; margin-left: 55px;'>Control total de usuarios y credenciales SICA</p>
         </div>
     """, unsafe_allow_html=True)
 
-    tab_gafete, tab_registro, tab_eliminar = st.tabs(["🔑 Generar Acceso Inteligente", "➕ Registrar Nuevo", "🗑️ Eliminar Personal"])
+    # Las pestañas de Streamlit no soportan HTML directo, pero podemos usar iconos de texto profesional
+    tab_gafete, tab_registro, tab_eliminar = st.tabs([
+        "Acceso Inteligente", 
+        "Registrar Nuevo", 
+        "Eliminar Personal"
+    ])
 
     # --- PESTAÑA 1: GENERADOR DE CARNET ---
     with tab_gafete:
@@ -1341,6 +1348,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
