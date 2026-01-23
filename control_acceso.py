@@ -626,6 +626,30 @@ with tab_gafete:
             
             st.image(qr_img_bytes, width=150)
 
+            def generar_pdf_v3(u, r, qr_bytes):
+                pdf = FPDF(orientation='L', unit='mm', format=(55, 85))
+                pdf.set_auto_page_break(auto=False, margin=0)
+                pdf.add_page()
+                pdf.set_fill_color(22, 27, 34); pdf.rect(0, 0, 85, 55, 'F')
+                pdf.set_fill_color(30, 132, 73); pdf.rect(0, 0, 85, 4, 'F'); pdf.rect(0, 51, 85, 4, 'F')
+                pdf.set_text_color(255, 255, 255); pdf.set_font("Arial", 'B', 10); pdf.set_xy(7, 8); pdf.cell(40, 5, "CONALEP CUAUTLA")
+                pdf.set_font("Arial", 'B', 14); pdf.set_xy(7, 18)
+                u_pdf = u.encode('latin-1', 'replace').decode('latin-1').upper()
+                pdf.multi_cell(45, 7, u_pdf, align='L')
+                pdf.set_xy(7, 38); pdf.set_fill_color(30, 132, 73); pdf.set_font("Arial", 'B', 9); pdf.cell(30, 6, f"  {r}", 0, 0, 'L', True)
+                with open("temp_qr.png", "wb") as f:
+                    f.write(qr_bytes)
+                pdf.image("temp_qr.png", x=50, y=10, w=30)
+                return pdf.output(dest='S').encode('latin-1', 'ignore')
+
+            # Generamos los datos y mostramos el botón
+            data_pdf = generar_pdf_v3(u_db, r_db, qr_img_bytes)
+            st.download_button("📥 Descargar llave PDF", data_pdf, f"Carnet_{u_db}.pdf", "application/pdf")
+            
+        else:
+            # Este else ahora está correctamente alineado con el 'if res.data:'
+            st.error("Usuario no encontrado.")
+
             # --- FUNCIÓN CORREGIDA ---
             def generar_pdf_v3(u, r, qr_bytes):
                 pdf = FPDF(orientation='L', unit='mm', format=(55, 85))
@@ -1386,6 +1410,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
