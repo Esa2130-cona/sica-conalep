@@ -597,7 +597,7 @@ elif menu == "Gestión de Accesos":
     ])
 
     # --- PESTAÑA 1: GENERADOR DE CARNET ---
-    with tab_gafete:
+with tab_gafete:
     u_busqueda = st.text_input("🔍 Buscar usuario para su llave inteligente", placeholder="Ej: jose.esteban").strip()
     if u_busqueda:
         res = supabase.table("usuarios").select("usuario, pin, rol").ilike("usuario", f"%{u_busqueda}%").execute()
@@ -1378,6 +1378,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
