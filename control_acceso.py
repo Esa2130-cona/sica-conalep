@@ -442,13 +442,13 @@ elif menu == "Registro de Prácticas":
         col1, col2 = st.columns(2)
         
         with col1:
-            taller_sel = st.selectbox("📍 Seleccione el Taller", 
+            taller_sel = st.selectbox(" Seleccione el Taller", 
                                     ["Informática", "Autotronica", "SHYPC", "Contabilidad"])
             grupo_sel = st.text_input("👥 Grupo", placeholder="Ej: 402-INFO").upper()
 
         with col2:
             modulo_p = st.text_input("📖 Módulo / Submódulo")
-            asistentes_p = st.number_input("🔢 Alumnos Asistentes", min_value=0, max_value=60, value=15)
+            asistentes_p = st.number_input("Alumnos Asistentes", min_value=0, max_value=60, value=15)
 
         nombre_p = st.text_input("🔧 Nombre de la Práctica", placeholder="Ej: Instalación de S.O. o Cambio de Frenos")
         
@@ -480,7 +480,13 @@ elif menu == "Registro de Prácticas":
   
     # 3. HISTORIAL Y FILTRO POR MES
     st.markdown("---")
-    st.subheader("📅 Historial de Prácticas Realizadas")
+    st.markdown("""
+        <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+        <h3 style='display: flex; align-items: center; gap: 10px;'>
+            <i class="material-icons" style="color: #8b949e; font-size: 32px;">calendar_month</i> 
+            Historial de Prácticas Realizadas
+        </h3>
+    """, unsafe_allow_html=True)
     
     # Selector de Mes para el reporte
     meses_nombres = {1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril", 5: "Mayo", 6: "Junio", 
@@ -1335,6 +1341,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
