@@ -605,18 +605,14 @@ with tab_gafete:
             doc = res.data[0]
             u_db, p_db, r_db = doc['usuario'], doc['pin'], doc['rol']
             
-            # --- CORRECCIÓN DE URL ---
-            # Asegúrate de que la URL base termine en / y los parámetros estén bien formados
             url_base = "https://sica-conalep-yxadaappyp3kz3hcarykgx3.streamlit.app/"
             url_final = f"{url_base}?u={u_db}&p={p_db}"
-            # -------------------------
 
             qr = qrcode.make(url_final)
             buf_qr = BytesIO()
             qr.save(buf_qr, format="PNG")
             qr_img_bytes = buf_qr.getvalue()
 
-            # Vista Previa con Material Icons (Añadido para consistencia)
             st.markdown(f"""
             <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
             <div style='background:#161b22; border:2px solid #1e8449; border-radius:12px; padding:20px; border-top:10px solid #1e8449; max-width:350px;'>
@@ -630,7 +626,8 @@ with tab_gafete:
             
             st.image(qr_img_bytes, width=150)
 
-            def generar_pdf_v3(u, r, img_bytes):
+            # --- FUNCIÓN CORREGIDA ---
+            def generar_pdf_v3(u, r, qr_bytes):
                 pdf = FPDF(orientation='L', unit='mm', format=(55, 85))
                 pdf.set_auto_page_break(auto=False, margin=0)
                 pdf.add_page()
@@ -638,12 +635,23 @@ with tab_gafete:
                 pdf.set_fill_color(30, 132, 73); pdf.rect(0, 0, 85, 4, 'F'); pdf.rect(0, 51, 85, 4, 'F')
                 pdf.set_text_color(255, 255, 255); pdf.set_font("Arial", 'B', 10); pdf.set_xy(7, 8); pdf.cell(40, 5, "CONALEP CUAUTLA")
                 pdf.set_font("Arial", 'B', 14); pdf.set_xy(7, 18)
+                
                 u_pdf = u.encode('latin-1', 'replace').decode('latin-1').upper()
                 pdf.multi_cell(45, 7, u_pdf, align='L')
                 pdf.set_xy(7, 38); pdf.set_fill_color(30, 132, 73); pdf.set_font("Arial", 'B', 9); pdf.cell(30, 6, f"  {r}", 0, 0, 'L', True)
-                with open("temp.png", "wb") as f: f.write(img_bytes)
-                pdf.image("temp.png", x=50, y=10, w=30)
+                
+                # Guardar temporalmente para el PDF
+                with open("temp_qr.png", "wb") as f:
+                    f.write(qr_bytes)
+                pdf.image("temp_qr.png", x=50, y=10, w=30)
+                
                 return pdf.output(dest='S').encode('latin-1', 'ignore')
+
+            # Llamada corregida a la función
+            pdf_data = generar_pdf_v3(u_db, r_db, qr_img_bytes)
+            st.download_button("📥 Descargar llave PDF", pdf_data, f"Carnet_{u_db}.pdf", "application/pdf")
+        else:
+            st.error("Usuario no encontrado.")
 
             # Botón de descarga profesional
             st.download_button("📥 Descargar llave PDF", generar_pdf_v3(u_db, r_db, qr_img_bytes), f"Carnet_{u_db}.pdf", "application/pdf")
@@ -1378,6 +1386,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
