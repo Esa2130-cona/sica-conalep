@@ -1075,7 +1075,13 @@ elif menu == "Avisos":
             st.error(f"Error: {e}")
 # =================DASHBOARD DIRECTOR=================
 elif menu == "Dashboard":
-    st.title("🏛️ Panel de Control Directivo - CONALEP")
+    st.markdown("""
+        <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+        <h1 style='display: flex; align-items: center; gap: 12px;'>
+            <i class="material-icons" style="font-size: 45px; color: #1e8449;">space_dashboard</i> 
+            Panel de Control Directivo - CONALEP
+        </h1>
+    """, unsafe_allow_html=True)
     st.markdown("---")
 
     try:
@@ -1359,6 +1365,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
