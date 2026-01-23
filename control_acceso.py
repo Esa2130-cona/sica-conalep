@@ -9,7 +9,7 @@ from fpdf import FPDF
 import qrcode
 from io import BytesIO
 # 1. CONFIGURACIÓN INICIAL (DEBE SER LO PRIMERO)
-st.set_page_config("SICA CONALEP CUAUTLA", layout="wide")
+st.set_page_config(="SICA CONALEP CUAUTLA", layout="wide")
 zona = pytz.timezone("America/Mexico_City")
 
 # ================= ESTILOS DE FLASH =================
@@ -1156,6 +1156,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
