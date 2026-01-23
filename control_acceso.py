@@ -597,6 +597,7 @@ elif menu == "Gestión de Accesos":
     ])
 
     # --- PESTAÑA 1: GENERADOR DE CARNET ---
+# --- PESTAÑA 1: GENERADOR DE CARNET ---
 with tab_gafete:
     u_busqueda = st.text_input("🔍 Buscar usuario para su llave inteligente", placeholder="Ej: jose.esteban").strip()
     if u_busqueda:
@@ -606,7 +607,7 @@ with tab_gafete:
             doc = res.data[0]
             u_db, p_db, r_db = doc['usuario'], doc['pin'], doc['rol']
             
-            # URL corregida para acceso automático
+            # URL para acceso automático
             url_base = "https://sica-conalep-yxadaappyp3kz3hcarykgx3.streamlit.app/"
             url_final = f"{url_base}?u={u_db}&p={p_db}"
 
@@ -629,7 +630,7 @@ with tab_gafete:
             
             st.image(qr_img_bytes, width=150)
 
-            # Definición de función con indentación correcta
+            # Función de PDF (Solo una vez)
             def generar_pdf_v3(u, r, qr_bytes):
                 pdf = FPDF(orientation='L', unit='mm', format=(55, 85))
                 pdf.set_auto_page_break(auto=False, margin=0)
@@ -641,95 +642,56 @@ with tab_gafete:
                 u_pdf = u.encode('latin-1', 'replace').decode('latin-1').upper()
                 pdf.multi_cell(45, 7, u_pdf, align='L')
                 pdf.set_xy(7, 38); pdf.set_fill_color(30, 132, 73); pdf.set_font("Arial", 'B', 9); pdf.cell(30, 6, f"  {r}", 0, 0, 'L', True)
+                
                 with open("temp_qr.png", "wb") as f:
                     f.write(qr_bytes)
                 pdf.image("temp_qr.png", x=50, y=10, w=30)
                 return pdf.output(dest='S').encode('latin-1', 'ignore')
 
-            # Generar y mostrar botón
+            # Botón de descarga
             data_pdf = generar_pdf_v3(u_db, r_db, qr_img_bytes)
             st.download_button("📥 Descargar llave PDF", data_pdf, f"Carnet_{u_db}.pdf", "application/pdf")
             
         else:
             st.error("Usuario no encontrado.")
 
-            # Generamos los datos y mostramos el botón
-            data_pdf = generar_pdf_v3(u_db, r_db, qr_img_bytes)
-            st.download_button("📥 Descargar llave PDF", data_pdf, f"Carnet_{u_db}.pdf", "application/pdf")
-            
-        else:
-            # Este else ahora está correctamente alineado con el 'if res.data:'
-            st.error("Usuario no encontrado.")
+# --- PESTAÑA 2: AGREGAR USUARIO ---
+with tab_registro:
+    st.subheader("Registrar Nuevo Personal")
+    with st.form("form_registro", clear_on_submit=True):
+        new_user = st.text_input("ID de Usuario (ej: m.perez)").strip().lower()
+        new_pin = st.text_input("PIN de Acceso (4 dígitos)", type="password")
+        new_rol = st.selectbox("Rol del Usuario", ["DOCENTE", "PREFECTO", "ADMIN","GENERAL","DIRECTOR"])
+        submit = st.form_submit_button("✅ Guardar Usuario Nuevo")
+        
+        if submit:
+            if new_user and new_pin:
+                data = {"usuario": new_user, "pin": new_pin, "rol": new_rol}
+                try:
+                    supabase.table("usuarios").insert(data).execute()
+                    st.success(f"¡Usuario {new_user} registrado correctamente!")
+                except Exception as e:
+                    st.error(f"Error al registrar: {e}")
+            else:
+                st.warning("Por favor llena todos los campos.")
 
-            # --- FUNCIÓN CORREGIDA ---
-            def generar_pdf_v3(u, r, qr_bytes):
-                pdf = FPDF(orientation='L', unit='mm', format=(55, 85))
-                pdf.set_auto_page_break(auto=False, margin=0)
-                pdf.add_page()
-                pdf.set_fill_color(22, 27, 34); pdf.rect(0, 0, 85, 55, 'F')
-                pdf.set_fill_color(30, 132, 73); pdf.rect(0, 0, 85, 4, 'F'); pdf.rect(0, 51, 85, 4, 'F')
-                pdf.set_text_color(255, 255, 255); pdf.set_font("Arial", 'B', 10); pdf.set_xy(7, 8); pdf.cell(40, 5, "CONALEP CUAUTLA")
-                pdf.set_font("Arial", 'B', 14); pdf.set_xy(7, 18)
-                
-                u_pdf = u.encode('latin-1', 'replace').decode('latin-1').upper()
-                pdf.multi_cell(45, 7, u_pdf, align='L')
-                pdf.set_xy(7, 38); pdf.set_fill_color(30, 132, 73); pdf.set_font("Arial", 'B', 9); pdf.cell(30, 6, f"  {r}", 0, 0, 'L', True)
-                
-                # Guardar temporalmente para el PDF
-                with open("temp_qr.png", "wb") as f:
-                    f.write(qr_bytes)
-                pdf.image("temp_qr.png", x=50, y=10, w=30)
-                
-                return pdf.output(dest='S').encode('latin-1', 'ignore')
+# --- PESTAÑA 3: ELIMINAR USUARIO ---
+with tab_eliminar:
+    st.subheader("Baja de Personal")
+    u_del = st.text_input("Escribe el Usuario a eliminar").strip()
+    if st.button("❌ Eliminar Permanentemente", type="secondary"):
+        if u_del:
+            res_del = supabase.table("usuarios").delete().eq("usuario", u_del).execute()
+            if res_del.data:
+                st.success(f"Usuario {u_del} ha sido eliminado.")
+            else:
+                st.error("No se encontró el usuario para eliminar.")
 
-            # Llamada corregida a la función
-            pdf_data = generar_pdf_v3(u_db, r_db, qr_img_bytes)
-            st.download_button("📥 Descargar llave PDF", pdf_data, f"Carnet_{u_db}.pdf", "application/pdf")
-        else:
-            st.error("Usuario no encontrado.")
-
-            # Botón de descarga profesional
-            st.download_button("📥 Descargar llave PDF", generar_pdf_v3(u_db, r_db, qr_img_bytes), f"Carnet_{u_db}.pdf", "application/pdf")
-        else:
-            st.error("Usuario no encontrado.")
-    # --- PESTAÑA 2: AGREGAR USUARIO ---
-    with tab_registro:
-        st.subheader("Registrar Nuevo Personal")
-        with st.form("form_registro", clear_on_submit=True):
-            new_user = st.text_input("ID de Usuario (ej: m.perez)").strip().lower()
-            new_pin = st.text_input("PIN de Acceso (4 dígitos)", type="password")
-            new_rol = st.selectbox("Rol del Usuario", ["DOCENTE", "PREFECTO", "ADMIN","GENERAL","DIRECTOR"])
-            submit = st.form_submit_button("✅ Guardar Usuario Nuevo")
-            
-            if submit:
-                if new_user and new_pin:
-                    data = {"usuario": new_user, "pin": new_pin, "rol": new_rol}
-                    try:
-                        supabase.table("usuarios").insert(data).execute()
-                        st.success(f"¡Usuario {new_user} registrado correctamente!")
-                    except Exception as e:
-                        st.error(f"Error al registrar: {e}")
-                else:
-                    st.warning("Por favor llena todos los campos.")
-
-    # --- PESTAÑA 3: ELIMINAR USUARIO ---
-    with tab_eliminar:
-        st.subheader("Baja de Personal")
-        u_del = st.text_input("Escribe el Usuario a eliminar").strip()
-        if st.button("❌ Eliminar Permanentemente", type="secondary"):
-            if u_del:
-                confirm = st.warning(f"¿Seguro que deseas eliminar a {u_del}?")
-                res_del = supabase.table("usuarios").delete().eq("usuario", u_del).execute()
-                if res_del.data:
-                    st.success(f"Usuario {u_del} ha sido eliminado.")
-                else:
-                    st.error("No se encontró el usuario para eliminar.")
-
-    # LISTA DE USUARIOS SIEMPRE VISIBLE ABAJO
-    st.markdown("---")
-    res_all = supabase.table("usuarios").select("usuario, rol, pin").execute()
-    if res_all.data:
-        st.dataframe(pd.DataFrame(res_all.data), use_container_width=True, hide_index=True)
+# LISTA DE USUARIOS SIEMPRE VISIBLE
+st.markdown("---")
+res_all = supabase.table("usuarios").select("usuario, rol, pin").execute()
+if res_all.data:
+    st.dataframe(pd.DataFrame(res_all.data), use_container_width=True, hide_index=True)
   # ================= MÓDULO: CREDENCIAL DIGITAL =================
 elif menu == "Credencial Digital":
     st.markdown("""
@@ -1421,6 +1383,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
