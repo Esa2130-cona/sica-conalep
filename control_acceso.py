@@ -1175,7 +1175,13 @@ elif menu == "Dashboard":
         st.error(f"Error al generar Dashboard: {e}")
 # ================= CONFIGURACIÓN INICIAL =================
 elif menu == "Servicios y Técnica":
-    st.title("⚙️ Panel de Servicios Escolares y Formación Técnica")
+    st.markdown("""
+        <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+        <h1 style='display: flex; align-items: center; gap: 12px;'>
+            <i class="material-icons" style="font-size: 45px; color: #1e8449;">account_balance</i> 
+            Panel de Servicios Escolares y Formación Técnica
+        </h1>
+    """, unsafe_allow_html=True)
     st.markdown("---")
 
     try:
@@ -1192,7 +1198,7 @@ elif menu == "Servicios y Técnica":
             df_al.columns = [c.lower().strip() for c in df_al.columns]
 
             # --- SECCIÓN: PRODUCTIVIDAD DE PREFECTURA Y PERSONAL ---
-            st.subheader("👮 Control de Desempeño Operativo")
+            st.subheader("Control de Desempeño Operativo")
             st.info("Métricas de reportes generados por cada miembro del personal.")
 
             if 'registrado_por' in df_rep.columns:
@@ -1365,6 +1371,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
