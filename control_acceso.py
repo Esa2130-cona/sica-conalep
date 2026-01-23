@@ -642,7 +642,7 @@ elif menu == "Gestión de Accesos":
 
     # --- PESTAÑA 2: AGREGAR USUARIO ---
     with tab_registro:
-        st.subheader("📝 Registrar Nuevo Personal")
+        st.subheader("Registrar Nuevo Personal")
         with st.form("form_registro", clear_on_submit=True):
             new_user = st.text_input("ID de Usuario (ej: m.perez)").strip().lower()
             new_pin = st.text_input("PIN de Acceso (4 dígitos)", type="password")
@@ -662,7 +662,7 @@ elif menu == "Gestión de Accesos":
 
     # --- PESTAÑA 3: ELIMINAR USUARIO ---
     with tab_eliminar:
-        st.subheader("🗑️ Baja de Personal")
+        st.subheader("Baja de Personal")
         u_del = st.text_input("Escribe el Usuario a eliminar").strip()
         if st.button("❌ Eliminar Permanentemente", type="secondary"):
             if u_del:
@@ -1354,6 +1354,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
