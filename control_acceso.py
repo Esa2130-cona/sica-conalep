@@ -1252,12 +1252,17 @@ elif menu == "Servicios y Técnica":
 
     except Exception as e:
         st.error(f"Error en Panel de Servicios: {e}")
-# ================= EXPEDIENTE DIGITAL (CON BOTÓN DE BLOQUEO) =================
-# ================= EXPEDIENTE DIGITAL ACTUALIZADO =================
-# ================= EXPEDIENTE DIGITAL FINAL Y CORREGIDO =================
+
 # ================= EXPEDIENTE DIGITAL FINAL (CORRECCIÓN DE ERRORES) =================
-elif menu == "Expediente Digital":
-    st.title("🗂️ Expediente Digital Integral")
+elif menu == "Servicios y Técnica":
+    st.markdown("""
+        <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+        <h1 style='display: flex; align-items: center; gap: 12px;'>
+            <i class="material-icons" style="font-size: 45px; color: #1e8449;">account_balance</i> 
+            Panel de Servicios Escolares y Formación Técnica
+        </h1>
+    """, unsafe_allow_html=True)
+    st.markdown("---")
     
     mat_exp = st.text_input("Ingrese Matrícula").strip().upper()
 
@@ -1371,6 +1376,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
