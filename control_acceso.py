@@ -119,24 +119,16 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ================= 1. SISTEMA DE LOGIN =================
-
-# ================= 1. AUTO-LOGIN POR QR (AÑADIR AQUÍ) =================
-if "user" not in st.session_state or st.session_state.user is None:
-    params = st.query_params
-    if "u" in params and "p" in params:
-        try:
-            query = supabase.table("usuarios").select("*").eq("usuario", params["u"]).eq("pin", params["p"]).execute()
-            if query.data:
-                st.session_state.user = query.data[0]
-                st.query_params.clear()
-                st.rerun()
-        except: pass
-
 
 # ================= 2. SISTEMA DE LOGIN MANUAL =================
 if not st.session_state.user:
-    st.markdown("<h1 style='color:white; text-align:center;'>🔐 SICA CONALEP CUAUTLA</h1>", unsafe_allow_html=True)
+    st.markdown("""
+        <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+        <h1 style='color:white; text-align:center;'>
+            <i class="material-icons" style="vertical-align: middle; font-size: 40px;">admin_panel_settings</i> 
+            SICA CONALEP CUAUTLA
+        </h1>
+    """, unsafe_allow_html=True)
     with st.container():
         u = st.text_input("Usuario").strip()
         p = st.text_input("PIN", type="password").strip()
@@ -149,7 +141,6 @@ if not st.session_state.user:
                 else: st.error("Credenciales incorrectas")
             except Exception as e: st.error(f"Error de base de datos: {e}")
     st.stop()
-
 
 # ================= 3. CONFIGURACIÓN DE USUARIO LOGUEADO =================
 user = st.session_state.user
@@ -1327,6 +1318,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
