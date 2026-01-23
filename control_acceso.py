@@ -785,7 +785,13 @@ elif menu == "Credencial Digital":
                 )
 # ================= MÓDULO: REPORTES =================
 elif menu == "Reportes":
-    st.title("🚨 Gestión de Reportes")
+    st.markdown("""
+        <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+        <h1 style='display: flex; align-items: center; gap: 10px;'>
+            <i class="material-icons" style="font-size: 45px; color: #FF4B4B;">report_problem</i> 
+            Gestión de Reportes
+        </h1>
+    """, unsafe_allow_html=True)
     
     # TRUCO PARA LIMPIAR TODO: Usamos un contador en el session_state
     if "form_reset_count" not in st.session_state:
@@ -1318,6 +1324,7 @@ elif menu == "Expediente Digital":
                 st.error("Matrícula no encontrada.")
         except Exception as e:
             st.error(f"Error en el sistema: {e}")
+
 
 
 
